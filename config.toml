@@ -1,4 +1,4 @@
-baseURL = 'https://test48320293.github.io/offsecnotes/'
+baseURL = 'https://github.com/frankheat/offsecnotes/'
 languageCode = 'en-us'
 title = 'offsecnotes'
 theme = "mytheme"
