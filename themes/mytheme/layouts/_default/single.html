@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    {{ partial "head.html" }}
+</head>
+
+<body>
+    <div class="top-bar row">
+        {{ partial "top-bar.html" }}
+    </div>
+
+    <div class="main-container container-fluid">
+
+        <div class="row justify-content-center">
+            <div class="site-nav col-lg-3 col-xl-3 p-4 d-none d-lg-block" id="sidebarLeft">
+                {{ partial "site-nav.html" }}
+            </div>
+
+            <div class="main-content col-lg-9 col-xl-6 p-4" id="mainContent">
+                <div class="main-content">
+                    {{ .Content }}
+                </div>
+
+            </div>
+
+            {{ if findRE "<ul>" .TableOfContents }}
+                <div class="sidebar-right col-xl-3 p-4 d-none d-xl-block" id="sidebarRight">
+                    <h4>Table of contents</h4>
+                    {{ .TableOfContents }}
+                </div>
+            {{ end }}
+        </div>
+
+    </div>
+
+
+    <script src='{{ absURL "js/active-index.js" }}'></script>
+    <script src='{{ absURL "js/active-toc.js" }}'></script>
+    <script src='{{ absURL "js/icon-collapse.js" }}'></script>
+    <script src='{{ absURL "js/site-nav-state.js" }}'></script>
+    <script src='{{ absURL "js/anchors.js" }}'></script>
+    <script src='{{ absURL "js/index-filter.js" }}'></script>
+    <script src='{{ absURL "js/toogle-sidebar.js" }}'></script>
+    <script src='{{ absURL "js/table.js" }}'></script>
+    <script src='{{ absURL "js/github-star.js" }}'></script>
+
+</body>
+
+</html>

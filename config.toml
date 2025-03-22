@@ -1,0 +1,4 @@
+baseURL = 'https://test48320293.github.io/offsecnotes/'
+languageCode = 'en-us'
+title = 'offsecnotes'
+theme = "mytheme"

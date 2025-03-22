@@ -1,0 +1,8 @@
+{{ $image := .Get "path" }}
+<figure><img src='{{ $image | absURL }}' class="img-fluid">
+     {{ with .Get "caption" }}
+     <figcaption>
+          {{ . }}
+     </figcaption>
+     {{ end }}
+</figure>
