@@ -51,7 +51,7 @@ def handleResponse(req, interesting):
     table.add(req)
 ```
 
-## Multi-endpoint race windows <a href="#aligning-multi-endpoint-race-windows" id="aligning-multi-endpoint-race-windows"></a>
+## Multi-endpoint race windows
 
 **Connection warming**
 
@@ -66,7 +66,7 @@ In Burp Repeater, try adding a `GET` request for the homepage at the start of yo
 
 Web servers often delay processing if too many requests are sent too quickly. By sending many dummy requests to trigger rate or resource limits, you can create a server-side delay, making the single-packet attack viable even with delayed execution.
 
-## Session-based locking mechanisms <a href="#session-based-locking-mechanisms" id="session-based-locking-mechanisms"></a>
+## Session-based locking mechanisms
 
 Some frameworks prevent accidental data corruption through request locking. For example, PHP's native session handler processes one request per session at a time.
 

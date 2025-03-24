@@ -23,7 +23,7 @@ weight: 5
 **Note**: We'll focus on the "authorization code" and "implicit" grant types as these are by far the most common.
 {{< /hint >}}
 
-## OAuth scopes <a href="#oauth-scopes" id="oauth-scopes"></a>
+## OAuth scopes
 
 For any OAuth grant type, the client application has to specify which data it wants to access and what kind of operations it wants to perform. It does this using the `scope` parameter of the authorization request it sends to the OAuth service.
 
@@ -38,7 +38,7 @@ scope=https://oauth-authorization-server.com/auth/scopes/user/contacts.readonly
 
 When OAuth is used for authentication, however, the standardized OpenID Connect scopes are often used instead.
 
-## Authorization code grant type <a href="#authorization-code-grant-type" id="authorization-code-grant-type"></a>
+## Authorization code grant type
 
 ### 1. Authorization request
 

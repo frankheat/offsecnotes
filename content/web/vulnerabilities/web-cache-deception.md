@@ -120,7 +120,7 @@ Premise
 /static/js/info.js     # 2 time "X-Cache: hit" -> Perfect, the page is cached
 ```
 
-### Normalization by the origin server <a href="#exploiting-normalization-by-the-origin-server" id="exploiting-normalization-by-the-origin-server"></a>
+### Normalization by the origin server
 
 ```python
 # 3. Confirm that the cache rule is based on the static directory

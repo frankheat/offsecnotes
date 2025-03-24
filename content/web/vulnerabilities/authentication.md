@@ -77,7 +77,7 @@ See if you can change the password of an arbitrary user. E.g. look for a hidden 
 * current password: \<right>, new-password-1=XXX, new-password-2=YYY
 {{< /hint >}}
 
-## 2FA <a href="#bypassing-two-factor-authentication" id="bypassing-two-factor-authentication"></a>
+## 2FA
 
 * **Brute-force OTP**
 * **Bypassing two-factor authentication**&#x20;

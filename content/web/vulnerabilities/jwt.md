@@ -15,7 +15,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4
 
 The header and payload parts of a JWT are base64url-encoded JSON objects.
 
-**JWT signature <a href="#jwt-signature" id="jwt-signature"></a>**
+**JWT signature**
 
 The server issuing the token generates the signature by hashing the header and payload, sometimes encrypting the resulting hash. This process uses a secret signing key, allowing servers to verify the token's integrity:
 

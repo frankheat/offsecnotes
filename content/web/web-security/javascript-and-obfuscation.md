@@ -164,7 +164,7 @@ eval('\\u\x300\661=123')
 // (3) a = 123
 ```
 
-### Javascript eval() + atob() <a href="#obfuscation-via-unicode-escaping" id="obfuscation-via-unicode-escaping"></a>
+### Javascript eval() + atob()
 
 ```javascript
 eval(atob("YWxlcnQoKQ=="))    // alert()

@@ -99,7 +99,7 @@ if you notice that the authorization request does not send a `state` parameter, 
 
 ## OpenID Connect
 
-### Identifying OpenID Connect <a href="#identifying-openid-connect" id="identifying-openid-connect"></a>
+### Identifying OpenID Connect
 
 Look for the mandatory `openid` scope
 

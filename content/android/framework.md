@@ -9,7 +9,7 @@ weight: 6
 
 **Read React Native JavaScript source code**
 
-### Without Hermes engine <a href="#react-native-without-hermes-engine" id="react-native-without-hermes-engine"></a>
+### Without Hermes engine
 
 ```sh
 # 1. Dissasemble
@@ -24,7 +24,7 @@ cat index.android.bundle
 # 4. Build and sign the apk
 ```
 
-### With Hermes engine <a href="#react-native-without-hermes-engine" id="react-native-without-hermes-engine"></a>
+### With Hermes engine
 
 You need [https://github.com/Kirlif/HBC-Tool](https://github.com/Kirlif/HBC-Tool)
 

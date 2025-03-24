@@ -114,7 +114,7 @@ java -jar APKEditor.jar m -i <path_splitted_apk> -o merged.apk
 java -jar uber-apk-signer.jar -a merged.apk --allowResign -o <merged_signed>
 ```
 
-## Troubleshooting apktool <a href="#troubleshooting-install-errors" id="troubleshooting-install-errors"></a>
+## Troubleshooting apktool
 
 * **INSTALL\_FAILED\_INVALID\_APK:** Failed to extract native libraries
   * This error occurs in some apktool versions with apps containing native libraries. To fix it, set `extractNativeLibs` to `true` in `AndroidManifest.xml`, then repackage and re-sign the APK.

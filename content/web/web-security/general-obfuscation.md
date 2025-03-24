@@ -9,13 +9,13 @@ weight: 1
 **Note**: for Javascript obfuscation go on [javascript-security-considerations.md](javascript-security-considerations.md "mention")
 {{< /hint >}}
 
-## URL encoding <a href="#obfuscation-via-url-encoding" id="obfuscation-via-url-encoding"></a>
+## URL encoding
 
 Sometimes, WAFs may fail to properly URL decode your input during checks.
 
 -> Encode the keywords, so `SELECT` becomes `%53%45%4C%45%43%54`.
 
-### Double URL encoding <a href="#obfuscation-via-double-url-encoding" id="obfuscation-via-double-url-encoding"></a>
+### Double URL encoding
 
 Since the WAF decodes the input only once, it may fail to detect the threat. If the back-end server double-decodes it, the payload will be injected successfully.
 
@@ -23,7 +23,7 @@ Since the WAF decodes the input only once, it may fail to detect the threat. If 
 [...]/?search=%253Cimg%2520src%253Dx%2520onerror%253Dalert(1)%253E
 ```
 
-### HTML encoding <a href="#obfuscation-via-html-encoding" id="obfuscation-via-html-encoding"></a>
+### HTML encoding
 
 In certain HTML locations, like element text or attribute values, browsers automatically decode these references when parsing.
 
@@ -56,7 +56,7 @@ XML supports character encoding with the same numeric escape sequences as HTML.
 </stockCheck>
 ```
 
-## Multiple encodings <a href="#obfuscation-via-multiple-encodings" id="obfuscation-via-multiple-encodings"></a>
+## Multiple encodings
 
 ```html
 <a href="javascript:&bsol;u0061lert(1)">Click me</a>
@@ -74,7 +74,7 @@ XML supports character encoding with the same numeric escape sequences as HTML.
 <a href="javascript:alert(1)">Click me</a>
 ```
 
-## SQL CHAR() function <a href="#obfuscation-via-the-sql-char-function" id="obfuscation-via-the-sql-char-function"></a>
+## SQL CHAR() function
 
 `CHAR(83)` = `CHAR(0x53)` = `S`
 

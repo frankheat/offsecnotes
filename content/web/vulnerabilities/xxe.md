@@ -55,7 +55,7 @@ weight: 30
 
 ## Blind XXE
 
-### Out-of-band (OAST) techniques <a href="#detecting-blind-xxe-using-out-of-band-oast-techniques" id="detecting-blind-xxe-using-out-of-band-oast-techniques"></a>
+### Out-of-band (OAST) techniques
 
 **Detection**
 
@@ -90,7 +90,7 @@ weight: 30
 **Note**: This technique might not work with multiline files.
 {{< /hint >}}
 
-### Via error messages <a href="#exploiting-blind-xxe-to-retrieve-data-via-error-messages" id="exploiting-blind-xxe-to-retrieve-data-via-error-messages"></a>
+### Via error messages
 
 Trigger an XML parsing error message with the file contents.
 

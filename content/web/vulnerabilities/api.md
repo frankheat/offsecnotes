@@ -96,7 +96,7 @@ If the application behaves differently, may suggest that the invalid value impac
 **Note**: We change isAdmin to "foo" because we want see if the user input is processed. If we get an error may indicate that the user input is being processed.
 {{< /hint >}}
 
-## Server-side parameter pollution <a href="#server-side-parameter-pollution" id="server-side-parameter-pollution"></a>
+## Server-side parameter pollution
 
 You make the request and the server queries an internal API
 

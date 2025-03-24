@@ -9,15 +9,15 @@
 Welcome to offsecnotes, a website dedicated to Offensive Security notes. This project provides a collection of concepts, techniques, and tools useful for anyone interested in penetration testing and offensive security.
 
 <p align="center">
-  <a href="#key-features">Android</a> •
-  <a href="#how-to-use">Web App</a> •
-  <a href="#download">Network</a> •
-  <a href="#credits">Misc</a>
+  <a href="https://frankheat.io">Android</a> •
+  <a href="https://frankheat.io">Web App</a> •
+  <a href="https://frankheat.io">Network</a> •
+  <a href="https://frankheat.io">Misc</a>
 </p>
 
 # Project link
 
-👉 https://frankheat.github.io/offsecnotes
+👉 https://frankheat.io
 
 # Table of contents
 
