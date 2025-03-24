@@ -17,7 +17,7 @@ Welcome to offsecnotes, a website dedicated to Offensive Security notes. This pr
 
 # Project link
 
-👉 https://frankheat.io
+👉 https://offsecnotes.frankheat.io
 
 # Table of contents
 
