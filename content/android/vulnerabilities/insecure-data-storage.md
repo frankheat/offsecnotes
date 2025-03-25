@@ -21,7 +21,7 @@ Historically, external storage was on an SD card, hence the `/sdcard/` folder na
 
 **Keychain** Here we can store cryptographic keys like private keys. On most devices, the keychain is protected in hardware by special security chips. IT does not store password, but only cryptographic keys.
 
-{{< details >}}
+{{< /details >}}
 
 
 ## Logs
