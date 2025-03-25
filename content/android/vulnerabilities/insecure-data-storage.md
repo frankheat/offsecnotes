@@ -5,6 +5,25 @@ weight: 3
 
 # Insecure Data Storage
 
+{{< details summary="Overview data storage" >}}
+
+**Internal Storage**
+This is private device storage where apps save data that only they can access. It is used to store private app data. Path: `/data/data/apk-path/` This is accessible only on a roteed device.
+* Shared Preferences (used to store various values such as user settings)
+* Cache (for temporary files)
+* Files (simple folder, used to store private app data)
+* Database (most apps use SQLite databases)
+* Other files/folder
+
+**External Storage**
+Historically, external storage was on an SD card, hence the `/sdcard/` folder name. On modern phones without SD slots, it refers to internal storage.
+
+
+**Keychain** Here we can store cryptographic keys like private keys. On most devices, the keychain is protected in hardware by special security chips. IT does not store password, but only cryptographic keys.
+
+{{< details >}}
+
+
 ## Logs
 
 ```sh

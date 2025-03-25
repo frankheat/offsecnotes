@@ -37,19 +37,28 @@ bu restore backup.adb
 
 ## Debuggable
 
-The `android:debuggable` attribute indicates if the application is debuggable and it is set to `false` by default \[[🔗](https://developer.android.com/privacy-and-security/risks/android-debuggable)].&#x20;
+The `android:debuggable` attribute indicates if the application is debuggable and it is set to `false` by default \[[🔗](https://developer.android.com/privacy-and-security/risks/android-debuggable)].
 
 {{< hint style=notes >}}
 **Note**: you cannot release a debuggable app on Google Play Store \[[🔗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[🔗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)].
 {{< /hint >}}
 
-**Testing**
+**Impact**
 
-Check `android:debuggable="true"` in the `AndroidManifest.xml`.If it is enable you can read and extract without **root privileges** all files inside the app internal storage.
+1. Check `android:debuggable="true"` in the `AndroidManifest.xml`. If it is enable you can use `run-as` to read and extract without **root privileges** all files inside the app internal storage. \[[🔗](https://android.googlesource.com/platform/system/core.git/+/android-4.2.2_r1/run-as/run-as.c)].
 
+```sh
+adb shell
+run-as com.package id
+```
+
+**Extract data from internal storage**
 ```sh
 adb exec-out run-as <package_name> tar c . > output.tar
 ```
+
+2. Debug an application
+
 
 ## WebView - Debug
 

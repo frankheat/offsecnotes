@@ -11,7 +11,7 @@ In android there are several ways to make HTTP requests. For example using `Http
 
 ## Cleartext Traffic
 
-Starting from Android 9 (API level 28), HTTP clients like `URLConnection`, `Cronet`, and `OkHttp` enforce the use of HTTPS, thus disabling cleartext traffic by default. However, it's important to note that other HTTP client libraries, such as `Ktor`, may not enforce these restrictions \[[🔗](https://developer.android.com/privacy-and-security/risks/cleartext-communications#risk-http)].&#x20;
+Starting from Android 9 (API level 28), HTTP clients like `URLConnection`, `Cronet`, and `OkHttp` enforce the use of HTTPS, thus disabling cleartext traffic by default. However, it's important to note that other HTTP client libraries, such as `Ktor`, may not enforce these restrictions \[[🔗](https://developer.android.com/privacy-and-security/risks/cleartext-communications#risk-http)].
 
 However, if developers explicitly set `usesCleartextTraffic=true` \[[🔗](https://developer.android.com/reference/android/security/NetworkSecurityPolicy#isCleartextTrafficPermitted\(\))] in the manifest or network security configuration \[[🔗](https://developer.android.com/privacy-and-security/security-config#CleartextTrafficPermitted)], cleartext traffic is permitted.
 

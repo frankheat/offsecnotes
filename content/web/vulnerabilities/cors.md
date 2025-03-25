@@ -73,7 +73,7 @@ Access-Control-Allow-Credentials: true
 
 If you find an XSS on `subdomain.vulnerable-website.com` inject JavaScript that uses CORS and retrieve information.
 
-```
+```sh
 https://subdomain.vulnerable-website.com/?xss=<script>cors-stuff-here</script>
 ```
 

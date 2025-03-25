@@ -62,7 +62,7 @@ load incognito
 list_tokens -u
 ```
 
-```
+```sh
  Delegation Tokens Available
  ========================================
  ATTACKDEFENSE\Administrator
