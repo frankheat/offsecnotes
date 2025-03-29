@@ -8,7 +8,7 @@ weight: 3
 {{< details summary="Overview data storage" >}}
 
 **Internal Storage**
-This is private device storage where apps save data that only they can access. It is used to store private app data. Path: `/data/data/apk-path/` This is accessible only on a roteed device.
+This is private device storage where apps save data that only they can access. It is used to store private app data. Path: `/data/data/apk-path/` This is accessible only on a rooted device.
 * Shared Preferences (used to store various values such as user settings)
 * Cache (for temporary files)
 * Files (simple folder, used to store private app data)

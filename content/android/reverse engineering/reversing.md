@@ -133,7 +133,7 @@ Decompile to (near) source code (Dex to Java) using jadx \[[🔗](https://github
 # Open jadx-gui
 jadx-gui
 
-# Dcompile
+# Decompile
 jadx target.apk
 jadx -d App target.apk
 ```

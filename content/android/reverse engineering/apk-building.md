@@ -36,7 +36,7 @@ Simply a ZIP archive with an `.apk` extension
 It almost always embodies the following files and directories, though only `AndroidManifest.xml` and `META-INF` are obligatory.
 
 * 🗎 **AndroidManifest.xml** is the app's manifest file in Android's **binary** XML format
-* 🗎 **classes.dex** or classe&#x73;_&#x4E;_.dex.  It's/they're Dalvik Executable (`.dex`)
+* 🗎 **classes.dex** or classesN.dex.  It's/they're Dalvik Executable (`.dex`)
 * 🗎 **resources.arsc** is the resource table file in binary format, optimizing the access to the UI resources
 * 📁 **META-INF**: incorporates the `CERT.SF` and `CERT.RSA` signature files, as well as the `MANIFEST.MF` manifest file.
 * 📁 **res**: includes all UI resources — except those from the `res/values`
@@ -50,7 +50,7 @@ Awesome resource written by Michael Zent \[[🔗](https://timeout.userpage.fu-be
 
 1.  `📁 res` (without `res/values`) and `🗎 AndroidManifest.xml` are compiled (aapt \[compile] tool)
 
-    * -> `🗎 R.java`, `🗎 resouces.asrc`, `📁 res (compiled)`, `🗎 AndroidManifest.xml` (compiled)
+    * -> `🗎 R.java`, `🗎 resources.asrc`, `📁 res (compiled)`, `🗎 AndroidManifest.xml` (compiled)
 
 
 2. `📁 java`,  `📁 libs`**,** `🗎 R.java`, `🗎 android.jar` are compiled (java compiler \[e.g. javac] and/or kotlin compiler \[e.g. kotlinc])
@@ -65,4 +65,4 @@ Awesome resource written by Michael Zent \[[🔗](https://timeout.userpage.fu-be
     * -> .apk (unsigned)
 
 
-5. zipalign and apksigner to sign the APK and make it installable and updateable on an Android device
+5. zipalign and apksigner to sign the APK and make it installable and updatable on an Android device

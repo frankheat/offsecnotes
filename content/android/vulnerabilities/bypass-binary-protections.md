@@ -56,7 +56,7 @@ openssl x509 -in cacert.crt -pubkey -noout | openssl pkey -pubin -outform der | 
 
 * **Intercept network traffic using remote debugging**
 
-This allow you to intercpet the traffic in the webview. It's especially useful in cordova-based apps.&#x20;
+This allow you to intercept the traffic in the webview. It's especially useful in cordova-based apps.&#x20;
 
 See [#webview-debug](security-misconfiguration.md#webview-debug "mention")
 

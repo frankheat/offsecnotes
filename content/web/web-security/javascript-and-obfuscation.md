@@ -98,7 +98,7 @@ function a(){}
 
 **Second form**: `\u{}`
 
-Unlike standard unicode escapes you are not restricted tofour hexadecimal characters.
+Unlike standard unicode escapes you are not restricted to four hexadecimal characters.
 
 ```javascript
 '\u{61}'                              //a

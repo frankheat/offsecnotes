@@ -32,7 +32,7 @@ Started tracing 73 functions. Press Ctrl+C to stop.
  14973 ms     | InterceptionFragment.license_check_2()
 
 # You know the class (InterceptionFragment) and the method called (license_check_2())
-# Now you want to interpect/override that method. 
+# Now you want to intercept/override that method. 
 ```
 
 Unfortunately, the package name is missing here. So you can use two ways to get it:

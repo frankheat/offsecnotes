@@ -1,15 +1,16 @@
 ---
-title: "API"
+title: "API Security Testing"
 weight: 1
 ---
 
-# API
+# API Security Testing
 
-## Discover
+APIs are a common target for attackers because they expose underlying business logic and data. This guide covers various techniques for discovering and testing API vulnerabilities.
 
-**Documentation**
+## Discovering API Endpoints
 
-Endpoints that may refer to API documentation
+### Checking for Documentation
+Some endpoints may refer to API documentation, which can reveal available endpoints and request structures.
 
 ```sh
 /api
@@ -17,7 +18,7 @@ Endpoints that may refer to API documentation
 /openapi.json
 ```
 
-Use common paths to directly fuzz for doc: `/api/swagger/v1/users/123`
+If you identify an endpoint for a resource, make sure to investigate the base path. E.g., `/api/swagger/v1/users/123`
 
 ```sh
 /api/swagger/v1
@@ -25,114 +26,155 @@ Use common paths to directly fuzz for doc: `/api/swagger/v1/users/123`
 /api
 ```
 
-***
+### Endpoint Enumeration
+Even if documentation is available, manually exploring the application can uncover undocumented endpoints.
 
-**Endpoints**
-
-* Browsing application (even if you have access to documentation, as it may be inaccurate)
-* Consider `PUT /api/user/update`, fuzz the `/update` with a list of other common functions, such as `delete` and `add`
-* Use wordlists based on common API naming
-* Look out for JavaScript files&#x20;
+- Consider paths like `/api/user/update` and test variations such as `/delete`, `/add`, etc.
+- Use wordlists with common API naming conventions.
+- Analyze JavaScript files for hidden API calls.
 
 {{< hint style=tips >}}
-**Tip**: JS Link Finder BApp (Burp extension)
+**Tip**: Use the **JS Link Finder** (Burp extension) to extract API endpoints from JavaScript files.
 {{< /hint >}}
 
-***
-
-**HTTP methods**
-
-Test all potential methods when you're investigating API endpoints
+### Testing HTTP Methods
+Test all possible HTTP methods (`GET`, `POST`, `PUT`, `DELETE`, etc.) to check for unintended access control weaknesses.
 
 {{< hint style=tips >}}
-**Tip**: Use HTTP verbs list in Burp Intruder
+**Tip**: Use Burp Intruder with a list of HTTP verbs to automate testing.
 {{< /hint >}}
 
-***
+### Hidden Parameters Discovery
+APIs often include hidden parameters that could be exploited.
 
-**Hidden parameters**
+- Bruteforce parameter names with wordlists.
+- Use the **Param Miner** Burp extension to identify hidden parameters.
 
-* Bruteforce with wordlists
-* Param miner (Burp extension)
+---
 
-## Change content types
+## Manipulating Content Types
 
-Changing the content type may enable you to
+Changing the `Content-Type` header can lead to:
 
-* Trigger errors that disclose useful information.
-* Bypass flawed defenses.
-* Take advantage of differences in processing logic. For example, an API may be secure when handling JSON data but susceptible to injection attacks when dealing with XML.
+- Unexpected errors that reveal useful debugging information.
+- Bypassing security filters that only validate specific content types.
+- Exploiting differences in API logic when processing different formats (e.g., JSON vs. XML).
 
-To change the content type, modify the Content-Type header and reformat the request body
+Modify the `Content-Type` header and reformat request data to test for such issues.
 
 {{< hint style=tips >}}
-**Tip**: Content type converter BApp automatically converts request data between XML and JSON.
+**Tip**: The **Content-Type Converter** BApp in Burp Suite can automatically switch data formats between JSON and XML.
 {{< /hint >}}
 
-## Mass assignment vulnerabilities
+---
 
-{{< details summary="Theory" >}}
+## Mass Assignment Vulnerabilities
 
-Software frameworks sometime allow developers to automatically bind HTTP request parameters into program code variables or objects to make using that framework easier on developers.
+{{< details summary="Understanding Mass Assignment" >}}
+Many modern APIs use frameworks that allow automatic assignment of incoming request data to an object. If the application does not properly filter which fields can be updated, an attacker can send unexpected data to modify sensitive fields that they shouldn't be able to change.
 
-**Premise**
+### Example
+Consider an API that allows users to update their profile with a `PUT /users/{id}` request. A User model might look like this:
 
-Consider `PATCH /api/users/` which enables users to update their username and email `{"username": "lebron", "email": "lebron@example.com"}`
+```javascript
+class User {
+  constructor(id, name, email, role, isAdmin) {
+    this.id = id;
+    this.name = name;
+    this.email = email;
+    this.role = role;
+    this.isAdmin = isAdmin;
+  }
+}
+```
+If the API assigns the request body to the user object like this:
 
-A concurrent `GET /api/users/123` request returns the following JSON: `{"id": 123, "name": "Lebron James", "email": "leb@example.com", "isAdmin": "false"}`
+```javascript
+app.put('/users/:id', (req, res) => {
+  let user = getUserFromDatabase(req.params.id);
+  Object.assign(user, req.body);  // 🔴 Vulnerability: blindly assigns all fields!
+  saveUserToDatabase(user);
+  res.json(user);
+});
+```
 
-This may indicate that the hidden id and isAdmin parameters are bound to the internal user object, alongside the updated username and email parameters.
+An attacker could send a request like this:
 
+```JSON
+{
+  "name": "attacker",
+  "isAdmin": true
+}
+```
 {{< /details >}}
 
-To test whether you can modify the enumerated isAdmin parameter value, send two PATCH request:
+### Testing for Mass Assignment
 
-* `{"username": "lebron", "email": "leb@example.com", "isAdmin": false}`
-* `{"username": "lebron","email": "leb@example.com", "isAdmin": "foo",}`
+Send two request with:
+- Valid expected parameter:
+```JSON
+{
+  "name": "attacker",
+  "isAdmin": "foo"
+}
+```
 
-If the application behaves differently, may suggest that the invalid value impacts the query logic, but the valid value doesn't. This may indicate that the parameter can be successfully updated by the user. (Set it to true)
+- Invalid expected parameter:
+```JSON
+{
+  "name": "attacker",
+  "isAdmin": true
+}
+```
 
-{{< hint style=notes >}}
-**Note**: We change isAdmin to "foo" because we want see if the user input is processed. If we get an error may indicate that the user input is being processed.
-{{< /hint >}}
+If the app behaves differently, the invalid value may affect the query, while the valid one doesn’t — suggesting the user can update the parameter.
 
-## Server-side parameter pollution
+---
 
-You make the request and the server queries an internal API
+## Server-Side Parameter Pollution (SSPP)
 
-```sh
-# Your browser
+APIs that pass query parameters between internal services may be vulnerable to manipulation.
+
+### Truncating Query Strings
+A browser request:
+
+```http
 GET /userSearch?name=test&back=/home
-# Internal queries
+```
+
+Might result in an internal query:
+
+```http
 GET /users/search?name=test&publicProfile=true
 ```
 
-**Truncating query strings**
+By injecting a URL-encoded `#`, you may truncate parameters:
 
-If you use a URL-encoded `#` you can truncate the server-side request
-
-```sh
-# Your browser
+```http
 GET /userSearch?name=test%23foo&back=/home
-# Internal queries
+```
+
+Which could modify the internal query:
+
+```http
 GET /users/search?name=test#foo&publicProfile=true
 ```
 
-***
+### Injecting Invalid Parameters
+Use a URL-encoded `&` to attempt parameter injection and observe responses:
 
-**Injecting invalid parameters**
-
-You can use an URL-encoded `&` character and review the response for clue about the additional parameter is parsed. (if the response is unchanged it may indicate that the parameter was successfully injected but ignored by the application)
-
-```sh
-# Your browser
+```http
 GET /userSearch?name=test%26foo=xyz&back=/home
-# Internal queries
+```
+
+Resulting in:
+
+```http
 GET /users/search?name=test&foo=xyz&publicProfile=true
 ```
 
-***
+if the response is unchanged it may indicate that the parameter was successfully injected but ignored by the application.
 
-**Injecting valid or override parameters**
+### Injecting Invalid Parameters
 
 The impact of this depends on how the application processes the second parameter.

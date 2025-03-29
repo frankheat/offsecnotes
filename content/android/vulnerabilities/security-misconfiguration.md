@@ -9,17 +9,13 @@ weight: 2
 
 `adb backup` allows you to create a backup of an Android device's data. It can back up app data, system setting, etc.&#x20;
 
-{{< hint style=notes >}}
-**Note**: For apps targeting Android 12 (API level 31), `adb backup` excludes app data, except for debuggable apps \[[🔗](https://developer.android.com/about/versions/12/behavior-changes-12#adb-backup-restrictions)].
-{{< /hint >}}
-
 **Testing**
 
 **Requirement**: `android:allowBackup="true"` in the `AndroidManifest.xml`
 
 ```sh
 # Backup one application with its apk
-adb backup -apk <package_name> -f <backup_name>.adb
+adb backup -apk <package_name> -f <backup_name>.ab
 
 # Restore backup
 adb restore <backup_name>.ab
@@ -32,7 +28,7 @@ bu backup <package_name>
 
 # Restore
 adb shell
-bu restore backup.adb
+bu restore backup.ab
 ```
 
 ## Debuggable
@@ -57,7 +53,7 @@ run-as com.package id
 adb exec-out run-as <package_name> tar c . > output.tar
 ```
 
-2. Debug an application
+2. Debug an application [Debug application code]({{< ref "android/debug-application-code" >}})
 
 
 ## WebView - Debug

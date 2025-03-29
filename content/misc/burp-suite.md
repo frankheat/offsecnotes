@@ -34,7 +34,7 @@ Highlight a character sequence, usually a parameter value, and select Extensions
 PwnFox _provide useful tools for your security audit_
 
 * Single click BurpProxy
-* Containers Profiles (it will automatically add a X-PwnFox-Color header to hightlight the query in Burp)
+* Containers Profiles (it will automatically add a X-PwnFox-Color header to highlight the query in Burp)
 * Other: https://github.com/yeswehack/PwnFox
 
 ## Out of band vulnerabilities

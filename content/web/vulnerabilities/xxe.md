@@ -159,7 +159,7 @@ Content-Length: 7
 foo=bar
 ```
 
-**Sumbit following request**
+**Submit following request**
 
 ```http
 POST /action HTTP/1.0

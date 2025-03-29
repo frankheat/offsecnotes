@@ -251,6 +251,8 @@ Before starting, you need to bind Burp to a privileged port.
 
 {{< details summary="Binding Burp to a privileged port (with authbind)" >}}
 
+Reference: \[[🔗](https://www.mwells.org/coding/2016/authbind-port-80-443/)].
+
 ```sh
 sudo touch /etc/authbind/byport/443
 sudo chown $USER:$USER /etc/authbind/byport/443

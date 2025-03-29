@@ -19,12 +19,14 @@ weight: 12
 
 {{< details summary="How do HTTP request smuggling vulnerabilities arise?" >}}
 
-* HTTP request smuggling vulnerabilities often occur due to the HTTP/1 specification offering two methods to define the request's end: the `Content-Length header` and `Transfer-Encoding` header.
+HTTP request smuggling vulnerabilities often occur due to the HTTP/1 specification offering two methods to define the request's end: the `Content-Length` header and `Transfer-Encoding` header.
   * The `Content-Length header` specifies the length of the message body in bytes
   * The `Transfer-Encoding` header specify that the message body uses chunked encoding. This means that the message body contains one or more chunks of data
     * Each chunk comprises a size in hexadecimal bytes, a newline, and the chunk's content. The message concludes with a zero-sized chunk.
+
+Type of HTTP-request-smuggling
   * TE.CL: the front-end server uses the `Transfer-Encoding` header and the back-end server uses the `Content-Length` header.
-  * TE.CL: the front-end server uses the `Transfer-Encoding` header and the back-end server uses the `Content-Length` header.
+  * CL.TE: the front-end server uses the `Content-Length` header and the back-end server uses the `Transfer-Encoding` header.
   * TE.TE: the front-end and back-end servers both support the `Transfer-Encoding` header, but one of the servers can be induced not to process it by obfuscating the header in some way.
 
 ```http
@@ -118,9 +120,9 @@ GET /404 HTTP/1.1
 Foo: x
 ```
 
-`Content-Legth: 49` -> all chars until `Foo:x` (include `\r\n`)
+`Content-Length: 49` -> all chars until `Foo:x` (include `\r\n`)
 
-`e` (hex) -> Lenght `q=smuggling&x=`
+`e` (hex) -> Length `q=smuggling&x=`
 
 Then send normal request. This will cause the subsequent "normal" request to look like this:
 
@@ -158,7 +160,7 @@ x=
 
 `7b` -> all chars from `GET` until `x=`
 
-`Content-Legth: 4` -> `7` `c` `\r` `\n`
+`Content-Length: 4` -> `7` `c` `\r` `\n`
 
 {{< hint style=notes >}}
 **Note**: Update Content-Length must be unchecked
@@ -478,7 +480,7 @@ foo             bar\r\n
 ```
 
 {{< hint style=notes >}}
-**Note**: here the request triggerg response queue poisoning, but you can also smuggle prefixes for classic request smuggling.
+**Note**: here the request trigger response queue poisoning, but you can also smuggle prefixes for classic request smuggling.
 {{< /hint >}}
 
 ## CL.0/H2.0 request smuggling

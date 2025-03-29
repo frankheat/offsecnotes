@@ -139,7 +139,7 @@ Interceptor.attach(strcmp_adr, {
         var flag = Memory.readUtf8String(args[1]); // second argument
         if (arg0.includes("Hello")) {
 
-            console.log("Hookin the strcmp function");
+            console.log("Hooking the strcmp function");
             console.log("Input " + arg0);
             console.log("The flag is "+ flag);
 

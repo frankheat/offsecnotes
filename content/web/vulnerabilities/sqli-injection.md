@@ -224,7 +224,7 @@ AND 1337=(CASE WHEN (1=1) THEN (SELECT 1337 FROM (SELECT LIKE('ABCDEFG',UPPER(HE
 
 {{< details summary="Attack example and automation with burp (PostgreSQL)" >}}
 
-* Attack type: cluser bomb
+* Attack type: cluster bomb
 * Payload position: (substring position) `§1§` , (char to match)`§a§`
 * `LIMIT 1` if you want the first row. Otherwise use `LIMIT 1 OFFSET 4`
 * Create new resource pool with maximum concurrent request to 1
@@ -260,7 +260,7 @@ An application might carry out a SQL query asynchronously (another thread execut
 * Remember that **SQLi can occur at any location** (UPDATE, INSERT, SELECT \[column, table], ORDER BY)
 * **SQLi can be even in XML/JSON**...
   * If there are some protection, try **XML encode**.
-* Use `— -`  insead of `--` . In many SQL systems, there must be at least one space after `--` for the comment to be recognised.
+* Use `— -`  instead of `--` . In many SQL systems, there must be at least one space after `--` for the comment to be recognised.
 
 ## Automatic exploitation
 

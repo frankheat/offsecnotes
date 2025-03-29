@@ -11,7 +11,7 @@ weight: 11
 
 * Single web server hosts multiple websites or applications.
 
-- Slthough each of these distinct websites will have a different domain name, they all share a common IP address with the server.
+- Although each of these distinct websites will have a different domain name, they all share a common IP address with the server.
 
 * Websites hosted in this way on a single server are known as "virtual hosts".
 
@@ -65,7 +65,7 @@ Bruteforce subdomain
 
 ### Routing-based SSRF
 
-If load balancers and reverse proxies are misconfigured to forward requests based on an unvalidated Host header, you can exploit this to reroute requests to any system you choose -> exploit this to have access internal-only systems.
+If load balancers and reverse proxies are misconfigured to forward requests based on an invalid Host header, you can exploit this to reroute requests to any system you choose -> exploit this to have access internal-only systems.
 
 **Detection**
 

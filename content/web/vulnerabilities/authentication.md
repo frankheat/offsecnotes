@@ -19,7 +19,7 @@ firstname.lastname@somecompany.com
 
 ***
 
-**Regisitration form**&#x20;
+**Registration form**
 
 Create account and see if there's error like "account already exists".
 
@@ -66,7 +66,7 @@ With your account locked, send a request with an incorrect password and another 
 
 **With password change**
 
-See if you can change the password of an arbitrary user. E.g. look for a hidden username paramer (control it). Brute-force password when you enter your current password.
+See if you can change the password of an arbitrary user. E.g. look for a hidden username parameter (control it). Brute-force password when you enter your current password.
 
 {{< hint style=tips >}}
 **Tip**: use your account and notice different behavior.

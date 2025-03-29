@@ -256,7 +256,7 @@ element.innerHTML = comment.author
 {{< hint style=notes >}}
 **Tips**:
 
-* Substitute `'` `"` and viceversa
+* Substitute `'` `"` and vice versa
 * Space is not needed
 
 ```html
