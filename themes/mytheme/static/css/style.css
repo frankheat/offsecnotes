@@ -22,6 +22,14 @@
         font-weight: bold;
     }
 
+    h2 { 
+        color: white;
+    }
+
+    h3 {
+        font-size: 1.3rem;
+    }
+
     pre {
         background-color: black !important;
         border-radius: 16px !important;
@@ -150,24 +158,29 @@
     #TableOfContents li a,
     #index li a {
         display: block;
-        padding: 5px 10px;
+        padding: 2px 10px;
         text-decoration: none;
         transition: 0.3s;
-        color: #adb5db;
+        color: rgb(180, 180, 180);
+        opacity: 0.8;
+    }
+
+    #sidebarLeft:hover li a,
+    #sidebarRight:hover li a {
+        color: rgb(207, 207, 207);
+        opacity: 1;
     }
 
     #TableOfContents li a.active,
     #index li a.active {
         color: white;
         background-color: #43454a;
-        border-radius: 10px;
     }
 
     #TableOfContents li a:hover,
     #index li a:hover {
         color: white;
         background-color: #2e436e;
-        border-radius: 15px;
         background-image: url('https://www.transparenttextures.com/patterns/asfalt-dark.png');
     }
 
@@ -180,6 +193,7 @@
     #index ul ul ul {
         padding-left: 30px;
     }
+
 
 
     /* Scrollbar style (Chrome, Edge, Safari) */
@@ -229,10 +243,15 @@
 
     .sidebar-right {
         max-width: 275px;
+        border-left: 1px solid rgb(82, 82, 82);
+        clip-path: inset(20px 0 20px 0);
     }
+
 
     .site-nav {
         max-width: 300px;
+        border-right: 1px solid rgb(82, 82, 82);
+        clip-path: inset(20px 0 20px 0);
     }
 
 
@@ -243,11 +262,10 @@
 
     .site-nav,
     .sidebar-right {
-        border-radius: 10px;
         box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         position: sticky;
         top: 50px;
-        height: calc(100vh - 70px);
+        height: calc(100vh - 50px);
         overflow-y: hidden;
         scrollbar-gutter: stable;
     }
