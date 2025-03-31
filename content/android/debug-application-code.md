@@ -3,7 +3,9 @@ title: "Debug application code"
 weight: 7
 ---
 
-# Why do you want to debug an application?
+# Debug application code
+
+## Why would you want to debug an application?
 
 Three scenario:
 
@@ -14,13 +16,13 @@ Three scenario:
     - Extract, without root privileges, all files inside the app internal storage
 
 {{< hint style=notes >}}
-**Note**: This scenario is often impossible because no release application on the Play Store can have `android:debuggable="true"`. \[[🔗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[🔗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)]. It means that the user has installed the app from a third-party store.
+**Note**: This scenario is often impossible because no release application on the Play Store can have `android:debuggable="true"` \[[🔗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[🔗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)]. It means that the user has installed the app from a third-party store.
 {{< /hint >}}
 
 3. You might have the app Java source code. Again, this scenario is highly unlikely, but not impossible.
 
 
-# Prerequisites
+## Prerequisites
 
 You need to have an application debuggable. If the app is not debuggable you can \[[🔗](https://www.pnfsoftware.com/jeb/manual/android-debugging/#debugging-non-debuggable-apps)]:
 
@@ -32,7 +34,7 @@ adb shell getprop ro.debuggable
 adb shell setprop ro.debuggable 1
 ```
 
-# Debugging levels
+## Debugging levels
 
 You can debug an application to a different levels:
 
@@ -40,7 +42,7 @@ You can debug an application to a different levels:
 - Smali
 - Native
 
-# Debug smali code
+## Debug smali code
 
 If you don't have the original Java code, you can debug the smali code. To do this, you can use IntelliJ/Android Studio + smalidea plugin or jadx.
 
@@ -53,18 +55,18 @@ If you don't have the original Java code, you can debug the smali code. To do th
 
 For more info: \[[🔗](https://github.com/skylot/jadx/wiki/Smali-debugger)].
 
-# Debug java code
+## Debug java code
 
 You need to have the original java code. You can use tools like: 
 * Android studio
 * jdb
 
-## Android studio
+### Android studio
 
 This is the simpler approach. You can follow the official guide: [Debug pre-built APKs](https://github.com/skylot/jadx/wiki/Smali-debugger).
 
 
-## jdb
+### jdb
 
 1. (optional) Set app to wait
 ```sh

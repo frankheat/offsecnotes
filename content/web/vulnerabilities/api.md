@@ -5,7 +5,7 @@ weight: 1
 
 # API Security Testing
 
-APIs are a common target for attackers because they expose underlying business logic and data. This guide covers various techniques for discovering and testing API vulnerabilities.
+APIs are a common target for attackers because they expose underlying business logic and data.
 
 ## Discovering API Endpoints
 

@@ -5,8 +5,6 @@ weight: 4
 
 # Network Interception
 
-## Introduction
-
 In android there are several ways to make HTTP requests. For example using `HttpURLConnection` (low-level API built into Java), `OkHttp` (A popular third-party library) etc.
 
 ## Cleartext Traffic
