@@ -30,6 +30,7 @@ Welcome to offsecnotes, a website dedicated to Offensive Security notes. This pr
 * Network Interception
 * ADB
 * Framework
+* Debug application code
 
 **WEB APPLICATION**
 
