@@ -3,37 +3,57 @@ title: "Business logic vulnerabilities"
 weight: 4
 ---
 
-# Business logic vulnerabilities
+# Business Logic Vulnerabilities
 
-## Examples
+Business logic vulnerabilities arise when an application’s workflow can be manipulated in unintended ways, allowing attackers to exploit flaws that developers didn’t anticipate. These vulnerabilities are particularly dangerous because they often bypass traditional security mechanisms.
 
-### Excessive trust in client-side controls
+## Excessive Trust in Client-Side Controls
 
-* A fundamentally flawed assumption is that users will only interact with the application via the provided web interface.
-* An attacker can use tools such as Burp to tamper with the data after it has been sent by the browser but before it is passed into the server-side logic
+A common mistake is assuming that users will interact with the application only through its intended interface.
 
-### Failing to handle unconventional input
 
-* Are there any limits that are imposed on the data?
-* What happens when you reach those limits?
-* Is any transformation or normalization being performed on your input?
+An attacker can use tools like **Burp Suite** to intercept and modify requests before they reach the server. This allows them to bypass client-side validations, change form fields, or manipulate API requests.
 
-### Users won't always supply mandatory input
+## Failing to Handle Unconventional Input
 
-* Remove one parameter at a time to ensure all relevant code paths are reached
-* Try deleting the name of the parameter as well as the value. The server will typically handle both cases differently.
-* Follow multi-stage processes through to completion. Sometimes tampering with a parameter in one step will have an effect on another step further along in the workflow
-* This applies to both `GET` and `POST` parameters, but don't forget to check the cookies too
+Attackers often experiment with **unexpected input values** to see how an application responds.
 
-### Users won't always follow the intended sequence
+**Questions to Consider:**
+- Are there any **limits** imposed on the input data?
+- What happens if those limits are **exceeded**?
+- Is input being **normalized or transformed** before processing?
 
-* Example: many websites that implement 2FA require users to log in on one page before entering a verification code on a separate page.
-* Force browser to submit requests in an unintended sequence
-* Try to identify what assumptions the developers have made and where the attack surface lies
 
-### Domain-specific flaws
 
-* Example: 10% discount on orders over $1000.
-  * An attacker could add items until they hit the $1000 threshold, remove the items they don't want before placing the order (if the business logic fails to check whether the order was changed after the discount is applied)
-* Pay particular attention to any situation where prices or other sensitive values are adjusted based on criteria determined by user actions
-* To identify these vulnerabilities, think carefully about what objectives an attacker might have and try to find different ways of achieving this using the provided functionality
+## Users Won’t Always Supply Mandatory Input
+
+Attackers might deliberately remove or alter parameters to test how the system responds.
+
+**Common Testing Approaches:**
+- **Remove** one parameter at a time and check how the application behaves.
+- **Omit both** the parameter name and its value to see if the system treats it differently.
+- Manipulate **multi-step processes** by modifying parameters at different stages.
+- Test both `GET` and `POST` parameters, and don’t forget **cookies**.
+
+
+## Users Won’t Always Follow the Intended Sequence
+
+Many applications assume users will follow a specific flow, but attackers can disrupt this sequence.
+
+For example, a website that implements **two-factor authentication (2FA)** may require users to log in first and then enter a verification code. However, an attacker might try to **skip** the login step and directly access the verification page.
+
+
+## Domain-Specific Flaws
+
+Business logic vulnerabilities can be highly dependent on the application’s specific functionality.
+
+**Example: Discount Manipulation**
+- A store offers a **10% discount** on orders over `$1000`.
+- An attacker adds items to reach `$1000`, gets the discount, then removes items but **keeps the discounted price**.
+- **Price manipulation**: Altering item prices before checkout.
+- **Bypassing quantity limits**: Ordering more items than allowed.
+- **Skipping fees**: Removing handling or shipping costs.
+
+{{< hint style=tips >}}
+Always think from an attacker’s perspective: **What objectives might they have, and how could they achieve them using unintended methods?**
+{{< /hint >}}

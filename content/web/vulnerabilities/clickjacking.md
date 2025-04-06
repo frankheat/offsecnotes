@@ -1,55 +1,67 @@
 ---
 title: "Clickjacking"
-weight: 6
+weight: 5
 ---
 
 # Clickjacking
 
 {{< details summary="Introduction" >}}
+Clickjacking is a web security vulnerability where an attacker tricks a user into clicking something different from what they perceive. This is done by overlaying an invisible or disguised element on top of a legitimate webpage.
 
+### How it works:
+- An attacker embeds an **invisible iframe** of a target website within a malicious page.
+- The user thinks they are clicking on the visible page, but they are actually interacting with the hidden iframe.
+- This can lead to unwanted actions such as **clicking on a hidden button, submitting a form, or activating a harmful feature.**
 
-* Clickjacking is a type of attack where a user is deceived into clicking on something on a hidden website by making them click on something else on a decoy website.
-
-- The method involves embedding an invisible, interactive web page (or multiple pages) that contains a button or hidden link, typically within an iframe. This iframe is then placed over the expected content of the user's decoy web page.
-
-* Clickjacking attacks are not mitigated by the CSRF token as a target session is established with content loaded from an authentic website and with all requests happening on-domain
-
+Clickjacking attacks are **not prevented** by CSRF tokens, as the user's session with the target site remains valid.
 {{< /details >}}
 
-## Example
+## Example of Clickjacking
+
+Here is a basic example of a clickjacking attack using an iframe:
 
 ```html
-<style>
-    iframe {
-        position:relative;
-        width:$width_value;
-        height: $height_value;
-        opacity: $opacity;
-        z-index: 2;
-    }
-    div {
-        position:absolute;
-        top:$top_value;
-        left:$side_value;
-        z-index: 1;
-    }
-</style>
-<div>Test</div>
-<iframe src="http://victim-site.com"></iframe>
+<html>
+    <head>
+        <style>
+            iframe {
+                position:relative;
+                width:$width_value;
+                height: $height_value;
+                opacity: $opacity;
+                z-index: 2;
+            }
+            div {
+                position: absolute;
+                top: 185px;
+                left: 90px;
+                z-index: 1;
+            }
+        </style>
+</head>
+    <body>
+        <div>You won $3,000</div>
+        <iframe src="http://victim-site.com"></iframe>
+    </body>
+</html>
 ```
 
-## Prefilled form input
+The `opacity` of the iframe is set to `0`, making it invisible, while the `z-index` ensures that it is layered above the visible content.
 
-Some websites allow prepopulating form inputs with `GET` parameters before submission.
+## Prefilled Form Input Attack
+Some websites allow prepopulating form inputs via `GET` parameters. Attackers can exploit this to trick users into submitting forms with attacker-controlled values.
 
-* `http://website.com/account?email=test@test.com`
-* In this case the email form field will be set to `test@test.com`
+Example:
+```md
+http://website.com/account?email=attacker@example.com
+```
+If the website autofills the email field, the victim might unknowingly submit the attacker's email instead of their own.
 
-## Frame busting scripts
+## Bypassing Frame Busting Scripts
+A frame busting script is a JavaScript script used by a website to prevent itself from being loaded inside an iframe on another site.
 
-A common client-side defense implemented through web browsers is the use of frame-busting or frame-breaking scripts. These can be implemented via proprietary browser JavaScript add-ons or extensions such as NoScript (make all frames visible, prevent clicking on invisible frames, etc.)
 
-An effective attacker workaround against frame busters is to use the HTML5 iframe `sandbox` attribute.
+However, attackers can **bypass** these protections using the `sandbox` attribute in HTML5:
 
 ```html
 <iframe id="victim_site" src="https://victim-site.com" sandbox="allow-forms"></iframe>
@@ -58,9 +70,14 @@ An effective attacker workaround against frame busters is to use the HTML5 ifram
 When this is set with the `allow-forms` or `allow-scripts` values and the `allow-top-navigation` value is omitted then the frame buster script can be neutralized as the iframe cannot check whether or not it is the top window.
 
 ## Clickjacking + DOM XSS
+An attacker can combine **Clickjacking with Cross-Site Scripting (XSS)** for more impact.
 
-You must first identified the XSS exploit. The XSS exploit is then combined with the iframe target URL so that the user clicks on the button or link and consequently executes the DOM XSS attack.
+**Steps**:
+1. Identify an **XSS vulnerability** on the target site.
+2. Embed the vulnerable page inside an iframe.
+3. Use clickjacking to make the victim **click a malicious link** that triggers the XSS.
 
-## Multistep clickjacking
+This allows the attacker to execute JavaScript in the victim's session, potentially leading to **account takeover**.
 
-Attacker manipulation of inputs to a target website may necessitate multiple actions. These actions can be implemented by the attacker using multiple divisions or iframes.
+## Multi-Step Clickjacking Attacks
+Some attacks require multiple steps. This can be done by overlaying multiple **iframes** with staged interactions.

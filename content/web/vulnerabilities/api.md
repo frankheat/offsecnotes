@@ -9,7 +9,7 @@ APIs are a common target for attackers because they expose underlying business l
 
 ## Discovering API Endpoints
 
-### Checking for Documentation
+### Documentation
 Some endpoints may refer to API documentation, which can reveal available endpoints and request structures.
 
 ```sh
@@ -44,13 +44,12 @@ Test all possible HTTP methods (`GET`, `POST`, `PUT`, `DELETE`, etc.) to check f
 **Tip**: Use Burp Intruder with a list of HTTP verbs to automate testing.
 {{< /hint >}}
 
-### Hidden Parameters Discovery
+### Hidden Parameters
 APIs often include hidden parameters that could be exploited.
 
 - Bruteforce parameter names with wordlists.
 - Use the **Param Miner** Burp extension to identify hidden parameters.
 
----
 
 ## Manipulating Content Types
 
@@ -66,7 +65,6 @@ Modify the `Content-Type` header and reformat request data to test for such issu
 **Tip**: The **Content-Type Converter** BApp in Burp Suite can automatically switch data formats between JSON and XML.
 {{< /hint >}}
 
----
 
 ## Mass Assignment Vulnerabilities
 
@@ -108,7 +106,7 @@ An attacker could send a request like this:
 ```
 {{< /details >}}
 
-### Testing for Mass Assignment
+**Testing for Mass Assignment**
 
 Send two request with:
 - Valid expected parameter:
@@ -129,7 +127,6 @@ Send two request with:
 
 If the app behaves differently, the invalid value may affect the query, while the valid one doesn’t — suggesting the user can update the parameter.
 
----
 
 ## Server-Side Parameter Pollution (SSPP)
 
@@ -177,4 +174,28 @@ if the response is unchanged it may indicate that the parameter was successfully
 
 ### Injecting Invalid Parameters
 
+If you've identified a parameter, add it and see if the server processes it.
+
+```http
+GET /userSearch?name=test%26email=foo&back=/home
+```
+
+Resulting in:
+
+```http
+GET /userSearch?name=test%26email=foo&publicProfile=true
+```
+
+### Overriding existing Parameters
+
 The impact of this depends on how the application processes the second parameter.
+
+```http
+GET /userSearch?name=test%26name=test2&back=/home
+```
+
+Resulting in:
+
+```http
+GET /users/search?name=test&26name=test2&publicProfile=true
+```

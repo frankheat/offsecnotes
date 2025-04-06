@@ -28,11 +28,7 @@ You need to have an application debuggable. If the app is not debuggable you can
 
 * Run the app in an emulator without Google services. Emulators have the `ro.debuggable` property set to `1`. In some cases, this may not suffice as OS or app components may check the Manifest's debuggable flag before or during execution.
 * Repackage the app and set `android:debuggable="true"` in `AndroidManifest.xml`. You don't need to be root.
-* Use a rooted phone so you can modify `ro.debuggable`:
-```sh
-adb shell getprop ro.debuggable
-adb shell setprop ro.debuggable 1
-```
+* Use a rooted phone so you can modify `ro.debuggable`.
 
 ## Debugging levels
 

@@ -1,54 +1,76 @@
 ---
-title: "BAC"
+title: "Broken Access Control (BAC)"
 weight: 3
 ---
 
-# BAC
+# Broken Access Control (BAC)
 
-Access control is the application of constraints on who or what is authorized to perform actions or access resources.
+Access control is a security mechanism that restricts who or what can perform actions or access specific resources. When improperly implemented, it can lead to **Broken Access Control (BAC)** vulnerabilities, allowing unauthorized users to gain access to sensitive functionality.
 
-## Unprotected functionality
+## Unprotected Functionality
+
+Some applications expose administrative or restricted resources without proper authentication checks.
 
 ```sh
-# Direct access
+# Direct access to admin panel
 https://insecure-website.com/admin
 
-# Less predictable URL -> maybe the URL is in JS constructing the user UI
+# Less predictable URL - could be referenced in JavaScript
 https://insecure-website.com/administrator-panel-yb556
 ```
 
-If you have an admin account, repeat the request with a normal user cookie. (Autorize burp extension can be useful)
+**How to Test**
+- If you have an admin account, try accessing the same resource using a **normal user session**.
+- The **Autorize** Burp Suite extension can help automate this check.
 
-## Parameter-based
+{{< hint style=tips >}}
+**Tip**: Applications may hide sensitive URLs in JavaScript files. Analyze them to discover potential admin endpoints.
+{{< /hint >}}
 
-Some applications determine the user's access rights or role at login, and then store this information in a user-controllable location. This could be:
+## Parameter-Based
 
-* **A hidden field**
-* **A cookie value**
-* **A preset query string parameter**
-  * `https://insecure-website.com/login/home.jsp?admin=true`
-  * `https://insecure-website.com/login/home.jsp?role=1`
+Some applications store user roles in locations that can be modified by the user, such as:
 
-## Referer-based
+- **Hidden form fields**
+- **Cookies**
+- **Query string parameters**
 
 ```sh
-GET /admin --> HTTP/1.1 401 Unauthorized
+# Manipulating role-based parameters
+https://insecure-website.com/login/home.jsp?admin=true
+https://insecure-website.com/login/home.jsp?role=1
 ```
 
-Try to request a subpage and set Referer
+**How to Test**
+- Try changing the parameter values and observe the response.
+- Use an intercepting proxy (like Burp Suite) to modify requests dynamically.
+
+
+## Referer-Based
+
+Some applications rely on the `Referer` header for access control, which can be manipulated.
 
 ```http
+# Direct request gets denied
+GET /admin HTTP/1.1
+401 Unauthorized
+
+# Modifying the Referer
 GET /admin/deleteUser HTTP/1.0
 Referer: https://vulnerable-website.com/admin
 ```
 
-You need to know sub-pages (you can brute-force them) and eventually parameters to perform an action.
+**How to Test**
+- Identify subpages and attempt to **brute-force** URLs.
+- Modify the `Referer` header to bypass restrictions.
 
-## Platform misconfiguration
+## Platform Misconfigurations
 
-**Try another HTTP method**
+Some applications fail to restrict access based on **HTTP methods** or **custom headers**.
 
-```markdown
+### Different HTTP Methods
+
+```sh
 GET
 HEAD
 POST
@@ -61,19 +83,22 @@ PATCH
 TEST
 ```
 
-**Override the URL in the original request**&#x20;
+### URL Manipulation
 
-E.g. `X-Original-URL` , `X-Rewrite-URL`. If it's not found it works.
+Try overriding the original URL with headers:
 
 ```http
-Get / HTTP/1.0
-X-Original-URL: /donotexist1
-X-Rewrite-URL: /donotexist1
+GET / HTTP/1.0
+X-Original-URL: /admin
+X-Rewrite-URL: /admin
 ```
 
-## URL-matching discrepancies
+## URL-Matching Discrepancies
 
-```markdown
+Some applications fail to properly validate URL case sensitivity or unexpected suffixes.
+
+```sh
+# Different URL variations to test
 /admin/deleteUser
 /ADMIN/DELETEUSER
 /admin/deleteUser.anything
@@ -81,21 +106,34 @@ X-Rewrite-URL: /donotexist1
 
 ## IDOR
 
-Try other ID / Brute force
+{{< details summary="What is IDOR?" >}}
+**Insecure Direct Object References (IDOR)** occur when an application does not properly enforce access control on direct resource identifiers, such as user IDs or document numbers.
+{{< /details >}}
 
-```markdown
+If the application exposes object IDs in URLs, an attacker may manipulate them to access unauthorized data.
+
+```sh
+# Changing the ID might reveal another user's data
 https://insecure-website.com/myaccount?id=123
 ```
 
-## Multi-step processes
+**How to Test**
+- Enumerate sequential or predictable IDs.
+- Look for exposed GUIDs in messages or reviews.
 
-Imagine a website where steps 1 and 2 have access controls, but step 3 doesn't. -> skip the first two steps.
 
-&#x20;(1) Load user details, (2) Submit changes, (3) Review and confirm.
+## Multi-Step Processes
+
+Some applications enforce access controls at the beginning of a workflow but fail to check authorization in later steps.
+
+**Example**
+1. Load user details
+2. Submit changes
+3. **Review and confirm (no access check)**
+
+An attacker might skip the first two steps and jump directly to the final action.
 
 ## Tips
 
-*   An application might use GUIDs to identify users, but GUIDs of other users could be exposed elsewhere in the app, such as in user messages or reviews.
-
-
-* An application may detect unauthorized access and redirect to the login page, but the response might still expose sensitive data of the targeted user.
+- **Look for exposed GUIDs or user IDs** in responses, messages, or URLs.
+- **Check for redirects** – even if unauthorized access is denied, the server may still return **sensitive data** before redirecting.

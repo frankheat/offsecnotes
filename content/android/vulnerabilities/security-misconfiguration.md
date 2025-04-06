@@ -33,7 +33,7 @@ bu restore backup.ab
 
 ## Debuggable
 
-The `android:debuggable` attribute indicates if the application is debuggable and it is set to `false` by default \[[🔗](https://developer.android.com/privacy-and-security/risks/android-debuggable)].
+The `android:debuggable` attribute indicates if the application is debuggable and it is set to `false` by default \[[🔗](https://developer.android.com/privacy-and-security/risks/android-debuggable)]. Check `android:debuggable="true"` in the `AndroidManifest.xml`.
 
 {{< hint style=notes >}}
 **Note**: you cannot release a debuggable app on Google Play Store \[[🔗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[🔗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)].
@@ -41,7 +41,9 @@ The `android:debuggable` attribute indicates if the application is debuggable an
 
 **Impact**
 
-1. Check `android:debuggable="true"` in the `AndroidManifest.xml`. If it is enable you can use `run-as` to read and extract without **root privileges** all files inside the app internal storage. \[[🔗](https://android.googlesource.com/platform/system/core.git/+/android-4.2.2_r1/run-as/run-as.c)].
+1. Debug an application. See [Debug application code]({{< ref "android/debug-application-code" >}})
+
+2. You can use `run-as` command to read and extract, **without root privileges**, all files inside the app internal storage. \[[🔗](https://android.googlesource.com/platform/system/core.git/+/android-4.2.2_r1/run-as/run-as.c)].
 
 ```sh
 adb shell
@@ -53,9 +55,6 @@ run-as com.package id
 adb exec-out run-as <package_name> tar c . > output.tar
 ```
 
-2. Debug an application [Debug application code]({{< ref "android/debug-application-code" >}})
-
-
 ## WebView - Debug
 
 **Requirements:**
@@ -63,9 +62,7 @@ adb exec-out run-as <package_name> tar c . > output.tar
 * `setWebContentsDebuggingEnabled` is set to true
 * OR `android:debuggable="true"`  (`setWebContentsDebuggingEnabled` is enabled automatically if the app is declared) More info: \[[🔗](https://developer.android.com/reference/android/webkit/WebView#setWebContentsDebuggingEnabled\(boolean\))].
 
-{{< hint style=notes >}}
-**Note**: the Apache Cordova application automatically gets attached to Chrome’s debugger. (_org.apache.cordova.SystemWebEngine)_
-{{< /hint >}}
+**Testing**
 
 1. Open the application on your phone&#x20;
 2. Open chrome on your machine `chrome://inspect/#devices`

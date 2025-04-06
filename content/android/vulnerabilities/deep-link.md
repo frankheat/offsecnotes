@@ -69,7 +69,7 @@ In this case Android attempt to access the **Digital Asset Links** file in order
 
 {{< /details >}}
 
-**Why is this a security issue?**
+**Why might that be a problem?**
 
 Because of Link Hijacking. This happen when a malicious app registers an URI that belongs to the victim app. If mobile OS redirects the user to the malicious app, it can lead to phishing (e.g., the malicious app displays forged UI to lure user passwords) or data leakage (e.g., the deep link may carry sensitive data in the URL parameters such as session IDs).
 
