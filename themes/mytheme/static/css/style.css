@@ -180,8 +180,8 @@
     #TableOfContents li a:hover,
     #index li a:hover {
         color: white;
-        background-color: #2e436e;
-        background-image: url('https://www.transparenttextures.com/patterns/asfalt-dark.png');
+        background-color: rgb(170, 40, 105);
+
     }
 
     #TableOfContents ul ul,
