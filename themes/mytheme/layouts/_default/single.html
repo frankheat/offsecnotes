@@ -7,7 +7,7 @@
 
 <body>
     <div class="top-bar row">
-        {{ partial "top-bar.html" }}
+        {{ partial "top-bar.html" . }}
     </div>
 
     <div class="main-container container-fluid">
@@ -21,16 +21,15 @@
                 <div class="main-content">
                     {{ .Content }}
                 </div>
-
+                {{ partial "footer.html" . }}
             </div>
 
             {{ if findRE "<ul>" .TableOfContents }}
-                <div class="sidebar-right col-xl-3 ps-5 py-4 d-none d-xl-block" id="sidebarRight">
+                <div class="sidebar-right col-xl-3 ps-5 pe-0 py-4 d-none d-xl-block" id="sidebarRight">
                     <span>Table of contents</span>
                     <div class="pt-2">
                         {{ .TableOfContents }}
                     </div>
-                    
                 </div>
             {{ end }}
         </div>

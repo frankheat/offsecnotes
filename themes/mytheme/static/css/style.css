@@ -6,10 +6,7 @@
     h1 {
         color: white;
         font-size: 50px;
-        text-align: center;
         font-weight: bold;
-        border-top: 1px solid white;
-        border-bottom: 1px solid white;
         padding-top: 1%;
         padding-bottom: 1%;
         margin-bottom: 3%;
@@ -119,7 +116,7 @@
         left: -50%;
         width: 230%;
         height: 140%;
-        background-color: rgb(214, 51, 132);
+        background-color: #002BFE;
         background-size: cover;
         background-position: center;
         filter: blur(80px);
@@ -189,15 +186,14 @@
 
     #TableOfContents li a.active,
     #index li a.active {
-        color: white;
-        background-color: #43454a;
+        color: #00CCFF;
+        font-weight: 550;
     }
 
     #TableOfContents li a:hover,
     #index li a:hover {
         color: white;
-        background-color: rgb(170, 40, 105);
-
+        background-color: rgb(67, 69, 74);
     }
 
     #TableOfContents ul ul,
@@ -225,7 +221,7 @@
 
     ::-webkit-scrollbar-thumb {
         border-radius: 8px;
-        background-color: rgb(214, 51, 132);
+        background-color: rgb(0, 204, 255);
     }
 
 
@@ -233,7 +229,7 @@
     body {
         align-items: center;
         font-family: 'Inter', sans-serif;
-        font-size: 18px;
+        font-size: 17.5px;
         background-color: rgb(19, 20, 22);
         color: rgb(207, 208, 208);
     }
@@ -282,6 +278,14 @@
         height: calc(100vh - 50px);
         overflow-y: hidden;
         scrollbar-gutter: stable;
+    }
+
+    .bottom-of-page {
+        margin-top: 80px;
+        padding-top: 30px;
+        border-top: 1px solid rgb(82, 82, 82);
+        padding-bottom: 30px;
+        font-size: 15px;;
     }
 
     @media (max-width: 992px) {
