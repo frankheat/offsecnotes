@@ -58,14 +58,22 @@
 
     /* Main content style */
     .tips, .notes, .warning {
-        padding: 15px 20px;
-        border: 1px solid white;
-        background-color: rgb(45, 31, 58);
-        margin-bottom: 2%;
+        padding: 10px 20px;
+        margin-bottom: 3%;
+        margin-top: 3%;
+        background-color: rgb(33, 37, 41);
     }
 
     .tips {
-        border-radius: 30px;
+        border-left: 3px solid greenyellow;
+    }
+
+    .notes {
+        border-left: 3px solid #3b82f6;
+    }
+
+    .warning {
+        border-left: 3px solid orange;
     }
 
     .btn-dark {
