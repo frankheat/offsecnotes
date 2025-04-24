@@ -1,6 +1,7 @@
 ---
 title: "File upload vulnerabilities"
 weight: 9
+description: "Learn how file upload vulnerabilities can be exploited, including flawed validation, server misconfigurations, race conditions, and techniques for bypassing security measures."
 ---
 
 # File upload vulnerabilities

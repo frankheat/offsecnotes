@@ -1,6 +1,7 @@
 ---
 title: "CORS"
 weight: 7
+description: "Learn how misconfigured CORS policies expose sensitive data via origin reflection, null whitelisting, and XSS on trusted subdomains."
 ---
 
 # CORS

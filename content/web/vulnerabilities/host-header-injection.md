@@ -1,6 +1,7 @@
 ---
 title: "Host header injection"
 weight: 11
+description: "Learn how host header injection vulnerabilities can be exploited for password reset poisoning, accessing internal systems, SSRF, and bypassing server validation."
 ---
 
 # Host header injection

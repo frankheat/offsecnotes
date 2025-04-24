@@ -1,6 +1,7 @@
 ---
 title: "SSRF"
 weight: 23
+description: "Explore advanced SSRF exploitation techniques, including bypassing filters, blind SSRF detection, protocol manipulation, and using tools like Gopherus to exploit internal services."
 ---
 
 # SSRF

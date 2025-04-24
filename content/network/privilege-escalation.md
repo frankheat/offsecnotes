@@ -1,6 +1,7 @@
 ---
 title: "Privilege Escalation"
 weight: 4
+description: "Learn about various techniques and methods for privilege escalation on both Windows and Linux systems, including UAC bypass, credential dumping, exploiting weak permissions, SUID, and more, with detailed notes and code examples."
 ---
 
 # Privilege Escalation

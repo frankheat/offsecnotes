@@ -1,6 +1,7 @@
 ---
 title: "Tapjacking"
 weight: 7
+description: "Learn about Tapjacking, the Android equivalent of clickjacking. Understand how this vulnerability tricks users and find resources for testing and preventing Tapjacking attacks."
 ---
 
 # Tapjacking

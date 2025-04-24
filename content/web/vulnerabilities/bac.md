@@ -1,6 +1,7 @@
 ---
 title: "Broken Access Control (BAC)"
 weight: 3
+description: "Understand how to identify and exploit Broken Access Control flaws, including IDOR, parameter tampering, misconfigured headers, and unprotected admin functionality."
 ---
 
 # Broken Access Control (BAC)

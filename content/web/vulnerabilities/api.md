@@ -1,6 +1,7 @@
 ---
 title: "API Security Testing"
 weight: 1
+description: "Learn effective techniques for API security testing, including endpoint discovery, content-type manipulation, and mass assignment vulnerability detection."
 ---
 
 # API Security Testing

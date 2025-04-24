@@ -1,6 +1,7 @@
 ---
 title: "Security Misconfiguration"
 weight: 2
+description: "Learn about common Android security misconfigurations like adb backup, debuggable flags, and WebView debugging."
 ---
 
 # Security Misconfiguration

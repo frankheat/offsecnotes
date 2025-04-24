@@ -1,6 +1,7 @@
 ---
 title: "OAuth 2.0"
 weight: 17
+description: "Explore OAuth 2.0 authorization framework, its vulnerabilities, and common security flaws in penetration testing. Learn how to identify OAuth flow and prevent attacks."
 ---
 
 # OAuth 2.0

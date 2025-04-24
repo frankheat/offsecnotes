@@ -1,6 +1,7 @@
 ---
 title: "Working with java code"
 weight: 3
+desceiprion: "Learn practical techniques for dynamic analysis and pentesting of Java applications. Explore how to enumerate classes and methods, hook functions, and interact with Java objects using Frida."
 ---
 
 # Working with java code

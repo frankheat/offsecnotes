@@ -1,6 +1,7 @@
 ---
 title: "Web LLM"
 weight: 27
+description: "Explore how to identify and exploit vulnerabilities in web-integrated LLM APIs. Learn techniques like API mapping, privilege escalation, and insecure output handling for advanced web pentesting."
 ---
 
 # Web LLM

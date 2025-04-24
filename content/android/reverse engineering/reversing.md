@@ -1,6 +1,7 @@
 ---
 title: "Reversing"
 weight: 2
+description: "Learn Android application reversing with detailed guides on understanding .dex and .smali, extracting and modifying APKs using Apktool, and decompiling with jadx."
 ---
 
 # Reversing

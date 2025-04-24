@@ -1,6 +1,7 @@
 ---
 title: "CSRF"
 weight: 8
+description: "Understand CSRF attacks with real examples and learn how to defend using SameSite cookies, CSRF tokens, and referer validation techniques."
 ---
 
 # CSRF

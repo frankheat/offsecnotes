@@ -1,6 +1,7 @@
 ---
 title: "Path traversal"
 weight: 19
+description: "Explore path traversal vulnerabilities, including bypass techniques and exploitation methods. Learn how attackers use encoding, double encoding, and null bytes to access restricted files on servers."
 ---
 
 # Path traversal

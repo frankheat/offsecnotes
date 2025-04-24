@@ -1,6 +1,7 @@
 ---
 title: "OS command injection"
 weight: 18
+description: "Learn about OS command injection vulnerabilities, detection methods, and exploitation techniques. Understand how to bypass restrictions and use metacharacters for injecting commands in both Windows and Unix systems."
 ---
 
 # OS command injection

@@ -1,6 +1,7 @@
 ---
 title: "XSS"
 weight: 29
+description: "In-depth XSS pentest notes covering reflected, stored, & DOM-based types. Learn context-specific attacks, exploitation techniques, WAF bypass strategies, & CSP defenses."
 ---
 
 # XSS

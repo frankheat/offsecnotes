@@ -1,6 +1,7 @@
 ---
 title: "Working with native code"
 weight: 4
+description: "Learn practical techniques for interacting with and analyzing native code using Frida in pentesting. Explore JNI, dynamic and static linking, detecting library loads, and hooking native functions for security assessments."
 ---
 
 # Working with native code

@@ -1,6 +1,7 @@
 ---
 title: "Information disclosure"
 weight: 13
+description: "Learn how to identify and exploit information disclosure vulnerabilities in web applications through techniques like fuzzing, error analysis, backup file inspection, and insecure configurations."
 ---
 
 # Information disclosure

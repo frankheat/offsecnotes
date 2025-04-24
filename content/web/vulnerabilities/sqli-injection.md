@@ -1,6 +1,7 @@
 ---
 title: "SQL injection"
 weight: 22
+description: "Comprehensive guide on detecting and exploiting SQL injection vulnerabilities, including blind, error-based, time-based, and out-of-band techniques with payloads, examples, and automation using sqlmap."
 ---
 
 # SQL injection

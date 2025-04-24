@@ -1,6 +1,7 @@
 ---
 title: "JWT"
 weight: 15
+description: "Learn how JSON Web Tokens (JWTs) work, common vulnerabilities like alg:none and key injections, and how to exploit weak JWT implementations using tools like Burp and hashcat."
 ---
 
 # JWT

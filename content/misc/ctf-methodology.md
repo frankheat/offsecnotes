@@ -1,6 +1,7 @@
 ---
 title: "CTF Methodology"
 weight: 4
+description: "Comprehensive notes and methodologies for penetration testing and Capture the Flag (CTF) challenges. Covering web server analysis, service exploitation, steganography, cracking, and privilege escalation techniques."
 ---
 
 # CTF Methodology
@@ -17,8 +18,7 @@ weight: 4
     * Do you have id\_rsa?
       * Use it to login
       * Password is required?
-        * `ssh2john id_rsa > id_rsa.hash`
-        * Crack it
+        * `ssh2john id_rsa > id_rsa.hash` & crack it
   * Samba (SMB)
     * `smbclient -L //<IP>`&#x20;
     * `enum4linux <IP>`

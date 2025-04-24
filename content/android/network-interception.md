@@ -1,6 +1,7 @@
 ---
 title: "Network Interception"
 weight: 4
+description: "Learn Android network interception techniques for pentesting. Covers cleartext traffic, SSL interception, certificate handling, and bypassing restrictions with VPNs and transparent proxies."
 ---
 
 # Network Interception

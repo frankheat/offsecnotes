@@ -1,6 +1,7 @@
 ---
 title: "Business logic vulnerabilities"
 weight: 4
+description: "Learn how to identify and exploit business logic vulnerabilities, including discount abuse, sequence bypass, and client-side trust failures in web apps."
 ---
 
 # Business Logic Vulnerabilities

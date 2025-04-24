@@ -1,6 +1,7 @@
 ---
 title: "Intent Attack Surface"
 weight: 4
+description: "Learn about Android Intent attack surfaces, how to start activities, handle incoming intents, and send intents using adb for penetration testing."
 ---
 
 # Intent Attack Surface

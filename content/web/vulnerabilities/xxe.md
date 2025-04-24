@@ -1,6 +1,7 @@
 ---
 title: "XXE"
 weight: 30
+description: "Learn to detect and exploit XXE (XML External Entity) vulnerabilities. These pentest notes cover file retrieval, SSRF, blind XXE techniques (OAST, error-based), XInclude, and more attack vectors."
 ---
 
 # XXE

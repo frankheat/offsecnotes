@@ -1,6 +1,7 @@
 ---
 title: "SSTI"
 weight: 24
+description: "Learn how to detect and exploit Server-Side Template Injection (SSTI) vulnerabilities in various templating engines such as Jinja2, Twig, ERB, and Smarty. Includes payloads, testing techniques, and identification methods."
 ---
 
 # SSTI

@@ -1,6 +1,7 @@
 ---
 title: "Insecure deserialization"
 weight: 14
+description: "Explore insecure deserialization in web applications, including attack vectors, object manipulation, gadget chains, and tools like ysoserial and PHPGGC for exploitation."
 ---
 
 # Insecure deserialization

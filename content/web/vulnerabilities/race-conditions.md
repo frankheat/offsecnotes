@@ -1,6 +1,7 @@
 ---
 title: "Race conditions"
 weight: 21
+description: "Learn how to detect and exploit race conditions in web applications, including multi-endpoint timing attacks, session locking, and server delay manipulation using tools like Burp Suite and Turbo Intruder."
 ---
 
 # Race conditions
@@ -26,6 +27,12 @@ Even with simultaneous requests, external factors can unpredictably affect serve
 
 Sending many requests helps reduce server-side jitter, even though only two are needed for exploits.
 
+**With Custom Action - Bambdas**
+1. Send to repeater.
+2. Use custom action: 
+https://gist.github.com/albinowax/101e3b2e605496db1ddf84d14f5d0485
+3. Set NUMBER_OF_REQUESTS and run.
+
 **With Burp Repeater**
 
 1. Add requests in a group
@@ -50,6 +57,7 @@ def queueRequests(target, wordlists):
 def handleResponse(req, interesting):
     table.add(req)
 ```
+
 
 ## Multi-endpoint race windows
 

@@ -1,6 +1,7 @@
 ---
 title: "Clickjacking"
 weight: 5
+description: "Understand clickjacking attacks, iframe-based exploits, form prefill tricks, frame busting bypasses, and how they combine with XSS for account takeover."
 ---
 
 # Clickjacking

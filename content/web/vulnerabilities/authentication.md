@@ -1,6 +1,7 @@
 ---
 title: "Authentication"
 weight: 2
+description: "Explore key authentication testing techniques like username enumeration, password reset flaws, 2FA bypasses, and account lockout analysis."
 ---
 
 # Authentication

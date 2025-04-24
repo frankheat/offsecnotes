@@ -1,6 +1,7 @@
 ---
 title: "WebSockets"
 weight: 28
+description: "Learn about WebSockets penetration testing, including connection establishment, vulnerabilities like XSS and SQLi, and cross-site WebSocket hijacking."
 ---
 
 # WebSockets
