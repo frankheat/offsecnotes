@@ -2,7 +2,7 @@
     <div class="bottom-of-page container">
         <div class="row">
             <div class="col">
-                © 2025, {{ .Site.Params.NICKNAME }}
+                © 2025, {{ .Site.Params.AUTHOR }}
                 {{- $lastmod := now.AddDate -100 0 0 -}}
                 {{- range .Site.RegularPages -}}
                 {{- if gt .Lastmod $lastmod -}}

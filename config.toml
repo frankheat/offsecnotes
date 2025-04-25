@@ -6,6 +6,6 @@ enableGitInfo = true
 
 [params]
   GITHUB_PROJECT = "https://github.com/frankheat/offsecnotes"
-  NICKNAME = "frankheat"
+  AUTHOR = "frankheat"
   GITHUB_PROFILE = "https://github.com/frankheat"
   LINKEDIN_PROFILE = "https://www.linkedin.com/in/francesco-volpe98/"

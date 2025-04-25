@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    {{ partial "head.html" }}
+    {{ partial "head.html" . }}
 
     <style>
         h1 {
@@ -47,8 +47,8 @@
             <div class="main-content col-lg-9 col-xl-6 p-4" id="mainContent">
                 <div class="main-content">
                     <div class="title">
-                        <h1>offsecnotes</h1>
-                        <h5>by frankheat</h5>
+                        <h1>{{ .Params.projectName }}</h1>
+                        <h5>by {{ .Site.Params.AUTHOR }}</h5>
                     </div>
                     {{ partial "site-nav.html" }}
                 </div>
