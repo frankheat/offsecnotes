@@ -1,5 +1,5 @@
 <h1 align="center">
-  <a href="https://github.com/frankheat/offsecnotes"><img src="static/favicon.svg" alt="Markdownify" width="100"></a>
+  <a href="https://github.com/frankheat/offsecnotes"><img src="static/favicon.png" alt="Markdownify" width="100"></a>
   <br>
   offsecnotes
   <br>
