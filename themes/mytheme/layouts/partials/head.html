@@ -2,11 +2,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ if .Title }}{{ .Title }} – offsecnotes {{ end }}</title>
 
+<meta name="description" content="{{ .Params.Description }}">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta property="og:title" content="{{ if .Title }}{{ .Title }} – offsecnotes {{ end }}">
+<meta property="og:description" content="{{ .Params.Description }}">
+<meta property="og:image" content='{{ absURL "favicon.png" }}'>
+<meta property="og:url" content='{{ .Permalink }}'>
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="{{ if .Title }}{{ .Title }} – offsecnotes {{ end }}">
+<meta name="twitter:image" content='{{ absURL "favicon.png" }}'>
+
 <link rel="canonical" href="{{ .Permalink }}">
 <link rel="icon" href='{{ absURL "favicon.png" }}' type="image/x-icon">
-{{ with .Params.description }}
-<meta name="description" content="{{ . }}">
-{{ end }}
 
 
 <!-- bootstrap -->

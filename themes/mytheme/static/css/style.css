@@ -1,6 +1,7 @@
     /* General style */
     a {
         text-decoration: none;
+        color: rgb(33, 122, 253)
     }
 
     h1 {
@@ -39,6 +40,10 @@
 
     strong {
         color: white;
+    }
+
+    code {
+        color: rgb(217, 69, 146)
     }
 
 
