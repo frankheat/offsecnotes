@@ -8,12 +8,13 @@ description: "In-depth XSS pentest notes covering reflected, stored, & DOM-based
 
 Cross-site scripting (XSS) works by manipulating a vulnerable web site so that it returns malicious JavaScript to users.
 
-XSS cheatsheet: [https://portswigger.net/web-security/cross-site-scripting/cheat-sheet](https://portswigger.net/web-security/cross-site-scripting/cheat-sheet)
+XSS cheatsheet: [PortSwigger XSS cheat-sheet](https://portswigger.net/web-security/cross-site-scripting/cheat-sheet)
 
-More info about Javascript & obfuscation: [javascript-security-considerations.md](../web-security/javascript-security-considerations.md "mention")
+More info about Javascript & obfuscation: [Javascript & Obfuscation]({{< ref "web/web-security/javascript-and-obfuscation" >}})
 
-{{< details summary="Do not use alert(1) -> use alert(document.domain)" >}}
+{{< hint style=warning >}}
 
+**Warning**: Do not use `alert(1)` -> use `alert(document.domain)`.
 
 ```html
 <textarea id="script" onchange=("unsafe(this.value)"></textarea><br>
@@ -34,7 +35,17 @@ function unsafe(t) {
   * this is because the sandboxed iframe also has a different origin. It's isolated from the website it is embedded into and you cannot steal the secret session.
 * Use `alert(document.domain)` or `alert(window.origin)` instead
 
-{{< /details >}}
+{{< /hint >}}
+
+{{< hint style=warning >}}
+
+**Warning**: Do not use `<script>` tag -> use `<img>`.
+
+If your target is using the innerHTML sink — the most common sink vulnerable to DOM XSS — your script might not work as expected. This is because innerHTML won't render a `<script>` tag \[[🔗](https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML#security_considerations)]. However, if you use an `<img>` tag with an onerror attribute instead, the script will execute normally. 
+
+Additionally, if the target sanitizes your payload using a library like DOMPurify, instead of simply encoding it, a `<script>` tag would be completely stripped out, leaving no visible trace. On the other hand, if you use an `<img>` tag, DOMPurify will remove the onerror attribute as expected, but the image itself will still be present. You will see the image load (or attempt to load) and the corresponding request in the logs, signaling that further investigation is needed.
+
+{{< /hint >}}
 
 ## Reflected XSS
 

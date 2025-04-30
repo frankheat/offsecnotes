@@ -72,7 +72,8 @@ Modify the `Content-Type` header and reformat request data to test for such issu
 {{< details summary="Understanding Mass Assignment" >}}
 Many modern APIs use frameworks that allow automatic assignment of incoming request data to an object. If the application does not properly filter which fields can be updated, an attacker can send unexpected data to modify sensitive fields that they shouldn't be able to change.
 
-### Example
+**Example**
+
 Consider an API that allows users to update their profile with a `PUT /users/{id}` request. A User model might look like this:
 
 ```javascript

