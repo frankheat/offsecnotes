@@ -1,4 +1,4 @@
-baseURL = 'https://github.com/frankheat/offsecnotes/'
+baseURL = 'https://offsecnotes.frankheat.io/'
 languageCode = 'en-us'
 title = 'offsecnotes'
 theme = "mytheme"
@@ -6,7 +6,7 @@ enableGitInfo = true
 enableRobotsTXT = true
 
 [params]
-  GITHUB_PROJECT = "https://github.com/frankheat/offsecnotes"
   AUTHOR = "frankheat"
+  GITHUB_PROJECT = "https://github.com/frankheat/offsecnotes"
   GITHUB_PROFILE = "https://github.com/frankheat"
   LINKEDIN_PROFILE = "https://www.linkedin.com/in/francesco-volpe98/"
