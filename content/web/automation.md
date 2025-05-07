@@ -1,5 +1,5 @@
 ---
-title: "Automation"
+title: ""
 weight: 3
 ---
 
@@ -9,7 +9,7 @@ weight: 3
 
 ```sh
 # Web fuzzer 
-ffuf -w wordlist.txt -u https://example.com/file-FUZZ- c
+ffuf -w wordlist.txt -u https://example.com/file-FUZZ -c
 
 # Recursive content discovery
 # You can set depth (recursion), extract links from response body
@@ -36,3 +36,7 @@ waybackurls https://example.com
 ```sh
 nikto -h http://example.com
 ```
+
+## Technology Identification
+
+Use [Wappalyzer](https://www.wappalyzer.com/) extension.

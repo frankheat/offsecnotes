@@ -30,7 +30,7 @@ Netcraft is an ISP,  that offers a free web portal \[[🔗](https://searchdns.ne
 
 ## Open-Source Code
 
-Gather information through GitHub, GitLab, etc.&#x20;
+Gather information through GitHub, GitLab, etc.
 
 * Manual
 * Automatic
