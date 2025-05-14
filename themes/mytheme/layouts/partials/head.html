@@ -24,10 +24,11 @@
     integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
     crossorigin="anonymous"></script>
 
-<!-- prism -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-<link rel="stylesheet" href='{{ absURL "css/vscode-dark.css" }}'>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+<!-- highlight.js -->
+<link rel="stylesheet" href='{{ absURL "css/atom-one-dark.min.css" }}'>
+<script src='{{ absURL "js/highlight.min.js" }}'></script>
+<script>hljs.highlightAll();</script>
+
 
 <!-- stylesheet -->
 <link rel="stylesheet" href='{{ absURL "css/style.css" }}'>

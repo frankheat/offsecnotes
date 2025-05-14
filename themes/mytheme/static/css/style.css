@@ -32,10 +32,12 @@
 
     pre {
         background-color: rgb(32, 32, 32) !important;
+        border: 1px solid rgb(54, 54, 54);
     }
 
     .highlight {
         margin-bottom: 2%;
+        
     }
 
     strong {
@@ -43,7 +45,7 @@
     }
 
     code {
-        color: rgb(217, 69, 146)
+        color: rgb(217, 69, 146);
     }
 
 
