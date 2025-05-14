@@ -16,5 +16,7 @@ document.querySelectorAll('#TableOfContents a[href^="#"]').forEach(anchor => {
                 behavior: "smooth"
             });
         }
+
+        history.pushState(null, null, '#' + targetId);
     });
 });

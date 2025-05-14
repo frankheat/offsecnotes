@@ -3,10 +3,11 @@
     <nav id="index">
         <ul>
             {{ range site.Sections.ByWeight }}
-            <li>
+            
+            <li class="sections">
+                <hr>
                 <strong>{{ .Title }}</strong>
                 <ul>
-        
                     {{ range .Sections.ByWeight }}
                     <li>
         

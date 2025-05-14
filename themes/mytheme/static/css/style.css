@@ -113,6 +113,16 @@
         border-bottom: 4px solid rgb(82, 82, 82);
     }
 
+    input {
+        background-color: rgb(19, 20, 22) !important;
+        border: 1px solid rgb(55, 59, 62) !important;
+        color: white !important;
+    }
+
+    input::placeholder {
+        color: rgb(121, 121, 121) !important;
+    }
+
 
     /* Top bar style */
     .navbar-brand-blur {
@@ -184,19 +194,13 @@
     #TableOfContents li a,
     #index li a {
         display: block;
-        padding-top: 2px;
-        padding-bottom: 2px;
+        padding-top: 5px;
+        padding-bottom: 5x;
         text-decoration: none;
         transition: 0.3s;
-        color: rgb(180, 180, 180);
+        color: rgb(185, 194, 214);
         opacity: 0.8;
         font-size: 15px;
-    }
-
-    #sidebarLeft:hover li a,
-    #sidebarRight:hover li a {
-        color: rgb(207, 207, 207);
-        opacity: 1;
     }
 
     #TableOfContents li a.active,
@@ -208,17 +212,19 @@
     #TableOfContents li a:hover,
     #index li a:hover {
         color: white;
-        background-color: rgb(67, 69, 74);
+        text-decoration: underline;
     }
 
-    #TableOfContents ul ul,
-    #index ul ul {
+    #TableOfContents ul ul {
         padding-left: 15px;
     }
 
-    #TableOfContents ul ul ul,
     #index ul ul ul {
-        padding-left: 30px;
+        padding-left: 15px;
+    }
+
+    .sections {
+        margin-bottom: 10px;
     }
 
 
