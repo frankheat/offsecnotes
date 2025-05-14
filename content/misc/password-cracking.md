@@ -41,18 +41,21 @@ hydra -L user.txt -P pass.txt <ip> <protocol>
 ## Rules (password bruteforce)
 
 * **FIRST CHOICE**:  best64 (now best66). Fast, works well.
-  * [https://github.com/hashcat/hashcat/blob/master/rules/best66.rule](https://github.com/hashcat/hashcat/blob/master/rules/best66.rule)
+  * [best66.rule](https://github.com/hashcat/hashcat/blob/master/rules/best66.rule)
 * **SECOND/THIRD CHOICE**: InsidePro-PasswordsPro (\~3000) && InsidePro-Hashmanager (\~7000)
-  * (2) [https://github.com/hashcat/hashcat/blob/master/rules/InsidePro-PasswordsPro.rule](https://github.com/hashcat/hashcat/blob/master/rules/InsidePro-PasswordsPro.rule)
-  * (3) [https://github.com/hashcat/hashcat/blob/master/rules/InsidePro-HashManager.rule](https://github.com/hashcat/hashcat/blob/master/rules/InsidePro-HashManager.rule)
+  * (2) [InsidePro-PasswordsPro.rule](https://github.com/hashcat/hashcat/blob/master/rules/InsidePro-PasswordsPro.rule)
+  * (3) [InsidePro-HashManager.rule](https://github.com/hashcat/hashcat/blob/master/rules/InsidePro-HashManager.rule)
   * You can also combine them...
 * **FOURTH CHOICE**: OneRuleToRuleThemAll. (\~50k). The best.
-  * [https://github.com/NotSoSecure/password\_cracking\_rules/blob/master/OneRuleToRuleThemAll.rule](https://github.com/NotSoSecure/password_cracking_rules/blob/master/OneRuleToRuleThemAll.rule)
+  * [OneRuleToRuleThemAll.rule](https://github.com/NotSoSecure/password_cracking_rules/blob/master/OneRuleToRuleThemAll.rule)
 
 **Generate wordlist based on rules**
 
-[https://weakpass.com/generate](https://weakpass.com/generate)&#x20;
-
+1. Online tool: [https://weakpass.com/generate](https://weakpass.com/generate)
+2. Hashcat:
+```bash
+hashcat -r best66.rule --stdout file.txt
+```
 
 
 **More info about rules:**

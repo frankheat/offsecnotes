@@ -59,3 +59,15 @@ There are so many ways: [https://book.hacktricks.wiki/linux-hardening/bypass-bas
 `command`
 $(command)
 ```
+
+## Identify CMD or PowerShell
+
+To determine whether commands are executed by PowerShell or CMD, use this snippet:
+
+```cmd
+(dir 2>&1 *`|echo CMD);&<# rem #>echo PowerShell
+```
+
+## Reverse Shell Generator
+
+https://www.revshells.com/

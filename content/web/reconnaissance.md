@@ -1,15 +1,22 @@
 ---
-title: ""
+title: "Reconnaissance"
 weight: 3
 ---
 
-# Automation
+# Reconnaissance
 
 ## Enumerating web resources
 
 ```sh
 # Web fuzzer 
-ffuf -w wordlist.txt -u https://example.com/file-FUZZ -c
+ffuf -c -u https://example.com/file-FUZZ -w wordlist.txt
+
+# with extension
+ffuf -c -u https://example.com/FUZZ -w wordlist.txt -e .php,.html,.txt
+
+# with more placeholder
+ffuf -c -u http://example.com/FUZZ/FILE -w wordlist.txt:FUZZ -w wordlist2.txt:FILE 
+
 
 # Recursive content discovery
 # You can set depth (recursion), extract links from response body

@@ -392,3 +392,7 @@ CSP restrict the resources (such as scripts and images) that a page can load and
   * `<script src="https://evil.com/hacked.js"></script>` will not work
 * Restricting Unsafe JavaScript
 * Others [https://cheatsheetseries.owasp.org/cheatsheets/Content\_Security\_Policy\_Cheat\_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html)
+
+## Compress & minify JavaScript
+
+You can compress and minify your JS by using tools like [JSCompress](https://jscompress.com/).

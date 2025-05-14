@@ -77,7 +77,7 @@ Because of Link Hijacking. This happen when a malicious app registers an URI tha
 Suppose that:
 
 * The victim user have malicious app installed
-* Both apps (victim and malicious) manage `geo://` , `https://google.com`
+* Both apps (victim and malicious) manage `geo://`, `https://google.com`
 
 | **Android** | **Victim App installed** | **Link supported** | **URI**            | **Behavior**                                       |
 |-------------|--------------------------|--------------------|--------------------|----------------------------------------------------|

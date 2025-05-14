@@ -43,6 +43,16 @@ An attacker can request the following URL to retrieve the `/etc/passwd` file fro
   * Example: `....//....//....//etc/passwd%00.jpg` (strip, double-encode, null byte, whitelist extension)
   * `%252E%252E%252E%252E%252F%252F%252E%252E%252E%252E%252F%252F%252E%252E%252E%252E%252F%252Fetc%252Fpasswd%252500%252Ejpg`
 
+## Common files
+
+**Linux list**: https://github.com/MrW0l05zyn/pentesting/blob/master/web/payloads/lfi-rfi/lfi-linux-list.txt
+
+**Windows list**: https://github.com/MrW0l05zyn/pentesting/blob/master/web/payloads/lfi-rfi/lfi-windows-list.txt
+
+{{< hint style=tips >}}
+**Tip**: On Windows, you can also try using a different drive letter than *C:*.
+{{< /hint >}}
+
 ## Automatic exploitation
 
 Use intruder with this list: [https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Directory%20Traversal/Intruder/deep\_traversal.txt](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Directory%20Traversal/Intruder/deep_traversal.txt)&#x20;

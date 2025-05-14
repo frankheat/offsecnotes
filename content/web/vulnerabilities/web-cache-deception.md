@@ -53,7 +53,7 @@ Consider the following example:
 # Now https://site.com/my-account/abc.js contains your sensitive data cached
 
 # Find a way to send the victim on http://site.com/my-account/xyz.js
-# Note: I omitted cache buster for for simplicity
+# Note: I omitted cache buster for simplicity
 ```
 
 {{< hint style=notes >}}

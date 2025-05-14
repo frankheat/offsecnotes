@@ -7,25 +7,47 @@ weight: 5
 
 ## Commands
 
-```sh
-# Install apk
+Install apk
+```bash
 adb install <path.apk>
+```
 
-# Lists all installed packages
-adb shell pm list packages
+Uninstalls the application
+```sh
+adb shell am start <package_name>/<activity_name>
+```
 
-# List only third party packages
-adb shell pm list packages -3
-
-# Clear the application data
+Clear the application data
+```sh
 adb shell pm clear <package_name>
+```
 
-# List information such as activities and permissions of a package
+Lists all installed packages
+```sh
+adb shell pm list packages
+```
+
+List only third party packages
+```sh
+adb shell pm list packages -3
+```
+
+List information such as activities and permissions of a package
+```sh
 adb shell dumpsys package <package_name>
+```
 
-# Starts the activity of the specified package
+Starts the activity of the specified package
+```sh
 adb shell am start <package_name>/<activity_name>
+```
 
-# Uninstalls the application
-adb shell am start <package_name>/<activity_name>
+Copy a file from the device
+```sh
+adb pull <remote-file> <local-file>
+```
+
+Copy a file on the device
+```sh
+adb push <local-file> <destination-directory>
 ```
