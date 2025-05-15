@@ -5,7 +5,7 @@
     }
 
     h1 {
-        color: white;
+        color: rgb(195, 208, 229);
         font-size: 50px;
         font-weight: bold;
         padding-top: 1%;
@@ -17,17 +17,16 @@
     h3 {
         margin-top: 5%;
         margin-bottom: 1%;
-        font-weight: bold;
+        font-weight: 700;
+        color: rgb(195, 208, 229);
     }
 
     h2 { 
-        color: rgb(207, 208, 208);
-        font-weight: 400;
+        color: rgb(195, 208, 229);
     }
 
     h3 {
-        font-size: 1.3rem;
-        font-weight: 400;
+        font-size: 1.3rem
     }
 
     pre {
@@ -41,7 +40,7 @@
     }
 
     strong {
-        color: white;
+        color: rgb(195, 208, 229);
     }
 
     code {
@@ -252,7 +251,7 @@
         font-family: 'Inter', sans-serif;
         font-size: 17.5px;
         background-color: rgb(19, 20, 22);
-        color: rgb(207, 208, 208);
+        color: rgb(155, 163, 180);
     }
 
     .top-bar {
