@@ -47,7 +47,7 @@ The native methods for PHP serialization are `serialize()` and `unserialize()`. 
 
 **Important**: a serialized object may not be obvious at first view. Example:
 
-```url
+```bash
 %7b%22token%22%3a%22Tzo0OiJVc2VyIjoyOntzOjg6InVzZXJuYW1lIjtzOjY6InRlc3QiO3M6MTI6ImFjY2Vzc190b2tlbiI7czozMjoiZmx6bnQ3ZTRwYTNobGpnN3dpejJkeGxuMHVyN3VkNjYiO30%3d%22%2c%22sig_hmac_sha1%22%3a%226d68c7db6f6b4d5abc5e84acea971fd72d217202%22%7d
 ```
 
