@@ -45,17 +45,20 @@ description: "Comprehensive notes and methodologies for penetration testing and 
 
 ## WebServer
 
-* View source code
-* Take note of any possible username, password, email, user info, subdomains
+* Browse the app to see what functionalities are available. Activate Burp to see what the app is doing under the hood.
+* Inspect the source code to look for comments, suspicious scripts, endpoints, URLs, etc. 
+* View `robots.txt`, `sitemap.xml`, `.git`
+* Take note of any possible username, password, email, user info, subdomains.
 * Analyze response. Any useful information?
-  * `curl -v <IP>`
-* View robots.txt
+  * Burp / Network monitor / `curl -v <domain>`
+* Check which technologies the app uses with **Wappalyzer**
 * Any login page?
   * Default user:password
   * Dictionary attack
   * Creating wordlist from webpage with CeWL
   * Do you need usernames?
-    * https://github.com/francescovolpe/Cyber-Security-Notes/blob/main/Web%20vulnerabilities/Authentication.md#usernames-enumeration
+    * [Username Enumeration](/web/vulnerabilities/authentication/#username-enumeration)
+* If you have identified the domain of the web application, check for subdomains.
 * File/directory enum
   * Always try more extentions
   * Try more wordlist
@@ -73,15 +76,15 @@ description: "Comprehensive notes and methodologies for penetration testing and 
 
 ## Strange strings?
 
-* Hash? -> https://hashes.com/en/tools/hash\_identifier
+* Hash? -> https://hashes.com/en/tools/hash_identifier
   * https://crackstation.net/
   * john, hashcat
-* Base64? -> https://gchq.github.io/CyberChef/#recipe=From\_Base64('A-Za-z0-9%2B/%3D',true,false)
+* Base64? -> https://gchq.github.io/CyberChef/#recipe=From_Base64('A-Za-z0-9%2B/%3D',true,false)
 * Rotate
 * Magic formula? -> https://gchq.github.io/CyberChef/#recipe=Magic(3,false,false,'')
 * Try all cyberchef decodings
-* Can I use this string/key somewhere? Ex. key to decrypt?
-* Google search
+* Can I use this string/key somewhere? E.g. key to decrypt?
+* Search on Google
 
 ## Steganography
 
@@ -114,4 +117,4 @@ description: "Comprehensive notes and methodologies for penetration testing and 
 
 ## PrivEsc
 
-[privilege-escalation.md](../iii-network/privilege-escalation.md "mention")
+[Privilege Escalation](/network/privilege-escalation/)

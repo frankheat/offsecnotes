@@ -14,7 +14,7 @@ description: "Learn about various techniques and methods for privilege escalatio
 
 ### Automation script
 
-```batch
+```cmd
 :: https://github.com/itm4n/PrivescCheck
 powershell -ep bypass -c ". .\PrivescCheck.ps1; Invoke-PrivescCheck"
 ```
@@ -186,11 +186,15 @@ set SMBPass <LM hash>:<NTLM hash>
 
 ### Vulnerable program
 
-Search scripts that execute programs or programs. Search for any vulnerable version. One example: chkrootkit v0.49 (running as root)
+Search scripts that execute programs. Search for **any vulnerable version**. One example: chkrootkit v0.49 (running as root)
 
 ```sh
 ps aux
 ```
+
+{{< hint style=notes >}}
+**Note**: it's possible that another user (e.g., root) is running a cron job that executes a script periodically, which you may not be able to see. Therefore, it's crucial to identify and enumerate all potential programs that could be vulnerable.
+{{< /hint >}}
 
 ### Weak Permissions
 
@@ -206,6 +210,11 @@ sudo -l
 ```
 
 ### SUID - custom binary
+
+Find all SUID binaries:
+```bash
+find / -perm -4000 2>/dev/null
+```
 
 Premise: you have `binary_name` (with suid) that use/load/execute `loaded_binary`
 
@@ -241,6 +250,15 @@ gcc binary.c -o <loaded_binary>
 # Run the binary
 ./binary_name
 ```
+
+### Email
+
+Analyze the email for any sensitive information:
+
+```bash
+ls /var/mail
+```
+
 
 ### Other
 

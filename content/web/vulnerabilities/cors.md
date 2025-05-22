@@ -120,5 +120,3 @@ https://sub.vulnerable.com/?xss=<script>...your-code...</script>
 
 CORS exploits often rely on the browser sending cookies along with cross-origin requests. This depends on the `SameSite` attribute of the cookie.
 To exploit CORS with `withCredentials=true`, the session cookie must be accessible (i.e., not blocked by `SameSite=Strict`).
-
-Learn more in the dedicated section on [SameSite Cookies]({{< ref "web/vulnerabilities/csrf" >}}).
