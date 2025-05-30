@@ -3,9 +3,8 @@
     <input id="filter-input" type="text" class="form-control mb-2 rounded-pill" placeholder="Filter" autocomplete="off">
     <div>
         {{ range site.Sections.ByWeight }}
-        
+        <hr class="hr-sitenav">
         <div class="sections">
-            <hr>
             <strong>{{ .Title }}</strong>
             <ul>
                 {{ range .Sections.ByWeight }}

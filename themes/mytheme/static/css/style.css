@@ -20,7 +20,7 @@
         color: rgb(195, 208, 229);
     }
 
-    h2 { 
+    h2 {
         color: rgb(195, 208, 229);
     }
 
@@ -35,7 +35,7 @@
 
     .highlight {
         margin-bottom: 2%;
-        
+
     }
 
     strong {
@@ -45,7 +45,7 @@
     code {
         color: rgb(64, 134, 190);
         background-color: #282c34 !important;
-        padding: 4px 6px; 
+        padding: 4px 6px;
         font-size: 90%;
     }
 
@@ -74,7 +74,9 @@
 
 
     /* Main content style */
-    .tips, .notes, .warning {
+    .tips,
+    .notes,
+    .warning {
         padding: 10px 20px;
         margin-bottom: 3%;
         margin-top: 3%;
@@ -187,7 +189,7 @@
         padding-left: 0;
     }
 
-    #TableOfContents li a{
+    #TableOfContents li a {
         padding-left: 15px;
     }
 
@@ -221,10 +223,6 @@
 
     #index ul ul {
         padding-left: 15px;
-    }
-
-    .sections {
-        margin-bottom: 10px;
     }
 
 
@@ -308,7 +306,8 @@
         padding-top: 30px;
         border-top: 1px solid rgb(82, 82, 82);
         padding-bottom: 30px;
-        font-size: 15px;;
+        font-size: 15px;
+        ;
     }
 
     @media (max-width: 992px) {
@@ -321,5 +320,9 @@
 
         .main-content {
             padding: 0% 1% !important;
+        }
+
+        .hr-sitenav {
+            margin: 1% 0%;
         }
     }
