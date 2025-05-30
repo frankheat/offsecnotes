@@ -12,6 +12,8 @@ Two phases:
 1. Find a way to trigger a response that unintentionally includes a dangerous payload.
 2. Ensure the response is cached and served to the intended victims after success.
 
+---
+
 ## Exploiting cache design flaws
 
 **Web cache poisoning to deliver XSS**
@@ -59,6 +61,8 @@ Cache-Control: public, max-age=1800
 **Vary header**
 
 The `Vary` header specifies a list of additional headers that should be treated as part of the cache key even if they are normally unkeyed. For example, it is commonly used to specify that the `User-Agent` header is keyed. If the mobile version of a website is cached, this won't be served to non-mobile users by mistake.
+
+---
 
 ## Exploiting cache implementation flaws
 

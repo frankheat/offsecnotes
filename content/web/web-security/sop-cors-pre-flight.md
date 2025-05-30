@@ -13,6 +13,8 @@ weight: 6
 * The SOP allows embedding of images via the `<img>` `<video>` `<script>`.
   * However, while these external resources can be loaded by the page, any JavaScript on the page won't be able to read the contents of these resources.
 
+---
+
 ## Cross-origin resource sharing
 
 The cross-origin resource sharing specification provides controlled relaxation of the same-origin policy. The CORS specification identifies a collection of protocol headers
@@ -32,8 +34,6 @@ This means that the browser will allow code running on normal-website.com to acc
 **Note**: `Access-Control-Allow-Origin` is returned only if the whitelisted values or `*` or `null` matched the Origin.
 {{< /hint >}}
 
-***
-
 **Access-Control-Allow-Origin: \***
 
 The use of the wildcard `*` is restricted in the specification as you cannot combine the wildcard with the cross-origin transfer of credentials (authentication, cookies or client-side certificates). This following response is not permitted
@@ -43,8 +43,6 @@ Access-Control-Allow-Origin: *
 Access-Control-Allow-Credentials: true
 ```
 
-***
-
 **Access-Control-Allow-Origin: null**
 
 Specifies that only origins with a `null` origin are allowed to access the resource. Browsers might send the value `null` in the Origin header in various unusual situations:
@@ -53,6 +51,8 @@ Specifies that only origins with a `null` origin are allowed to access the resou
 * Requests from serialized data.
 * Request using the `file` protocol.
 * Sandboxed cross-origin requests.
+
+---
 
 ## Pre-flight checks
 

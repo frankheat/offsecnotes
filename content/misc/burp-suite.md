@@ -5,6 +5,7 @@ weight: 2
 
 # Burp Suite
 
+
 ## Burp Scanner
 
 **Active scan**
@@ -23,11 +24,15 @@ Highlight the insertion point, right-click, and select "**Scan selected insertio
 
 Highlight a character sequence, usually a parameter value, and select Extensions > "**Scan manual insertion point**".
 
+---
+
 ## Broken Access Control
 
 * **Multi-Account Containers** (firefox extension) _It create a separate browser environment for each account you are testing_
 * **Autorize** (burp extension)
   * Automatically repeats every request with the session of the low privileged user
+
+---
 
 ## PwnFox
 
@@ -37,11 +42,15 @@ PwnFox _provide useful tools for your security audit_
 * Containers Profiles (it will automatically add a X-PwnFox-Color header to highlight the query in Burp)
 * Other: https://github.com/yeswehack/PwnFox
 
+---
+
 ## Out of band vulnerabilities
 
 Many companies filtering and block outbound traffic to the default collaborator domain.
 
 * **webhook.site** _Webhook.site generates a free, unique URL and e-mail address and lets you see everything that’s sent there instantly._
+
+---
 
 ## Logger ++ filters: Top 25 Parameters
 
@@ -49,6 +58,8 @@ Many companies filtering and block outbound traffic to the default collaborator 
 * https://owasp.org/www-project-top-25-parameters/
 * https://github.com/lutfumertceylan/top25-parameter/tree/master
 
+
+---
 
 ## Custom actions
 

@@ -12,6 +12,8 @@ Improper handling of file uploads is a common security weakness in web applicati
 **Warning**: By default, servers do not execute uploaded files unless they are explicitly configured to do so.
 {{< /hint >}}
 
+---
+
 ## Flawed File Validation
 
 Poor validation allows attackers to bypass filters and upload dangerous files.
@@ -72,6 +74,8 @@ exiftool -Comment="<?php echo 'START ' . file_get_contents('/etc/passwd') . ' EN
 
 This works if you can upload a php extension file. This works why you have a real image file (that bypass restrictions) but when you open the image it's executed as php script.
 
+---
+
 ## Overriding Server Configuration
 
 Many servers allow configuration files in directories to override global settings. Web servers use them when present, but they're not accessible via HTTP requests.
@@ -80,6 +84,8 @@ If the file extension is blacklisted, you might trick the server into mapping a 
 
 * Apache servers → `.htaccess`
 * Example: `AddType application/x-httpd-php .<EXTENSION>`
+
+---
 
 ## PUT Method Exploitation
 
@@ -94,6 +100,8 @@ Content-Length: 49
 <?php echo file_get_contents('/etc/passwd'); ?>
 ```
 
+---
+
 ## Path Traversal + File Upload
 
 If execution is blocked in the upload directory but the web server use the filename field in the request to determine the file’s name and location, you can try to escape using path traversal in the `filename` field:
@@ -106,12 +114,16 @@ Content-Disposition: form-data; name="avatar"; filename="../exploit.php"
 **Tip**: If directory traversal is filtered, try encoding it: `filename="..%2fexploit.php"`.
 {{< /hint >}}
 
+---
+
 ## Upload Without RCE
 
 Even without remote code execution, you can still cause harm:
 
 - Upload `.html` or `.svg` files with embedded JavaScript → **Stored XSS**
 - Upload XML files like `.docx`, `.xlsx` → Possible **XXE injection**
+
+---
 
 ## Race Conditions in File Uploads
 

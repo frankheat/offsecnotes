@@ -43,10 +43,14 @@ Even minor differences in error messages can reveal valid usernames.
 
 Some systems check passwords only if the username is valid. Sending an excessively long password may create a delay, indicating the username exists.
 
+---
+
 ## Password Attacks
 
 [Cracking passwords]({{< ref "misc/password-cracking" >}}) is a key part of authentication testing.
 
+
+---
 
 ## Account Locking Mechanisms
 
@@ -56,6 +60,8 @@ Check if accounts lock after multiple failed attempts (e.g., 3 or 5 attempts). U
 - **IP-Based Lockout**: The failed attempts counter resets if the IP owner logs in successfully. (Make sure that concurrent requests is set to 1)
 Try bypassing with an `X-Forwarded-For` header.
 
+
+---
 
 ## Password Reset Vulnerabilities
 
@@ -93,6 +99,8 @@ X-Forwarded-Host: attacker.com
 
 username=victim
 ```
+
+---
 
 ## Two-Factor Authentication (2FA) Bypasses
 
@@ -135,10 +143,14 @@ verification-code=123456
 ```
 
 
+---
+
 ## "Remember Me" Cookie Attacks
 
 - Study how "Remember Me" cookies are generated (e.g., Base64 encoding or hashed values).
 - Attempt brute-forcing attack.
+
+---
 
 ## Password change
 

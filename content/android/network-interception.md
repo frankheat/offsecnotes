@@ -8,11 +8,15 @@ description: "Learn Android network interception techniques for pentesting. Cove
 
 In android there are several ways to make HTTP requests. For example using `HttpURLConnection` (low-level API built into Java), `OkHttp` (A popular third-party library) etc.
 
+---
+
 ## Cleartext Traffic
 
 Starting from Android 9 (API level 28), HTTP clients like `URLConnection`, `Cronet`, and `OkHttp` enforce the use of HTTPS, thus disabling cleartext traffic by default. However, it's important to note that other HTTP client libraries, such as `Ktor`, may not enforce these restrictions \[[🔗](https://developer.android.com/privacy-and-security/risks/cleartext-communications#risk-http)].
 
 However, if developers explicitly set `usesCleartextTraffic=true` \[[🔗](https://developer.android.com/reference/android/security/NetworkSecurityPolicy#isCleartextTrafficPermitted\(\))] in the manifest or network security configuration \[[🔗](https://developer.android.com/privacy-and-security/security-config#CleartextTrafficPermitted)], cleartext traffic is permitted.
+
+---
 
 ## SSL interception
 
@@ -214,6 +218,8 @@ java -jar uber-apk-signer.jar -apk <app_name>.apk
 {{< hint style=notes >}}
 **Note**: unpacking and repacking an app can break stuff.
 {{< /hint >}}
+
+---
 
 ## Intercepting Without Proxy Support
 

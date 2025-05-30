@@ -18,6 +18,8 @@ nth vaddr      bind   type     lib name
 [...]
 ```
 
+---
+
 ## Exports
 
 ```sh
@@ -30,6 +32,8 @@ nth paddr      vaddr      bind     type size lib name
 212 0x000b18e0 0x000b18e0 GLOBAL   FUNC   35 r_bin_java_get_item_desc_from_bin_cp_list
 [...]
 ```
+
+---
 
 ## Symbols
 
@@ -44,6 +48,8 @@ nth paddr      vaddr      bind     type size lib name
 [...]
 ```
 
+---
+
 ## List Libraries
 
 ```sh
@@ -54,6 +60,8 @@ liblog.so
 libz.so
 [...]
 ```
+
+---
 
 ## Show strings
 

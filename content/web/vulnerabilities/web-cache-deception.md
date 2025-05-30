@@ -13,11 +13,15 @@ Web cache deception is a vulnerability where an attacker tricks a web cache into
 
 More info about web cache: [web-cache.md](../web-security/web-cache.md "mention")
 
+---
+
 ## Constructing a web cache deception attack
 
 1. Identify a target endpoint that returns dynamic responses with sensitive information, focusing on those supporting `GET`, `HEAD`, or `OPTIONS` methods, as they are typically cached
 2. Look for discrepancies in how the cache and origin server parse the URL path
 3. Craft a malicious URL to trick the cache into storing a dynamic response. When the victim accesses it, their data is cached. Use Burp to request the same URL and retrieve the cached response. Avoid using a browser to prevent redirects or data invalidation.
+
+---
 
 ## Static extension cache rules
 
@@ -101,6 +105,8 @@ Objective: identify a character that is used as a delimiter by the origin server
     If the cache or origin server decodes these characters, it may be possible to use an encoded version in an exploit.
 * Make sure to test all ASCII characters and a range of common extensions, including `.css`, `.ico`, and `.exe`
 {{< /hint >}}
+
+---
 
 ## Static directory cache rules (with normalization discrepancies)
 

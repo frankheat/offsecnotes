@@ -37,12 +37,16 @@ Host: portswigger.net
 Some intercepting proxies use the Host header to determine the target IP address, making testing difficult. Burp Suite keeps the Host header and target IP address separate, which is crucial.
 {{< /hint >}}
 
-### Supply an arbitrary Host header
+---
+
+## Supply an arbitrary Host header
 
 Start by testing the effect of providing an arbitrary domain name in the Host header
 
 * Occasionally, you can still reach the target website with an unexpected Host header
 * Or get an invalid Host header error
+
+---
 
 ## Exploitation
 
@@ -85,6 +89,8 @@ You may encounter servers that only perform thorough validation on the first req
 ### Exploiting server-side vulnerabilities
 
 E.g. SQLi, etc.
+
+---
 
 ## Bypass validation
 

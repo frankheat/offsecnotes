@@ -14,6 +14,8 @@ description: "Learn how to bypass common binary protections such as SSL pinning,
 apkid --scan-depth 0 -r target.apk
 ```
 
+---
+
 ## SSL Pinning
 
 * **Missing SSL pinning**
@@ -65,6 +67,8 @@ See [#webview-debug](security-misconfiguration.md#webview-debug "mention")
 **Tip**: if you can't use remote debugging, recompile the app and enable it.
 {{< /hint >}}
 
+---
+
 ## Root Detection
 * **Missing root detection**
 * **Bypass with frida**
@@ -78,6 +82,8 @@ frida --codeshare dzonerzy/fridantiroot -f <com.package.app> -U
   * `apkid --scan-depth 0 -r target.apk`
 * **Bypass protection analyzing the code and/or with frida**
   * If the app return an error message (e.g. "Your device appears to be rooted"), search this string inside the code
+
+---
 
 ## Emulator Detection
 

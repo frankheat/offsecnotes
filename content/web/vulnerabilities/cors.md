@@ -4,9 +4,11 @@ weight: 7
 description: "Learn how misconfigured CORS policies can expose sensitive data through origin reflection, null origin whitelisting, and XSS on trusted subdomains."
 ---
 
-# CORS
+# CORS Misconfiguration
 
 **Impact**: If a web response includes sensitive data (like an API key or CSRF token), and CORS is misconfigured, an attacker could steal that data using a malicious website.
+
+---
 
 ## What is CORS?
 
@@ -16,6 +18,8 @@ CORS (Cross-Origin Resource Sharing) is a browser security feature that controls
 **Note**: An "origin" in CORS includes the protocol, domain, and port. So `https://example.com` and `http://example.com` are considered different origins
 \[[🔗](https://developer.mozilla.org/en-US/docs/Glossary/Origin)].
 {{< /hint >}}
+
+---
 
 ## Origin Reflection in ACAO Header
 
@@ -47,6 +51,8 @@ Access-Control-Allow-Origin: https://evil.com
 </script>
 ```
 
+---
+
 ## Bypassing Origin Checks with Similar Domains
 
 Some applications whitelist trusted origins without strict validation, making it possible to bypass checks using similar-looking domains.
@@ -59,6 +65,8 @@ Some applications whitelist trusted origins without strict validation, making it
 {{< hint style=notes >}}
 **Note**: You need to know or guess the whitelisted origins to attempt this.
 {{< /hint >}}
+
+---
 
 ## Whitelisted `null` Origin
 
@@ -93,6 +101,8 @@ Access-Control-Allow-Origin: null
 </script>"></iframe>
 ```
 
+---
+
 ## Using XSS on a Trusted Subdomain to Exploit CORS
 
 If a site allows CORS requests only from a trusted subdomain and you find an XSS vulnerability on that subdomain, you can use the XSS to steal data via CORS.
@@ -115,6 +125,8 @@ URL:
 https://sub.vulnerable.com/?xss=<script>...your-code...</script>
 ```
 
+
+---
 
 ## The Role of SameSite Cookies
 

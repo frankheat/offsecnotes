@@ -7,6 +7,8 @@ weight: 10
 
 GraphQL syntax: [https://portswigger.net/web-security/graphql/what-is-graphql](https://portswigger.net/web-security/graphql/what-is-graphql)
 
+---
+
 ## Serving over HTTP
 
 **HTTP GET**
@@ -29,6 +31,8 @@ JSON-encoded body
 }
 ```
 
+---
+
 ## GraphQL endpoints
 
 ### Universal queries
@@ -36,6 +40,8 @@ JSON-encoded body
 Sending `query{__typename}` to a GraphQL endpoint will return `{"data": {"__typename": "query"}}` in the response.
 
 Try with POST, GET or POST with `application/x-www-form-urlencoded`
+
+---
 
 ## Common endpoint names
 
@@ -57,6 +63,8 @@ More endpoint: [SecLists discovery graphql](https://github.com/danielmiessler/Se
 {{< hint style=notes >}}
 **Note**: Response could be "query not present" or similar. (meaning it's present)
 {{< /hint >}}
+
+---
 
 ## Discovering schema information
 
@@ -188,6 +196,8 @@ Now you can easily view relationships between schema entities using a GraphQL vi
 
 Suggestions are a feature of the Apollo GraphQL platform where the server suggests query amendments in error messages. [Clairvoyance](https://github.com/nikitastupin/clairvoyance) is a tool that uses suggestions to automatically recover all or part of a GraphQL schema, even when introspection is disabled.
 
+---
+
 ## Bypassing GraphQL introspection defenses
 
 * Developers might use a regex to exclude the `__schema` keyword. Try spaces, new lines, and commas, which GraphQL ignores but flawed regex does not.
@@ -210,6 +220,8 @@ Suggestions are a feature of the Apollo GraphQL platform where the server sugges
 
 * POST request with a content-type of `x-www-form-urlencoded`
 
+---
+
 ## Bypassing rate limiting
 
 Use aliases to return multiple instances of the same type of object in one request.
@@ -229,6 +241,8 @@ Use aliases to return multiple instances of the same type of object in one reque
         }
     }
 ```
+
+---
 
 ## GraphQL CSRF
 

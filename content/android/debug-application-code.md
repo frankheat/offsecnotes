@@ -23,6 +23,8 @@ Three scenario:
 3. You might have the app Java source code. Again, this scenario is highly unlikely, but not impossible.
 
 
+---
+
 ## Prerequisites
 
 You need to have an application debuggable. If the app is not debuggable you can \[[🔗](https://www.pnfsoftware.com/jeb/manual/android-debugging/#debugging-non-debuggable-apps)]:
@@ -32,6 +34,8 @@ You need to have an application debuggable. If the app is not debuggable you can
 * Run the app in an emulator without Google services. Emulators have the `ro.debuggable` property set to `1`. In some cases, this may not suffice as OS or app components may check the Manifest's debuggable flag before or during execution.
 * Use a rooted phone so you can modify `ro.debuggable`.
 
+---
+
 ## Debugging levels
 
 You can debug an application to a different levels:
@@ -39,6 +43,8 @@ You can debug an application to a different levels:
 - Java
 - Smali
 - Native
+
+---
 
 ## Debug smali code
 
@@ -52,6 +58,8 @@ If you don't have the original Java code, you can debug the smali code. To do th
 4. Now you can set breakpoint, read and modify register value etc.
 
 For more info: \[[🔗](https://github.com/skylot/jadx/wiki/Smali-debugger)].
+
+---
 
 ## Debug java code
 

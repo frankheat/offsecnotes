@@ -30,6 +30,8 @@ startActivity(intent);
 
 `getIntent()` is a method in Android used to retrieve the **Intent.**
 
+---
+
 ## Send intent with adb
 
 ```sh

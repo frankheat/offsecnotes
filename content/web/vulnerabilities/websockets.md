@@ -69,9 +69,13 @@ It is common to use json
 
 {{< /details >}}
 
+---
+
 ## Manipulating WebSocket connections
 
 [https://portswigger.net/web-security/websockets#manipulating-websocket-connections](https://portswigger.net/web-security/websockets#manipulating-websocket-connections)
+
+---
 
 ## WebSockets vulnerabilities
 
@@ -82,6 +86,8 @@ It is common to use json
     * Example if the content of a message is transmitted to another user (via chat...)
     * `{"message":"<img src=1 onerror='alert(1)'>"}`
 * Also blind vulnerabilities
+
+---
 
 ## Cross-site WebSocket hijacking
 

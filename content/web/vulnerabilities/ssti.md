@@ -8,6 +8,8 @@ description: "Learn how to detect and exploit Server-Side Template Injection (SS
 
 Server-side template injection (SSTI) occurs when an attacker exploits native template syntax to inject and execute a malicious payload on the server.
 
+---
+
 ## Detect
 
 ### Plaintext context
@@ -63,6 +65,8 @@ Hello user<tag>
 http://vulnerable-website.com/?greeting=data.username}}<PAYLOAD>
 ```
 
+---
+
 ## Identification
 
 * Smarty (PHP)
@@ -89,6 +93,8 @@ http://vulnerable-website.com/?greeting=data.username}}<PAYLOAD>
 {{< hint style=notes >}}
 **Note**: there are many other template languages.
 {{< /hint >}}
+
+---
 
 ## Exploitation
 

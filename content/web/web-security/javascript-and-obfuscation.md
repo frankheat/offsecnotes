@@ -60,6 +60,8 @@ Tagged template strings
 alert`1337` // Calls the alert function with the argument 1337
 ```
 
+---
+
 ## Obfuscation
 
 ### Hexadecimal
@@ -174,6 +176,8 @@ eval(atob("YWxlcnQoKQ=="))    // alert()
 
 This can be useful to bypass char/string blocked.
 
+---
+
 ## eval() - DOM XSS
 
 * Consider `eval('var searchResultsObj = ' + this.responseText);`
@@ -190,6 +194,8 @@ This can be useful to bypass char/string blocked.
 * This specific example is a case of Reflected DOM XSS
 {{< /hint >}}
 
+---
+
 ## replace()
 
 The `replace()` method returns a new string with matches of a pattern replaced by a replacement, which can be a string or a function. The pattern can be a string or RegExp.
@@ -204,6 +210,8 @@ function escapeHTML(html) {
 
 You can easy bypass this with `<><img src=1 onerror=alert(1)>`
 
+---
+
 ## document.location
 
 In JavaScript, the `location` variable (`document.location`) represents the URL of the current document. Assigning a value to it redirects the page to that URL.
@@ -213,6 +221,8 @@ In JavaScript, the `location` variable (`document.location`) represents the URL 
 location = 'https://google.it';
 </script>
 ```
+
+---
 
 ## Javascript in innerHTML
 
@@ -224,6 +234,8 @@ el.innerHTML = name; <!-- harmless in this case -->
 HTML specifies that a `<script>` tag inserted with innerHTML should not execute
 
 In this case you can use `const name = "<img src='x' onerror='alert(1)'>";`
+
+---
 
 ## Javascript in href attribute
 

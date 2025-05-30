@@ -31,6 +31,8 @@ When the back button is pressed on `Bank-Main-Activity`, the user will go to the
   * This vulnerability is patched from **Android SDK version 28**. \[[🔗](https://developer.android.com/privacy-and-security/risks/strandhogg)]&#x20;
 * `android:launchMode="singleTask"` in `AndroidManifest.xml` (necessary for this scenario)
 
+---
+
 ## Testing
 
 You can use malware apk by ivan sincek \[[🔗](https://github.com/ivan-sincek/malware-apk)].

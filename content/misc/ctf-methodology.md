@@ -6,6 +6,7 @@ description: "Comprehensive notes and methodologies for penetration testing and 
 
 # CTF Methodology
 
+
 ## General
 
 * Take note of CTF keywords
@@ -43,6 +44,8 @@ description: "Comprehensive notes and methodologies for penetration testing and 
     * Fasttrack.txt
     * Rockyou.txt
 
+---
+
 ## WebServer
 
 * Browse the app to see what functionalities are available. Activate Burp to see what the app is doing under the hood.
@@ -74,6 +77,8 @@ description: "Comprehensive notes and methodologies for penetration testing and 
   * SSRF
   * XXE
 
+---
+
 ## Strange strings?
 
 * Hash? -> https://hashes.com/en/tools/hash_identifier
@@ -85,6 +90,8 @@ description: "Comprehensive notes and methodologies for penetration testing and 
 * Try all cyberchef decodings
 * Can I use this string/key somewhere? E.g. key to decrypt?
 * Search on Google
+
+---
 
 ## Steganography
 
@@ -100,6 +107,8 @@ description: "Comprehensive notes and methodologies for penetration testing and 
 * Audio
   * Spectogram https://convert.ing-now.com/audio-spectrogram-creator/
 
+---
+
 ## Cracking
 
 * PGP
@@ -114,6 +123,8 @@ description: "Comprehensive notes and methodologies for penetration testing and 
   * fcrackzip -> brute force (password <7)
   * bkcrack (known plaintext attack) https://github.com/kimci86/bkcrack/tree/master
     * The newer scheme for password-protecting zip files (with AES-256, rather than "ZipCrypto") does not have this weakness.
+
+---
 
 ## PrivEsc
 

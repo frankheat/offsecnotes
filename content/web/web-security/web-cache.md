@@ -11,6 +11,8 @@ A web cache is an intermediary system between the origin server and the user. Wh
 
 When the cache gets an HTTP request, it decides whether to serve a cached response or forward the request to the origin server by generating a "cache key". Typically, this would contain the request line and `Host` header but can also include headers and content type.
 
+---
+
 ## Cache rules
 
 Cache rules dictate what can be cached and for how long. They usually store static resources, which change infrequently and are used across multiple pages. Dynamic content isn't cached, as it often contains sensitive information, ensuring users receive the most up-to-date data from the server.
@@ -19,6 +21,8 @@ Cache rules dictate what can be cached and for how long. They usually store stat
 * **Static directory** rules match URL paths starting with a specific prefix, typically used for directories containing static resources, such as `/static` or `/assets`.&#x20;
 * **File name** rules target specific files that are essential and rarely change, like `robots.txt` and `favicon.ico`.
 * **Custom** rules.
+
+---
 
 ## Detecting cached responses
 
@@ -30,6 +34,8 @@ Cache rules dictate what can be cached and for how long. They usually store stat
 * The `Cache-Control` header may include a directive that indicates caching, like `public` with a `max-age` that has a value over `0`. Note that this only suggests that the resource is cacheable. It isn't always indicative of caching, as the cache may sometimes override this header.
 
 If you notice a big difference in response time for the same request, this may also indicate that the faster response is served from the cache.
+
+---
 
 ## Using a cache buster
 

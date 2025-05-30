@@ -24,9 +24,14 @@ whois 38.100.193.70
 whois 38.100.193.70 -h 192.168.5.5
 ```
 
+---
+
 ## Netcraft
 
 Netcraft is an ISP,  that offers a free web portal \[[🔗](https://searchdns.netcraft.com/)] for information gathering (technologies, subdomains, etc.).
+
+--- 
+
 
 ## Open-Source Code
 
@@ -35,6 +40,8 @@ Gather information through GitHub, GitLab, etc.
 * Manual
 * Automatic
   * [https://github.com/gitleaks/gitleaks](https://github.com/gitleaks/gitleaks)
+
+---
 
 ## Google Dorks
 
@@ -54,9 +61,13 @@ intitle:“index of” “parent directory”
 * [https://www.exploit-db.com/google-hacking-database](https://www.exploit-db.com/google-hacking-database)
 * [https://dorksearch.com/](https://dorksearch.com/)
 
+---
+
 ## Shodan
 
 Shodan \[[🔗](https://www.shodan.io/)] is a search engine for internet-connected devices, including servers, routers, and IoT devices.
+
+---
 
 ## DNS Enumeration
 
@@ -97,6 +108,8 @@ dnsrecon -d example.com -t brt -D list.txt    # Brute force subdomain enum
 sublist3r -d example.com
 ```
 
+---
+
 ## All in one
 
 * **amass** \[[🔗](https://github.com/owasp-amass/amass)]: network mapping and external asset discovery using open source information gathering and active reconnaissance techniques
@@ -106,13 +119,20 @@ sublist3r -d example.com
 theHarvester -d example.com -b google,linkedin,dnsdumpster,duckduckgo
 ```
 
+---
+
 ## Port Scanning
 
 **Netcat** \[[🔗](https://sourceforge.net/p/nc110/git/ci/master/tree/)]
 
+Use Netcat when Nmap isn't available.
+
 ```sh
 # Scan TCP
 nc -nvv -w 1 -z 192.168.5.5 100-102
+
+# Scan port 445 on 192.168.1.1–254
+for i in $(seq 1 254); do nc -nvv -w 1 -z 192.168.1.$i 445; done
 
 # Scan UDP [Highly unreliable, as firewalls/routers may drop ICMP packets ->
 # leading to false positives]
@@ -143,9 +163,11 @@ nmap -p 5 192.168.5.5
 **Note**: 1000-port scan generate around 72KB of traffic. Scanning all ports generate about 4 MB. 254 hosts \* 4 MB = 1000 MB of traffic.
 {{< /hint >}}
 
+---
+
 ## Host Discovery (nmap)
 
-**-sn option**
+**`-sn` option**
 
 The default host discovery done with `-sn` consists of an **ICMP echo request**. But when a privileged user tries to scan targets on a local ethernet network, **ARP requests** are used.
 
@@ -153,9 +175,7 @@ The default host discovery done with `-sn` consists of an **ICMP echo request**.
 nmap -sn 192.168.1.0/24
 ```
 
-***
-
-**-PS option**
+**`-PS` option**
 
 ```sh
 nmap -sn -PS 192.168.1.5
@@ -169,13 +189,13 @@ This option sends an empty TCP packet with the SYN flag set. The default destina
 `nmap -sn -PS22-25 192.168.1.5`
 {{< /hint >}}
 
-***
-
 **Other options**
 
 * `-PA` (ACK flag is set instead of the SYN flag). Default port: 80
 * `-PU` (sends a UDP packet). Default port: 40125
 * `-PY` (sends an SCTP packet). Default port: 80
+
+---
 
 ## Port Scanning (nmap)
 
@@ -198,6 +218,8 @@ nmap --script "default or safe" # Load all scripts that are in the default, safe
 {{< hint style=notes >}}
 **Note**: there are many categories. Some of the scripts in this category are considered intrusive and may not run on a network target without permissions.
 {{< /hint >}}
+
+---
 
 ## Website Recon
 

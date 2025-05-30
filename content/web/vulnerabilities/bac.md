@@ -28,6 +28,8 @@ https://insecure-website.com/administrator-panel-yb556
 **Tip**: Applications may hide sensitive URLs in JavaScript files. Analyze them to discover potential admin endpoints.
 {{< /hint >}}
 
+---
+
 ## Parameter-Based
 
 Some applications store user roles in locations that can be modified by the user, such as:
@@ -47,6 +49,8 @@ https://insecure-website.com/login/home.jsp?role=1
 - Use an intercepting proxy (like Burp Suite) to modify requests dynamically.
 
 
+---
+
 ## Referer-Based
 
 Some applications rely on the `Referer` header for access control, which can be manipulated.
@@ -64,6 +68,8 @@ Referer: https://vulnerable-website.com/admin
 **How to Test**
 - Identify subpages and attempt to **brute-force** URLs.
 - Modify the `Referer` header to bypass restrictions.
+
+---
 
 ## Platform Misconfigurations
 
@@ -94,6 +100,8 @@ X-Original-URL: /admin
 X-Rewrite-URL: /admin
 ```
 
+---
+
 ## URL-Matching Discrepancies
 
 Some applications fail to properly validate URL case sensitivity or unexpected suffixes.
@@ -104,6 +112,8 @@ Some applications fail to properly validate URL case sensitivity or unexpected s
 /ADMIN/DELETEUSER
 /admin/deleteUser.anything
 ```
+
+---
 
 ## IDOR
 
@@ -123,6 +133,8 @@ https://insecure-website.com/myaccount?id=123
 - Look for exposed GUIDs in messages or reviews.
 
 
+---
+
 ## Multi-Step Processes
 
 Some applications enforce access controls at the beginning of a workflow but fail to check authorization in later steps.
@@ -133,6 +145,8 @@ Some applications enforce access controls at the beginning of a workflow but fai
 3. **Review and confirm (no access check)**
 
 An attacker might skip the first two steps and jump directly to the final action.
+
+---
 
 ## Tips
 

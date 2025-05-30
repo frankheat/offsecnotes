@@ -49,6 +49,8 @@ console.log("[*] Loaded classes: " + classes.length);
 */
 ```
 
+---
+
 ## Enumerate methods
 
 `Java.enumerateMethods("class!method")`
@@ -62,6 +64,8 @@ console.log(JSON.stringify(allExampleMethods, null, 2));
 const activity = Java.enumerateMethods('*mainactivity*!*/i')
 console.log(JSON.stringify(activity, null, 2));
 ```
+
+---
 
 ## Java.perform(fn)
 
@@ -80,6 +84,8 @@ Java.perform(() => {
     console.log(exampleIstance.method);
 })
 ```
+
+---
 
 ## Hooking methods
 
@@ -148,6 +154,8 @@ Java.perform(function() {
 **Tip**: if you don't know what are the overload available, try to hook the method without the overload. Frida automatically tell you that the method has more than one overload and it will show you the ones available.
 {{< /hint >}}
 
+---
+
 ## Call a static method
 
 ```javascript
@@ -167,6 +175,8 @@ Java.perform(function() {
 ```
 
 {{< /details >}}
+
+---
 
 ## Create a class istance
 
@@ -190,6 +200,8 @@ Java.perform(function() {
 ```
 
 {{< /details >}}
+
+---
 
 ## Working with class variable
 

@@ -8,6 +8,7 @@ description: "Learn effective techniques for API security testing, including end
 
 APIs are a common target for attackers because they expose underlying business logic and data.
 
+
 ## Discovering API Endpoints
 
 ### Documentation
@@ -52,6 +53,8 @@ APIs often include hidden parameters that could be exploited.
 - Use the **Param Miner** Burp extension to identify hidden parameters.
 
 
+---
+
 ## Manipulating Content Types
 
 Changing the `Content-Type` header can lead to:
@@ -66,6 +69,8 @@ Modify the `Content-Type` header and reformat request data to test for such issu
 **Tip**: The **Content-Type Converter** BApp in Burp Suite can automatically switch data formats between JSON and XML.
 {{< /hint >}}
 
+
+---
 
 ## Mass Assignment Vulnerabilities
 
@@ -129,6 +134,8 @@ Send two request with:
 
 If the app behaves differently, the invalid value may affect the query, while the valid one doesn’t — suggesting the user can update the parameter.
 
+
+---
 
 ## Server-Side Parameter Pollution (SSPP)
 

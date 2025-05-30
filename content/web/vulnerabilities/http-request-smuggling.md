@@ -42,6 +42,8 @@ q=smuggling
 
 {{< /details >}}
 
+---
+
 ## Identification
 
 {{< hint style=warning >}}
@@ -89,6 +91,8 @@ The back-end server, relying on the Content-Length header, waits for additional 
 {{< hint style=warning >}}
 **Warning**: The timing-based test for TE.CL vulnerabilities will potentially disrupt other application users if the application is vulnerable to the CL.TE variant of the vulnerability. So to be stealthy and minimize disruption, you should use the CL.TE test first and continue to the TE.CL test only if the first test is unsuccessful.
 {{< /hint >}}
+
+---
 
 ## Confirmation/Exploitation
 
@@ -165,6 +169,8 @@ x=
 {{< hint style=notes >}}
 **Note**: Update Content-Length must be unchecked
 {{< /hint >}}
+
+---
 
 ## Exploitation
 
@@ -329,15 +335,21 @@ Host: attacker-website.com
 Foo: X
 ```
 
+---
+
 ## Content-Length in the smuggled request
 
 The value in the `Content-Length` header in the smuggled request will determine how long the back-end server believes the request is. If you set this value too short, you will receive only part of the rewritten request; if you set it too long, the back-end server will time out waiting for the request to complete. Of course, the solution is to guess an initial value that is a bit bigger than the submitted request, and then gradually increase the value to retrieve more information, until you have everything of interest.
+
+---
 
 ## HTTP/2 request smuggling
 
 **HTTP/2 downgrading**
 
 HTTP/2 downgrading converts HTTP/2 requests into HTTP/1 syntax, allowing web servers and proxies to support HTTP/2 clients while communicating with HTTP/1 back-end servers.
+
+---
 
 ## Identification
 
@@ -368,6 +380,8 @@ GET /404 HTTP/1.1
 Host: vulnerable-website.com
 Foo: x
 ```
+
+---
 
 ## Exploitation
 
@@ -400,6 +414,8 @@ Host: vulnerable-website.com
 Foo: x
 ```
 
+---
+
 ## Request smuggling via CRLF injection
 
 In HTTP/2 messages `\r\n` no longer has any special significance within a header value and, therefore, can be included inside the value itself without causing the header to be split. when this is rewritten as an HTTP/1 request, the `\r\n` will once again be interpreted as a header delimiter. As a result, an HTTP/1 back-end server would see two distinct headers.
@@ -422,6 +438,8 @@ Foo: x
 {{< hint style=notes >}}
 **Note**: to inject newlines into HTTP/2 headers, in burp use the Inspector to drill down into the header, then press the `Shift + Return` keys.
 {{< /hint >}}
+
+---
 
 ## Response queue poisoning
 
@@ -453,6 +471,8 @@ Host: vulnerable-website.com\r\n
 \r\n
 ```
 
+---
+
 ## HTTP/2 request splitting
 
 This approach is more versatile, allowing even GET requests without relying on methods that support a body.
@@ -482,6 +502,8 @@ foo             bar\r\n
 {{< hint style=notes >}}
 **Note**: here the request trigger response queue poisoning, but you can also smuggle prefixes for classic request smuggling.
 {{< /hint >}}
+
+---
 
 ## CL.0/H2.0 request smuggling
 

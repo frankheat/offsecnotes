@@ -14,6 +14,8 @@ weight: 5
   * After receiving an access token, the client application requests this data from the resource server, typically from a dedicated /userinfo endpoint.
   * Once it has received the data, the client application uses it in place of a username to log the user in. The access token that it received from the authorization server is often used instead of a traditional password.
 
+---
+
 ## OAuth grant type / OAuth flows
 
 * The OAuth grant type determines the exact sequence of steps that are involved in the OAuth process.
@@ -22,6 +24,8 @@ weight: 5
 {{< hint style=notes >}}
 **Note**: We'll focus on the "authorization code" and "implicit" grant types as these are by far the most common.
 {{< /hint >}}
+
+---
 
 ## OAuth scopes
 
@@ -37,6 +41,8 @@ scope=https://oauth-authorization-server.com/auth/scopes/user/contacts.readonly
 ```
 
 When OAuth is used for authentication, however, the standardized OpenID Connect scopes are often used instead.
+
+---
 
 ## Authorization code grant type
 
@@ -123,6 +129,8 @@ The resource server should verify that the token is valid and that it belongs to
 ```
 
 The client application can finally use this data for its intended purpose. In the case of OAuth authentication, it will typically be used as an ID to grant the user an authenticated session, effectively logging them in.
+
+---
 
 ## Implicit grant type
 

@@ -86,6 +86,8 @@ frida -U <package_name>
 
 {{< /details >}}
 
+---
+
 ## Commands
 
 ```sh
@@ -116,6 +118,8 @@ frida -U -f <package_name> -l <script.js>
 # Attach to application
 frida -U <package_name>
 ```
+
+---
 
 ## ❗ Frida Troubleshooting
 

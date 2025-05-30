@@ -21,6 +21,8 @@ Race conditions occurs when websites process requests concurrently without prope
 
 {{< /details >}}
 
+---
+
 ## Detecting and exploiting
 
 Even with simultaneous requests, external factors can unpredictably affect server processing. Burp adjusts techniques automatically.&#x20;
@@ -59,6 +61,8 @@ def handleResponse(req, interesting):
 ```
 
 
+---
+
 ## Multi-endpoint race windows
 
 **Connection warming**
@@ -68,17 +72,19 @@ In Burp Repeater, try adding a `GET` request for the homepage at the start of yo
 * If only the first request has a longer processing time but the rest are fast, ignore the delay and continue testing.&#x20;
 * If inconsistent response times persist, it indicates back-end delay interference. To work around this, use Turbo Intruder to send connection warming requests before your main attack requests.
 
-***
-
 **Abusing rate or resource limits**
 
 Web servers often delay processing if too many requests are sent too quickly. By sending many dummy requests to trigger rate or resource limits, you can create a server-side delay, making the single-packet attack viable even with delayed execution.
+
+---
 
 ## Session-based locking mechanisms
 
 Some frameworks prevent accidental data corruption through request locking. For example, PHP's native session handler processes one request per session at a time.
 
 If your requests are processed sequentially, **try using a different session token for each**.
+
+---
 
 ## Time-sensitive attacks
 

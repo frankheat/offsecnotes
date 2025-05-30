@@ -30,6 +30,8 @@ Optionals:
   * 📁 **libs**: comprises Java `.jar` and/or Android `.aar` archive files mostly for the compilation phase.
   * 📁 **lib**: contains native shared `.so` and/or static `.a` library files.
 
+---
+
 ## Android Package (apk)
 
 Simply a ZIP archive with an `.apk` extension
@@ -44,6 +46,8 @@ It almost always embodies the following files and directories, though only `Andr
 * 📁 **assets**: comprises further resources packed as-is into the `.apk` file.
 * 📁 **lib**: contains native shared libraries of the package
 * An APK may contain further files and folders
+
+---
 
 ## Building process
 

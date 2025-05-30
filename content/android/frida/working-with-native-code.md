@@ -44,6 +44,8 @@ Using the `RegisterNatives`. This function is called from the native code, not t
 
 {{< /details >}}
 
+---
+
 ## Detecting external native library load
 
 ```javascript
@@ -72,6 +74,8 @@ The `android_dlopen_ext` API  \[[🔗](https://developer.android.com/ndk/referen
 When `onEnter` is called, it is checked whether the library that `android_dlopen_ext` is loading is the desired library. If so, it sets `flag = 1`.&#x20;
 
 `onLeave` checks whether the `flag == 1`. If this check is omitted, the code within `onLeave` will be executed each time any library is loaded.
+
+---
 
 ## Working with native library
 
@@ -108,6 +112,8 @@ Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
 ```
 
 To work with the native library, you can create a `Module` object. Once you have created it you can perform various actions. Refer to [https://frida.re/docs/javascript-api/#module](https://frida.re/docs/javascript-api/#module).
+
+---
 
 ## Hooking a native functions
 
@@ -153,6 +159,8 @@ Interceptor.attach(strcmp_adr, {
 ```
 
 {{< /details >}}
+
+---
 
 ## Change the return of a native function
 

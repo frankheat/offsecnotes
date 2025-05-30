@@ -6,15 +6,18 @@ description: "Learn about password cracking techniques, including identifying ha
 
 # Password Cracking
 
+
 ## Identify hash
 
 * [_https://hashes.com/en/tools/hash\_identifier_](https://hashes.com/en/tools/hash_identifier)
+
+---
 
 ## Cracking 
 
 ### Hash
 
-* [https://crackstation.net](https://crackstation.net/) _CrackStation uses massive pre-computed lookup tables to crack password hashes_
+[https://crackstation.net](https://crackstation.net/) _CrackStation uses massive pre-computed lookup tables to crack password hashes_
 
 ### Shadow file
 
@@ -92,6 +95,8 @@ john --wordlist=wordlist.txt ssh.hash
 ```
 
 
+---
+
 ## Rules (password bruteforce)
 
 * **FIRST CHOICE**:  best64 (now best66). Fast, works well.
@@ -116,3 +121,23 @@ hashcat -r best66.rule --stdout file.txt
 
 * [https://notsosecure.com/one-rule-to-rule-them-all](https://notsosecure.com/one-rule-to-rule-them-all)
 * [https://trustedsec.com/blog/better-hacking-through-cracking-know-your-rules](https://trustedsec.com/blog/better-hacking-through-cracking-know-your-rules)
+
+
+---
+
+## Generate wordlist
+
+```sh
+# Generate words of length 4 with only characters a, b, and c
+crunch 4 4 abc -o wordlist.txt
+
+# Generate words of length 6 to 8 with only characters a, b, c, 1, 2, 3
+crunch 6 8 abc123 -o wordlist.txt
+
+# Pattern
+# @ = Lowercase letters (a–z)
+# , = Uppercase letters (A–Z)
+# % = Numbers (0–9)
+# ^ = Symbols
+crunch 6 6 -t a@^^%% -o mix.txt
+```

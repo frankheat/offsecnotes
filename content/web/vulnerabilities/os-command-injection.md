@@ -14,6 +14,8 @@ description: "Learn about OS command injection vulnerabilities, detection method
 
 Placing `&` after the injected command is generally useful because it separates the injected command from whatever follows the injection point.
 
+---
+
 ## Blind OS command
 
 **Detection**
@@ -41,9 +43,13 @@ curl https://website.com/whoami.txt
 
 3. Open a shell
 
+---
+
 ## Bypass restriction
 
 There are so many ways: [https://book.hacktricks.wiki/linux-hardening/bypass-bash-restrictions/index.html](https://book.hacktricks.wiki/linux-hardening/bypass-bash-restrictions/index.html)
+
+---
 
 ## Metacharacters
 
@@ -62,6 +68,8 @@ There are so many ways: [https://book.hacktricks.wiki/linux-hardening/bypass-bas
 $(command)
 ```
 
+---
+
 ## Identify CMD or PowerShell
 
 To determine whether commands are executed by PowerShell or CMD, use this snippet:
@@ -69,6 +77,8 @@ To determine whether commands are executed by PowerShell or CMD, use this snippe
 ```cmd
 (dir 2>&1 *`|echo CMD);&<# rem #>echo PowerShell
 ```
+
+---
 
 ## Reverse Shell Generator
 

@@ -17,6 +17,8 @@ Clickjacking is a web security vulnerability where an attacker tricks a user int
 Clickjacking attacks are **not prevented** by CSRF tokens, as the user's session with the target site remains valid.
 {{< /details >}}
 
+---
+
 ## Example of Clickjacking
 
 Here is a basic example of a clickjacking attack using an iframe:
@@ -49,6 +51,8 @@ Here is a basic example of a clickjacking attack using an iframe:
 
 The `opacity` of the iframe is set to `0`, making it invisible, while the `z-index` ensures that it is layered above the visible content.
 
+---
+
 ## Prefilled Form Input Attack
 Some websites allow prepopulating form inputs via `GET` parameters. Attackers can exploit this to trick users into submitting forms with attacker-controlled values.
 
@@ -57,6 +61,8 @@ Example:
 http://website.com/account?email=attacker@example.com
 ```
 If the website autofills the email field, the victim might unknowingly submit the attacker's email instead of their own.
+
+---
 
 ## Bypassing Frame Busting Scripts
 A frame busting script is a JavaScript script used by a website to prevent itself from being loaded inside an iframe on another site.
@@ -70,6 +76,8 @@ However, attackers can **bypass** these protections using the `sandbox` attribut
 
 When this is set with the `allow-forms` or `allow-scripts` values and the `allow-top-navigation` value is omitted then the frame buster script can be neutralized as the iframe cannot check whether or not it is the top window.
 
+---
+
 ## Clickjacking + DOM XSS
 An attacker can combine **Clickjacking with Cross-Site Scripting (XSS)** for more impact.
 
@@ -79,6 +87,8 @@ An attacker can combine **Clickjacking with Cross-Site Scripting (XSS)** for mor
 3. Use clickjacking to make the victim **click a malicious link** that triggers the XSS.
 
 This allows the attacker to execute JavaScript in the victim's session, potentially leading to **account takeover**.
+
+---
 
 ## Multi-Step Clickjacking Attacks
 Some attacks require multiple steps. This can be done by overlaying multiple **iframes** with staged interactions.

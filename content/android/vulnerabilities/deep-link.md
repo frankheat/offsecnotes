@@ -88,11 +88,15 @@ Suppose that:
 | > 12        | N / Y                    | Web Links          | `https://google.com` | {{< text-color color=green >}}Open in default browser{{< /text-color >}}                            |
 | > 6         | Y                        | App Links          | `https://google.com` | {{< text-color color=green >}}Open Victim App{{< /text-color >}}                                    |
 
+---
+
 ## Start an intent
 
 ```sh
 adb shell am start -W -a android.intent.action.VIEW -d "geo://"
 ```
+
+---
 
 ## Testing
 

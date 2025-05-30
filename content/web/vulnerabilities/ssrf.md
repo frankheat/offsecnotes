@@ -20,6 +20,8 @@ api=http://localhost/admin
 api=http://192.168.0.68/admin
 ```
 
+---
+
 ## Protocols
 
 If you can control the protocol you can change it.
@@ -30,11 +32,15 @@ If you can control the protocol you can change it.
 **Tip**: with gopher in some case it is possible to get a shell. E.g. interacting with mysql, redis PostgreSQL, etc. [https://github.com/tarunkant/Gopherus](https://github.com/tarunkant/Gopherus)
 {{< /hint >}}
 
+---
+
 ## Blind
 
 Difficult to exploit because you will be able to exploit only well-known vulnerabilities.
 
 **Detection:** Out-of-band techniques
+
+---
 
 ## Bypass SSRF defenses
 
@@ -68,6 +74,8 @@ api=http://website.com/product?productId=6
 # Exploit
 api=http://website.com/login?redirect=http://192.168.0.68/admin
 ```
+
+---
 
 ## Finding hidden attack surface for SSRF
 

@@ -67,6 +67,8 @@ So there are tools out there to convert to and from a human readable representat
   const/16 v0, 42    //smali
   ```
 
+---
+
 ## Extract APK
 
 ```bash
@@ -80,6 +82,8 @@ adb shell pm path <com.package.app>
 # Get apk(s)
 adb pull <path>
 ```
+
+---
 
 ## Disassemble & Assemble
 
@@ -115,6 +119,8 @@ java -jar APKEditor.jar m -i <path_splitted_apk> -o merged.apk
 java -jar uber-apk-signer.jar -a merged.apk --allowResign -o <merged_signed>
 ```
 
+---
+
 ## Troubleshooting apktool
 
 * **INSTALL\_FAILED\_INVALID\_APK:** Failed to extract native libraries
@@ -125,6 +131,8 @@ java -jar uber-apk-signer.jar -a merged.apk --allowResign -o <merged_signed>
 apktool d -f -r target.apk
 # Note: This do not decode resources
 ```
+
+---
 
 ## Dex to Java
 

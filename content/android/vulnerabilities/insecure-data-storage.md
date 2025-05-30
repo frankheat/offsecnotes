@@ -32,6 +32,8 @@ Historically, external storage was on an SD card, hence the `/sdcard/` folder na
 adb logcat | grep "$(adb shell ps | grep <package-name> | awk '{print $2}')"
 ```
 
+---
+
 ## Local Storage
 
 ```sh
@@ -44,6 +46,8 @@ objection -g <package_name> run env
 
 * Check for sensitive information/data store on Shared Preferences or not
 * Check if sensitive information/data is stored in the local storage database using strong encryption on or not
+
+---
 
 ## Application Memory
 

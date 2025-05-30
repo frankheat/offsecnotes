@@ -63,6 +63,8 @@ Base64 token decoding&#x20;
 O:4:"User":2:{s:8:"username";s:6:"wiener";s:12:"access_token";s:32:"flznt7e4pa3hljg7wiz2dxln0ur7ud66";}
 ```
 
+---
+
 ## Manipulating serialized objects
 
 * You can either edit the object directly in its byte stream form
@@ -120,10 +122,14 @@ Attacker can modify the password attribute so that it contained the integer `0` 
 * When modifying data types in any serialized object format, update any type labels and length indicators in the serialized data too (Otherwise, the serialized object will be corrupted and will not be deserialized).
 {{< /hint >}}
 
+---
+
 ## Using application functionality
 
 * Consider "Delete user" functionality, the user's profile picture is deleted by accessing the file path in the $user->image\_location attribute
 * If this $user was created from a serialized object, an attacker could exploit this by passing in a modified object with the image\_location set to an arbitrary file path
+
+---
 
 ## Magic methods
 
@@ -139,6 +145,8 @@ private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundE
 
 * They allow you to pass data from a serialized object into the website's code before the object is fully deserialized.
 
+---
+
 ## Injecting arbitrary objects
 
 Deserialization methods often don't validate the objects they process. Attackers can pass any serializable class, allowing them to instantiate arbitrary classes. With source code access, you can:
@@ -146,6 +154,8 @@ Deserialization methods often don't validate the objects they process. Attackers
 * Identify classes with deserialization magic methods
 * Check if they perform unsafe operations on controllable data
 * Then pass in a serialized object of this class to use its magic method for an exploit.
+
+---
 
 ## Gadget chains
 

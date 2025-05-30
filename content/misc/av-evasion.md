@@ -5,6 +5,7 @@ weight: 3
 
 # AV Evasion
 
+
 ## AV evasion with shellter
 
 * Shellter is a dynamic shellcode injection tool aka dynamic PE infector. It can be used in order to inject shellcode into native Windows applications (currently 32-bit apps only). The shellcode can be something yours or something generated through a framework, such as Metasploit. Shellter takes advantage of the original structure of the PE file and doesn’t apply any modification such as changing memory access permissions in sections (unless the user wants to), adding an extra section with RWE access, and whatever would look dodgy under an AV scan.
@@ -19,6 +20,8 @@ weight: 3
   * Set lhost and lport
   * Now the exe will be overwrite (but shellter creates a backup of the original exe)
   * Set listener (ex. multi/handler), download the exe on the target machine and execute
+
+---
 
 ## AV evasion for powershell script - Invoke-Obfuscation
 
@@ -37,6 +40,8 @@ weight: 3
 * Choose one of the AST\ALL options to apply to current payload: `1`
 * In the result you will get the result obfuscated code. Copy and save the code
 * Set listener (ex. multi/handler), download the exe on the target machine and execute
+
+---
 
 ## Tips
 

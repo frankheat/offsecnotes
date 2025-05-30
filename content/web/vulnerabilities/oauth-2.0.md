@@ -20,6 +20,8 @@ description: "Explore OAuth 2.0 authorization framework, its vulnerabilities, an
 
 {{< /details >}}
 
+---
+
 ## Identifying OAuth authentication
 
 * If you see an option to log in using your account from a different website, this is a strong indication that OAuth is being used.
@@ -31,6 +33,8 @@ If using an external OAuth service, identify the provider by the hostname in the
 
 * `/.well-known/oauth-authorization-server`
 * `/.well-known/openid-configuration`
+
+---
 
 ## Vulnerabilities
 
@@ -97,6 +101,8 @@ Tip: the default URI will often be on an OAuth-specific path, such as `/oauth/ca
 ### Flawed CSRF protection
 
 if you notice that the authorization request does not send a `state` parameter, It potentially means that you can initiate an OAuth flow yourself before tricking a user's browser into completing it, similar to a traditional CSRF attack.
+
+---
 
 ## OpenID Connect
 

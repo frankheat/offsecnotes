@@ -29,11 +29,15 @@ Without the server's secret signing key, generating a correct signature for a gi
 * By design, servers don't store information about the JWTs they issue. Each token is a self-contained entity.
 * JWT attacks involve users sending modified JWTs to the server to achieve malicious goals.
 
+---
+
 ## Arbitrary signatures
 
 Sometimes, developers decode tokens without verifying the signature.
 
 So, tamper the JWT and ignore the signature.
+
+---
 
 ## No signature
 
@@ -49,6 +53,8 @@ JWTs can be left unsigned (`alg` set to `none`). Servers usually reject unsigned
 **Tip**: Use JSON Web Tokens Burp Extension. Go to the request -> JSON Web Tokens and test "Alg None  Attack".
 {{< /hint >}}
 
+---
+
 ## Brute-forcing secret keys
 
 Some signing algorithms, such as HS256 (HMAC + SHA-256), use a string as the secret key -> crack it.
@@ -60,6 +66,8 @@ hashcat -a 0 -m 16500 <jwt> <wordlist>
 ```
 
 Go on JWT Editor Keys tab -> New Symmetric Key -> specify secret -> generate the key -> and finally sign.
+
+---
 
 ## JWT header parameter injections
 

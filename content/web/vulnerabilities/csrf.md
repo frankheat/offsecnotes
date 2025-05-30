@@ -8,6 +8,8 @@ description: "Learn what CSRF attacks are, how they work with real examples, and
 
 Cross-Site Request Forgery (CSRF) is a type of web attack where a malicious site tricks a user into performing actions on another site where they're authenticated. For example, it could change a user's email or send money—without their consent.
 
+---
+
 ## How CSRF Attacks Work
 
 An attacker can trick a logged-in user into submitting unwanted requests.
@@ -32,6 +34,8 @@ An attacker can trick a logged-in user into submitting unwanted requests.
 ```html
 <img src="https://vulnerable-website.com/email/change?email=pwned@evil-user.net">
 ```
+
+---
 
 ## CSRF Defenses
 
@@ -74,6 +78,8 @@ Don't rely solely on referer validation. Users or browsers may strip or modify t
 
 {{< /details >}}
 
+---
+
 ## CSRF Token Bypass Techniques
 
 - Switch from `POST` to `GET`
@@ -93,6 +99,8 @@ Don't rely solely on referer validation. Users or browsers may strip or modify t
   ```html
   <img src="https://vulnerable-website.com/?search=test%0d%0aSet-Cookie:%20csrfKey=YOUR-KEY%3b%20SameSite=None" onerror="document.forms[0].submit()">
   ```
+
+---
 
 ## Bypassing SameSite Protections
 
@@ -139,6 +147,8 @@ Now trigger redirect to a sensitive endpoint:
 {{< hint style=notes >}}
 **Note**: this attack isn't possible with server-side redirects, as browsers recognize the cross-site request and apply cookie restrictions.
 {{< /hint >}}
+
+---
 
 ## Bypassing Referer Validation
 

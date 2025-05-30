@@ -11,6 +11,8 @@ description: "Learn how to identify and exploit information disclosure vulnerabi
 * Add payload positions to parameters and use pre-built wordlists of fuzz strings to test a high volume of different inputs in quick succession.
 * Use grep matching rules to quickly identify occurrences of keywords, such as error, invalid, SELECT, SQL, and so on.
 
+---
+
 ## Common sources of information disclosure
 
 * Files for web crawlers

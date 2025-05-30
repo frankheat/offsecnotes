@@ -41,6 +41,8 @@ HTML encode `:` -> `&#58;` = `&#0000000000058;`
 
 `<a href="javascript&#00000000000058;alert(1)">Click me</a>`
 
+---
+
 ## XML encoding
 
 XML supports character encoding with the same numeric escape sequences as HTML.
@@ -55,6 +57,8 @@ XML supports character encoding with the same numeric escape sequences as HTML.
     </storeId>
 </stockCheck>
 ```
+
+---
 
 ## Multiple encodings
 
@@ -73,6 +77,8 @@ XML supports character encoding with the same numeric escape sequences as HTML.
 ```html
 <a href="javascript:alert(1)">Click me</a>
 ```
+
+---
 
 ## SQL CHAR() function
 

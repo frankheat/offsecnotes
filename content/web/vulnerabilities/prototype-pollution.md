@@ -83,9 +83,13 @@ console.log(obj.z)                    // Output: undefined
 
 More info: [https://www.netspi.com/blog/technical-blog/web-application-pentesting/ultimate-guide-to-prototype-pollution/](https://www.netspi.com/blog/technical-blog/web-application-pentesting/ultimate-guide-to-prototype-pollution/)
 
+---
+
 ## Prototype pollution sources
 
 The three most common JavaScript patterns that can lead to prototype pollution are merging, cloning, and value setting operations. Anytime an object is dynamically built from user input, there's a risk of prototype pollution.
+
+---
 
 ## Client-side prototype pollution (manual)
 
@@ -145,6 +149,8 @@ Being able to affect the global `__proto__` property is not very useful unless y
 **Tip**: Third-party libraries of prototype pollution gadgets [https://github.com/BlackFan/client-side-prototype-pollution](https://github.com/BlackFan/client-side-prototype-pollution)
 {{< /hint >}}
 
+---
+
 ## Browser APIs
 
 **Fetch**
@@ -180,6 +186,8 @@ Same thing. `defineProperty` accept other "descriptor" a.g. `value`.&#x20;
 
 [https://portswigger.net/web-security/prototype-pollution/client-side/browser-apis#prototype-pollution-via-object-defineproperty](https://portswigger.net/web-security/prototype-pollution/client-side/browser-apis#prototype-pollution-via-object-defineproperty)
 
+---
+
 ## Client-side prototype pollution (with DOM Invader)
 
 **Finding sources**
@@ -189,6 +197,8 @@ Same thing. `defineProperty` accept other "descriptor" a.g. `value`.&#x20;
 **Finding gadgets**
 
 [https://portswigger.net/burp/documentation/desktop/tools/dom-invader/prototype-pollution#scanning-for-prototype-pollution-gadgets](https://portswigger.net/burp/documentation/desktop/tools/dom-invader/prototype-pollution#scanning-for-prototype-pollution-gadgets)
+
+---
 
 ## Server-side prototype pollution
 
@@ -268,6 +278,8 @@ HTTP/1.1 200 OK
 Server-Side Prototype Pollution Scanner (Burp extension)
 
 Right click on the request -> Extensions -> Server-Side Prototype Pollution Scanner -> Server-Side Prototype Pollution
+
+---
 
 ## Bypassing defenses
 
