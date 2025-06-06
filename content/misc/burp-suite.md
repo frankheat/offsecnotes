@@ -1,6 +1,6 @@
 ---
 title: "Burp Suite"
-weight: 2
+weight: 3
 ---
 
 # Burp Suite

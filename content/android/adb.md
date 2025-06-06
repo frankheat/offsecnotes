@@ -12,7 +12,7 @@ Install apk
 adb install <path.apk>
 ```
 
-Uninstalls the application
+Uninstall the application
 ```sh
 adb shell am start <package_name>/<activity_name>
 ```

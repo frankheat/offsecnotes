@@ -4,7 +4,6 @@ weight: 1
 description: "Learn about various techniques and methods for privilege escalation on Windows systems, including UAC bypass, credential dumping and more, with detailed notes and code examples."
 ---
 
-
 # Windows Privilege Escalation
 
 {{< hint style=notes >}}
@@ -16,6 +15,74 @@ description: "Learn about various techniques and methods for privilege escalatio
 ```cmd
 :: https://github.com/itm4n/PrivescCheck
 powershell -ep bypass -c ". .\PrivescCheck.ps1; Invoke-PrivescCheck"
+```
+
+---
+
+## Execute commands as another user
+
+* If the user is a member of the **Remote Desktop Users** group --> connect with RDP
+* If the user is a member of the **Remote Management Users** group --> connect with WinRM
+* If **you have access to a GUI** with an other user, you can use **Runas** to run a program as a different user. 
+
+```powershell
+runas /user:<USERNAME> cmd
+```
+After entering the password, a new command-line window opens, running under the specified user's account.
+
+---
+
+## History
+
+**Get-History**
+
+`Get-History` only shows commands executed before the current one in the same session.
+
+{{< hint style=warning >}}
+The history is session-based — it doesn’t persist across PowerShell windows by default. Each time you open a new console, the history starts fresh.
+{{< /hint >}}
+
+**Clear-History**
+
+If a user runs `Clear-History`, it will only clear PowerShell’s in-session history, which can be retrieved using `Get-History`. 
+
+{{< hint style=warning >}}
+`Clear-History` **does not remove**:
+* The command history saved by PSReadLine to disk (`ConsoleHost_history.txt`).
+* The content seen with `Ctrl+R` or arrow keys if PSReadLine is still managing that memory buffer.
+{{< /hint >}}
+
+**Retrieve PSReadLine history**
+
+```powershell
+# Get history save path
+(Get-PSReadlineOption).HistorySavePath
+
+# Get content of the history file
+type C:\Users\<USERNAME>\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt
+```
+
+---
+
+## Find password manager database
+
+E.g. search `*.kdbx`
+```powershell
+Get-ChildItem -Path C:\ -Include *.kdbx -File -Recurse -ErrorAction SilentlyContinue
+```
+
+---
+
+## Find sensitive information in configuration files
+
+E.g. configuration files of XAMPP
+```powershell
+Get-ChildItem -Path C:\xampp -Include *.txt,*.ini -File -Recurse -ErrorAction SilentlyContinue
+```
+
+E.g. search docs in home directory of the user
+```powershell
+Get-ChildItem -Path C:\Users\<USERNAME>\ -Include *.txt,*.pdf,*.xls,*.xlsx,*.doc,*.docx -File -Recurse -ErrorAction SilentlyContinue
 ```
 
 ---

@@ -24,7 +24,7 @@ ps aux
 ## Weak Permissions
 
 ```sh
-# World-writable files - Ex: maybe you can edit shadow file
+# World-writable files - E.g.: maybe you can edit shadow file
 find / -not -type l -perm -o+w
 ```
 

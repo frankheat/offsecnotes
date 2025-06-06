@@ -1,6 +1,6 @@
 ---
 title: "Password Cracking"
-weight: 1
+weight: 2
 description: "Learn about password cracking techniques, including identifying hash types, cracking hashes with tools like hashcat and CrackStation, cracking shadow files, and online password cracking with hydra. Explore effective password bruteforce rules and wordlist generation for pentesting."
 ---
 
