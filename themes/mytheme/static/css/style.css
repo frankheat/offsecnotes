@@ -6,8 +6,6 @@
 
     h1 {
         color: rgb(195, 208, 229);
-        font-size: 50px;
-        font-weight: bold;
         padding-top: 4%;
         padding-bottom: 1%;
         margin-bottom: 3%;
@@ -16,7 +14,6 @@
     h2,
     h3 {
         margin-bottom: 2%;
-        font-weight: 700;
         color: rgb(195, 208, 229);
     }
 
@@ -274,7 +271,7 @@
     }
 
     .main-content {
-        padding: 0% 5% !important;
+        padding: 0% 2% !important;
     }
 
     .sidebar-right {
