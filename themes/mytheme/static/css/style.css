@@ -40,7 +40,7 @@
     }
 
     code {
-        color: rgb(64, 134, 190);
+        color: rgb(255, 255, 255);
         background-color: #282c34 !important;
         padding: 4px 6px;
         font-size: 90%;
@@ -74,7 +74,7 @@
     .tips,
     .notes,
     .warning {
-        padding: 10px 20px;
+        padding: 2% 2%;
         margin-bottom: 3%;
         margin-top: 3%;
         background-color: rgb(33, 37, 41);
@@ -271,7 +271,7 @@
     }
 
     .main-content {
-        padding: 0% 2% !important;
+        padding: 0% 4% !important;
     }
 
     .sidebar-right {
