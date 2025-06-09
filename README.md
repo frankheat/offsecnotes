@@ -25,10 +25,10 @@ Welcome to offsecnotes, a website dedicated to Offensive Security notes. This pr
 **ANDROID**
 
 * Vulnerabilities
-* Reverse Engineering
+* Reverse engineering
 * Frida
-* Network Interception
-* ADB
+* Network interception
+* Android debug bridge (ADB)
 * Framework
 * Debug application code
 
@@ -36,19 +36,30 @@ Welcome to offsecnotes, a website dedicated to Offensive Security notes. This pr
 
 * Vulnerabilities
 * Web security
-* Automation
+* Reconnaissance
 
 **NETWORK**
 
-* Information Gathering
-* Network Services Exploitation
-* Post-Exploitation & Commands
-* Privilege Escalation
+* Information gathering
+* Network services exploitation
+* Post-exploitation essentials
+* Port forwarding
+
+**LINUX**
+* Linux commands
+* Linux enumeration
+* Linux privilege escalation
+
+**WINDOWS**
+* Windows enumeration
+* Windows essentials
+* Windows privilege escalation
 
 **MISCELLANEOUS**
 
-* Password Cracking
+* Password racking
 * Burp Suite
-* AV Evasion
-* CTF Methodology
+* AV evasion
+* Metasploit
+* CTF methodology
 * References
