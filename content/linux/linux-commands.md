@@ -6,6 +6,10 @@ description: ""
 
 # Linux commands
 
+---
+
+## Keyboard shortcuts
+
 ```sh
 ctrl + c # Terminate the currently running command
 ctrl + r # Search the current terminal session’s command history
@@ -13,6 +17,8 @@ ctrl + a # Go to the start of line
 ctrl + e # Go the the end of line
 ctrl + z # Sleep program
 ```
+
+---
 
 ## Work with files
 ```sh
@@ -24,6 +30,8 @@ sed -i 's/OLD/NEW/g' file.txt    # Replace string inside a file
 ls -al /etc/cron*                # Display all file that start with cron*
 cat /etc/cron*                   # Display the contents of all cron* files
 ```
+
+---
 
 ## Decompress
 ```sh
@@ -38,10 +46,14 @@ unzip file.zip               # .zip
 unxz file.xz                 # .xz            (apt install xz-utils)
 ```
 
+---
+
 ## Clipboard
 ```
 xclip -sel c < file.txt
 ```
+
+---
 
 ## Other commands
 ```sh

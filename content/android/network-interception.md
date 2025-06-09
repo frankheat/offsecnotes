@@ -1,10 +1,10 @@
 ---
-title: "Network Interception"
+title: "Network interception"
 weight: 4
 description: "Learn Android network interception techniques for pentesting. Covers cleartext traffic, SSL interception, certificate handling, and bypassing restrictions with VPNs and transparent proxies."
 ---
 
-# Network Interception
+# Network interception
 
 In android there are several ways to make HTTP requests. For example using `HttpURLConnection` (low-level API built into Java), `OkHttp` (A popular third-party library) etc.
 

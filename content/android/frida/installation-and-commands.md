@@ -1,9 +1,9 @@
 ---
-title: "Installation & Commands"
+title: "Installation & commands"
 weight: 1
 ---
 
-# Installation & Commands
+# Installation & commands
 
 ## Installation
 
@@ -24,7 +24,7 @@ pip3 install objection
 1. Choose a frida version. E.g. **frida 15.2.2**.
 2. Go on [https://github.com/frida/frida-tools/blob/13.6.1/setup.py](https://github.com/frida/frida-tools/blob/13.6.1/setup.py)
 3. Switch branches/tags and select a version. (You can also modify the URL)
-4. In the `setup.py` look at `install_requires`. It tells you what frida version it's supported. In this case **frida-tools 13.6.1** supports `frida >= 16.2.2, < 17.0.0`. If we choose **frida-tools 11.0.0**, it supports `frida >= 15.2.0, < 16.0.0`.
+4. In the `setup.py` look at `install_requires`. It tells you what frida version it's supported. In this case **frida-tools 13.6.1** supports `frida >= 16.2.2, < 17.0.0`. If we choose **frida-tools 11.0.0**, it supports `frida >= 15.2.0, < 16.0.0` so it will not work.
 5. Install: `pip install frida==15.2.0 frida-tools==11.0.0`
 6. Verify installation: `pip list`
 
@@ -91,7 +91,7 @@ frida -U <package_name>
 ## Commands
 
 ```sh
-# To list the available devices for frida
+# List the available devices for frida
 frida-ls-devices
 
 # Connect Frida to a device over USB and list running processes

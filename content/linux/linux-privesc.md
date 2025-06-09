@@ -1,11 +1,12 @@
 ---
-title: "Linux"
-weight: 1
+title: "Linux privilege escalation"
+weight: 3
 description: "Learn about various techniques and methods for privilege escalation on Linux system, including exploiting weak permissions, SUID, and more, with detailed notes and code examples."
 ---
 
-# Linux Privilege Escalation
+# Linux privilege escalation
 
+---
 
 ## Vulnerable program
 

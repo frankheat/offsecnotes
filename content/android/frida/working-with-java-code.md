@@ -1,10 +1,10 @@
 ---
-title: "Working with java code"
+title: "Working with Java code"
 weight: 3
 desceiprion: "Learn practical techniques for dynamic analysis and pentesting of Java applications. Explore how to enumerate classes and methods, hook functions, and interact with Java objects using Frida."
 ---
 
-# Working with java code
+# Working with Java code
 
 For additional details, refer to the [official documentation](https://frida.re/docs/javascript-api/).
 

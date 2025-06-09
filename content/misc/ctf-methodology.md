@@ -1,10 +1,10 @@
 ---
-title: "CTF Methodology"
-weight: 6
+title: "CTF methodology"
+weight: 5
 description: "Comprehensive notes and methodologies for penetration testing and Capture the Flag (CTF) challenges. Covering web server analysis, service exploitation, steganography, cracking, and privilege escalation techniques."
 ---
 
-# CTF Methodology
+# CTF methodology
 
 
 ## General

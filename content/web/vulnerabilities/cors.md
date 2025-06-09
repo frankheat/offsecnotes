@@ -1,10 +1,10 @@
 ---
-title: "CORS Misconfiguration"
+title: "CORS misconfiguration"
 weight: 7
 description: "Learn how misconfigured CORS policies can expose sensitive data through origin reflection, null origin whitelisting, and XSS on trusted subdomains."
 ---
 
-# CORS Misconfiguration
+# CORS misconfiguration
 
 **Impact**: If a web response includes sensitive data (like an API key or CSRF token), and CORS is misconfigured, an attacker could steal that data using a malicious website.
 

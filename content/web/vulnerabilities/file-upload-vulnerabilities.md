@@ -1,10 +1,10 @@
 ---
-title: "File Upload Vulnerabilities"
+title: "File upload vulnerabilities"
 weight: 9
 description: "Understand how to exploit file upload functionalities through flawed validation, misconfigurations, race conditions, and other advanced techniques."
 ---
 
-# File Upload Vulnerabilities
+# File upload vulnerabilities
 
 Improper handling of file uploads is a common security weakness in web applications. If not carefully validated, uploaded files can lead to remote code execution (RCE), cross-site scripting (XSS), and other types of attacks.
 

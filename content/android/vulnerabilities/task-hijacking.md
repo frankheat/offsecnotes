@@ -1,10 +1,10 @@
 ---
-title: "Task Hijacking"
+title: "Task hijacking"
 weight: 6
 description: "Explore the Task Hijacking vulnerability in Android applications. Learn how misconfigured AndroidManifest.xml settings can allow malicious apps to take over legitimate ones, potentially leading to information theft."
 ---
 
-# Task Hijacking
+# Task hijacking
 
 ## Introduction
 

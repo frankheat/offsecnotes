@@ -1,10 +1,10 @@
 ---
-title: "APK Building"
+title: "APK building"
 weight: 1
 description: "Learn about Android application structure, APK file format, and the APK building process for mobile security and pentesting."
 ---
 
-# APK Building
+# APK building
 
 ## Android Application Project
 

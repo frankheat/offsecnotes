@@ -1,10 +1,10 @@
 ---
-title: "Insecure Data Storage"
+title: "Insecure data storage"
 weight: 3
 description: "Learn about insecure data storage vulnerabilities in Android applications. Explore internal and external storage, shared preferences, databases, logs, and application memory to identify sensitive data exposure."
 ---
 
-# Insecure Data Storage
+# Insecure data storage
 
 {{< details summary="Overview data storage" >}}
 

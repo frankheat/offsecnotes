@@ -1,9 +1,9 @@
 ---
-title: "General Obfuscation"
+title: "General obfuscation"
 weight: 1
 ---
 
-# General Obfuscation
+# General obfuscation
 
 {{< hint style=notes >}}
 **Note**: for Javascript obfuscation go on [Javascript & Obfuscation]({{< ref "web/web-security/javascript-and-obfuscation" >}})

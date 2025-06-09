@@ -1,10 +1,10 @@
 ---
-title: "Bypass Binary Protections"
+title: "Bypass binary protections"
 weight: 1
 description: "Learn how to bypass common binary protections such as SSL pinning, root detection, and emulator detection. This guide covers identification techniques and practical methods using tools like Frida and Objection."
 ---
 
-# Bypass Binary Protections
+# Bypass binary protections
 
 ## Identify compilers, packers, obfuscators
 

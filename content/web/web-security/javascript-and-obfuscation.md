@@ -1,9 +1,9 @@
 ---
-title: "Javascript & Obfuscation"
+title: "Javascript & obfuscation"
 weight: 2
 ---
 
-# Javascript & Obfuscation
+# Javascript & obfuscation
 
 ## Strings
 

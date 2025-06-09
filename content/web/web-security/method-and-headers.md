@@ -1,9 +1,9 @@
 ---
-title: "Methods & Headers"
+title: "Methods & headers"
 weight: 3
 ---
 
-# Methods & Headers
+# Methods & headers
 
 ## TRACE Method
 

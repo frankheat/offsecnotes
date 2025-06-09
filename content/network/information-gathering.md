@@ -1,10 +1,10 @@
 ---
-title: "Information Gathering"
+title: "Information gathering"
 weight: 1
 description: "Learn essential information gathering techniques for pentesting, including Whois, DNS enumeration, port scanning with Nmap, Google Dorks, Shodan, and website reconnaissance."
 ---
 
-# Information Gathering
+# Information gathering
 
 ## Whois
 

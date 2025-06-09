@@ -1,10 +1,10 @@
 ---
-title: "API Security Testing"
+title: "API security testing"
 weight: 1
 description: "Learn effective techniques for API security testing, including endpoint discovery, content-type manipulation, and mass assignment vulnerability detection."
 ---
 
-# API Security Testing
+# API security testing
 
 APIs are a common target for attackers because they expose underlying business logic and data.
 
