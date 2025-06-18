@@ -28,11 +28,11 @@
 
     pre {
         background-color: rgb(32, 32, 32) !important;
+        border-radius: 0.375rem;
     }
 
     .highlight {
         margin-bottom: 2%;
-
     }
 
     strong {
@@ -44,6 +44,7 @@
         background-color: #282c34 !important;
         padding: 4px 6px;
         font-size: 90%;
+        border-radius: 0.25rem;
     }
 
     .highlight code {
