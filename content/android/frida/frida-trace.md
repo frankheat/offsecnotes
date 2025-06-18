@@ -31,10 +31,8 @@ Instrumenting...
 Started tracing 73 functions. Press Ctrl+C to stop.
  14972 ms  InterceptionFragment$4.onClick("<instance: android.view.View, $className: com.google.android.material.button.MaterialButton>")
  14973 ms     | InterceptionFragment.license_check_2()
-
-# You know the class (InterceptionFragment) and the method called (license_check_2())
-# Now you want to intercept/override that method. 
 ```
+Now that you're aware of the `InterceptionFragment` class its `license_check_2()` method, you can intercept or override this method. 
 
 Unfortunately, the package name is missing here. So you can use two ways to get it:
 
