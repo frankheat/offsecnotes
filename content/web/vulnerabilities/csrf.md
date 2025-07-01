@@ -6,7 +6,7 @@ description: "Learn what CSRF attacks are, how they work with real examples, and
 
 # Cross-Site Request Forgery (CSRF)
 
-Cross-Site Request Forgery (CSRF) is a type of web attack where a malicious site tricks a user into performing actions on another site where they're authenticated. For example, it could change a user's email or send money—without their consent.
+Cross-Site Request Forgery (CSRF) is a type of web attack where a malicious site tricks a user into performing actions on another site where they're authenticated. For example, it could change a user's email or send money-without their consent.
 
 ---
 

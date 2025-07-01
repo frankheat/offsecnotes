@@ -1,9 +1,9 @@
 ---
-title: "Reconnaissance"
+title: "Extra"
 weight: 3
 ---
 
-# Reconnaissance
+# Extra
 
 ## Enumerating web resources
 

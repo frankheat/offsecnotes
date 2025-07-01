@@ -50,7 +50,7 @@ nth paddr      vaddr      bind     type size lib name
 
 ---
 
-## List Libraries
+## List libraries
 
 ```sh
 rabin2 -l libyouwant.so

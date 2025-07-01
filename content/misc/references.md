@@ -29,3 +29,4 @@ weight: 6
 * [https://developer.android.com/privacy-and-security/security-tips](https://developer.android.com/privacy-and-security/security-tips)
 * [https://github.com/DERE-ad2001/Frida-Labs](https://github.com/DERE-ad2001/Frida-Labs)
 * [https://suam.wtf/posts/react-native-application-static-analysis-en/](https://suam.wtf/posts/react-native-application-static-analysis-en/)
+* [https://www.youtube.com/@fatalsec/videos](https://www.youtube.com/@fatalsec/videos)

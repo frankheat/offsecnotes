@@ -5,7 +5,7 @@ weight: 26
 
 # Web cache poisoning
 
-More info about web cache: [web-cache.md](../web-security/web-cache.md "mention")
+More info about web cache: [Web cache](/web/web-security/web-cache/)
 
 Two phases:
 

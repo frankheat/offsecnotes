@@ -280,7 +280,7 @@ csrf=ihmEx8D&postId=1&name=test&email=test@test.test&comment=
 {{< /hint >}}
 
 {{< hint style=tips >}}
-**Tip**: Another way to steal other users' responses is with the [#response-queue-poisoning](http-request-smuggling.md#response-queue-poisoning "mention") technique.
+**Tip**: Another way to steal other users' responses is with the [Response queue poisoning](/web/vulnerabilities/http-request-smuggling/#response-queue-poisoning) technique.
 {{< /hint >}}
 
 ### Exploit reflected XSS

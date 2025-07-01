@@ -66,7 +66,7 @@ Bruteforce subdomain
 ### Web cache poisoning via the Host header
 
 * Client-side vulnerabilities like XSS aren't exploitable if they're caused by the Host header, as attackers can't manipulate a victim's browser to generate a harmful host.
-* However, if the target uses a web cache, it may be possible to turn this useless [web-cache-poisoning.md](web-cache-poisoning.md "mention")
+* However, if the target uses a web cache, it may be possible to turn this useless [Web cache poisoning](/web/vulnerabilities/web-cache-poisoning/)
 
 ### Routing-based SSRF
 

@@ -56,7 +56,7 @@ Some applications support non-standard headers such these in order to allow over
 **Security implication**
 
 * This behavior can be used when access control is based on the request URL.
-* More info: [#platform-misconfiguration](../vulnerabilities/access-control-vulnerabilities.md#platform-misconfiguration "mention")
+* More info: [Platform misconfiguration](/web/vulnerabilities/bac/#platform-misconfigurations)
 
 ---
 
@@ -68,4 +68,4 @@ Some applications support non-standard headers such these in order to allow over
 **Security implication**
 
 * Bypass validation CSRF attack when an application use referer header to defende against CSRF attacks
-* [#referer-based-validation](../vulnerabilities/csrf-cross-site-request-forgery.md#referer-based-validation "mention")
+* [Referer based validation](/web/vulnerabilities/csrf/#bypassing-referer-validation)

@@ -128,4 +128,5 @@ description: "Comprehensive notes and methodologies for penetration testing and 
 
 ## PrivEsc
 
-[Privilege Escalation](/network/privilege-escalation/)
+* [Windows privilege escalation](/windows/windows-privesc/)
+* [Linux privilege escalation](/linux/linux-privesc/)

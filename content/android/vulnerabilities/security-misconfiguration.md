@@ -44,7 +44,7 @@ The `android:debuggable` attribute indicates if the application is debuggable an
 
 **Impact**
 
-1. Debug an application. See [Debug application code]({{< ref "android/debug-application-code" >}})
+1. Debug an application. See [Debug application code](/android/debug-application-code/)
 
 2. You can use `run-as` command to read and extract, **without root privileges**, all files inside the app internal storage. \[[🔗](https://android.googlesource.com/platform/system/core.git/+/android-4.2.2_r1/run-as/run-as.c)].
 

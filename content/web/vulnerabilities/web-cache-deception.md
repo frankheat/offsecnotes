@@ -11,7 +11,7 @@ Web cache deception is a vulnerability where an attacker tricks a web cache into
 
 {{< /details >}}
 
-More info about web cache: [web-cache.md](../web-security/web-cache.md "mention")
+More info about web cache: [Web cache](/web/web-security/web-cache/)
 
 ---
 

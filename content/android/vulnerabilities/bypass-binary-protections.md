@@ -61,7 +61,7 @@ openssl x509 -in cacert.crt -pubkey -noout | openssl pkey -pubin -outform der | 
 
 This allow you to intercept the traffic in the webview. It's especially useful in cordova-based apps.&#x20;
 
-See [#webview-debug](security-misconfiguration.md#webview-debug "mention")
+See [Webview debug](/android/vulnerabilities/security-misconfiguration/#webview---debug)
 
 {{< hint style=tips >}}
 **Tip**: if you can't use remote debugging, recompile the app and enable it.

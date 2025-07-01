@@ -57,7 +57,7 @@ If you don't have the original Java code, you can debug the smali code. To do th
 3. If you have the app opened, select the process. Otherwise you can launch app.
 4. Now you can set breakpoint, read and modify register value etc.
 
-For more info: \[[🔗](https://github.com/skylot/jadx/wiki/Smali-debugger)].
+For more info: https://github.com/skylot/jadx/wiki/Smali-debugger.
 
 ---
 
@@ -69,7 +69,7 @@ You need to have the original java code. You can use tools like:
 
 ### Android studio
 
-This is the simpler approach. You can follow the official guide: [Debug pre-built APKs](https://github.com/skylot/jadx/wiki/Smali-debugger).
+This is the simpler approach. You can follow the official guide: [Debug pre-built APKs](https://developer.android.com/studio/debug/apk-debugger).
 
 
 ### jdb
