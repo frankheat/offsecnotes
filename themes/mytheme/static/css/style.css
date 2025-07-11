@@ -247,7 +247,7 @@
         align-items: center;
         font-family: 'Inter', sans-serif;
         font-size: 17.5px;
-        background-color: rgb(19, 20, 22);
+        background-color: rgb(13, 17, 23);
         color: rgb(155, 163, 180);
     }
 
@@ -305,7 +305,6 @@
         border-top: 1px solid rgb(82, 82, 82);
         padding-bottom: 30px;
         font-size: 15px;
-        ;
     }
 
     @media (max-width: 992px) {
