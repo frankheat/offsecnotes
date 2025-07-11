@@ -5,19 +5,7 @@ weight: 6
 
 # References
 
-**NPT**
-
-* [https://github.com/neilmadhava/EJPTv2-Notes](https://github.com/neilmadhava/EJPTv2-Notes)
-* [https://juggernaut-sec.com/blog/](https://juggernaut-sec.com/blog/)
-
-**WAPT**
-
-* [https://portswigger.net/web-security](https://portswigger.net/web-security)
-* [https://portswigger.net/research/server-side-template-injection](https://portswigger.net/research/server-side-template-injection)
-* [https://www.netspi.com/blog/technical-blog/web-application-pentesting/ultimate-guide-to-prototype-pollution/](https://www.netspi.com/blog/technical-blog/web-application-pentesting/ultimate-guide-to-prototype-pollution/)
-* Gareth Heyes. (2022). JavaScript for hackers: Learn to think like a hacker.
-
-**MAPT**
+## ANDROID
 
 * [https://app.hextree.io/](https://app.hextree.io/)
 * [https://timeout.userpage.fu-berlin.de/apk-building-on-mobile/en/index.php](https://timeout.userpage.fu-berlin.de/apk-building-on-mobile/en/index.php)
@@ -30,3 +18,19 @@ weight: 6
 * [https://github.com/DERE-ad2001/Frida-Labs](https://github.com/DERE-ad2001/Frida-Labs)
 * [https://suam.wtf/posts/react-native-application-static-analysis-en/](https://suam.wtf/posts/react-native-application-static-analysis-en/)
 * [https://www.youtube.com/@fatalsec/videos](https://www.youtube.com/@fatalsec/videos)
+
+---
+
+ ## WEB
+
+* [https://portswigger.net/web-security](https://portswigger.net/web-security)
+* [https://portswigger.net/research/server-side-template-injection](https://portswigger.net/research/server-side-template-injection)
+* [https://www.netspi.com/blog/technical-blog/web-application-pentesting/ultimate-guide-to-prototype-pollution/](https://www.netspi.com/blog/technical-blog/web-application-pentesting/ultimate-guide-to-prototype-pollution/)
+* Gareth Heyes. (2022). JavaScript for hackers: Learn to think like a hacker.
+
+---
+
+## OTHER
+
+* [https://github.com/neilmadhava/EJPTv2-Notes](https://github.com/neilmadhava/EJPTv2-Notes)
+* [https://juggernaut-sec.com/blog/](https://juggernaut-sec.com/blog/)

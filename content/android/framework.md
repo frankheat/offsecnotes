@@ -26,7 +26,7 @@ cat index.android.bundle
 
 ### With Hermes engine
 
-You need [https://github.com/Kirlif/HBC-Tool](https://github.com/Kirlif/HBC-Tool)
+You need [HBC-Tool](https://github.com/Kirlif/HBC-Tool)
 
 ```sh
 # 1. Dissasemble

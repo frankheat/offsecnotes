@@ -65,7 +65,7 @@ adb exec-out run-as <package_name> tar c . > output.tar
 **Requirements:**
 
 * `setWebContentsDebuggingEnabled` is set to true
-* OR `android:debuggable="true"`  (`setWebContentsDebuggingEnabled` is enabled automatically if the app is declared) More info: \[[🔗](https://developer.android.com/reference/android/webkit/WebView#setWebContentsDebuggingEnabled\(boolean\))].
+* OR `android:debuggable="true"`  (`setWebContentsDebuggingEnabled` is enabled automatically if the app is declared). More info: [setWebContentsDebuggingEnabled](https://developer.android.com/reference/android/webkit/WebView#setWebContentsDebuggingEnabled\(boolean\)).
 
 **Testing**
 

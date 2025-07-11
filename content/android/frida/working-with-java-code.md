@@ -193,8 +193,8 @@ Java.perform(function() {
 ```javascript
 Java.perform(function() {
   var check = Java.use("com.ad2001.frida0x4.Check");
-  var check_obj = check.$new(); // Class Object
-  var res = check_obj.get_flag(1337); // Calling the method
+  var check_obj = check.$new();                       // Class Object
+  var res = check_obj.get_flag(1337);                 // Calling the method
   console.log("FLAG " + res);
 })
 ```

@@ -309,7 +309,7 @@ function startStalker(threadId) {
             call: true,
             ret: false,
             exec: false,
-            block: false
+            block: false,
             compile: false
         },
         onReceive: function (events) {

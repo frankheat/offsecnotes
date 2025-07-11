@@ -12,7 +12,7 @@ description: "Learn about deep link security in mobile applications, including d
 
 {{< details summary="Types of links" >}}
 
-**(Custom) Scheme URL** \[[🔗](https://developer.android.com/training/app-links#deep-links)]
+**[(Custom) Scheme URI](https://developer.android.com/training/app-links#deep-links)**
 
 App developers customize any schemes and URIs for their app without any restriction
 
@@ -33,7 +33,7 @@ When the user clicks a deep link, a disambiguation dialog might appear. This dia
 
 ***
 
-**Web links** \[[🔗](https://developer.android.com/training/app-links#web-links)]
+**[Web links](https://developer.android.com/training/app-links#web-links)**
 
 Web links are deep links that use the HTTP and HTTPS schemes.
 
@@ -51,7 +51,7 @@ Web links are deep links that use the HTTP and HTTPS schemes.
 
 ***
 
-**Android App Links** \[[🔗](https://developer.android.com/training/app-links#android-app-links)]
+**[Android App Links](https://developer.android.com/training/app-links#android-app-links)**
 
 Android App Links, available on Android 6.0 (API level 23) and higher, are web links with the `autoVerify` attribute. This lets your app become the default handler for the link type, so when a user clicks an Android App Link, your app opens immediately if installed, without a disambiguation dialog.&#x20;
 
@@ -76,13 +76,13 @@ Because of Link Hijacking. This happen when a malicious app registers an URI tha
 
 Suppose that:
 
-* The victim user have malicious app installed
+* The victim user has malicious app installed
 * Both apps (victim and malicious) manage `geo://`, `https://google.com`
 
-| **Android** | **Victim App installed** | **Link supported** | **URI**            | **Behavior**                                       |
+| **Android version** | **Victim App installed** | **Link supported** | **URI**            | **Behavior**                                       |
 |-------------|--------------------------|--------------------|--------------------|----------------------------------------------------|
-| -           | N                        | Scheme URL         | `geo://`           | {{< text-color color=red >}}Open in malicious{{< /text-color >}}                                  |
-| -           | Y                        | Scheme URL         | `geo://`           | {{< text-color color=orange >}}Dialog appear (malicious app, victim app){{< /text-color >}}          |
+| All           | N                        | Custom scheme URI         | `geo://`           | {{< text-color color=red >}}Open in malicious{{< /text-color >}}                                  |
+| All           | Y                        | Custom scheme URI         | `geo://`           | {{< text-color color=orange >}}Dialog appear (malicious app, victim app){{< /text-color >}}          |
 | < 12        | N                        | Web Links          | `https://google.com` | {{< text-color color=orange >}}Dialog appear (browser, malicious app){{< /text-color >}}             |
 | < 12        | Y                        | Web Links          | `https://google.com` | {{< text-color color=orange >}}Dialog appear (browser, malicious app, victim app){{< /text-color >}} |
 | > 12        | N / Y                    | Web Links          | `https://google.com` | {{< text-color color=green >}}Open in default browser{{< /text-color >}}                            |

@@ -8,7 +8,7 @@ description: "Learn essential information gathering techniques for pentesting, i
 
 ## Whois
 
-Whois \[[🔗](https://datatracker.ietf.org/doc/html/rfc3912)] is a protocol used for querying databases that store an Internet resource's registered users or assignees. You can provide:
+[Whois](https://datatracker.ietf.org/doc/html/rfc3912) is a protocol used for querying databases that store an Internet resource's registered users or assignees. You can provide:
 
 * Domain -> info about it such as name server, registrar, etc.
 * IP ->  info about who is hostring the IP address
@@ -28,7 +28,7 @@ whois 38.100.193.70 -h 192.168.5.5
 
 ## Netcraft
 
-Netcraft is an ISP,  that offers a free web portal \[[🔗](https://searchdns.netcraft.com/)] for information gathering (technologies, subdomains, etc.).
+Netcraft is an ISP,  that offers a free [web portal](https://searchdns.netcraft.com/) for information gathering (technologies, subdomains, etc.).
 
 --- 
 
@@ -38,8 +38,7 @@ Netcraft is an ISP,  that offers a free web portal \[[🔗](https://searchdns.ne
 Gather information through GitHub, GitLab, etc.
 
 * Manual
-* Automatic
-  * [https://github.com/gitleaks/gitleaks](https://github.com/gitleaks/gitleaks)
+* Automatic: [Gitleaks](https://github.com/gitleaks/gitleaks)
 
 ---
 
@@ -65,7 +64,7 @@ intitle:“index of” “parent directory”
 
 ## Shodan
 
-Shodan \[[🔗](https://www.shodan.io/)] is a search engine for internet-connected devices, including servers, routers, and IoT devices.
+[Shodan](https://www.shodan.io/) is a search engine for internet-connected devices, including servers, routers, and IoT devices.
 
 ---
 
@@ -95,14 +94,14 @@ nslookup example.com              # Works on Windows
 
 There are several tools...
 
-* **dnsrecon** \[[🔗](https://github.com/darkoperator/dnsrecon)]
+* [dnsrecon](https://github.com/darkoperator/dnsrecon)
 
 ```sh
 dnsrecon -d example.com -t std                # Standard enumeration
 dnsrecon -d example.com -t brt -D list.txt    # Brute force subdomain enum
 ```
 
-* **sublist3r** \[[🔗](https://github.com/aboul3la/Sublist3r)] enumerates subdomains using search engines such as Google and using DNSdumpster etc. It support also bruteforce.
+* [sublist3r](https://github.com/aboul3la/Sublist3r) enumerates subdomains using search engines such as Google and using DNSdumpster etc. It support also bruteforce.
 
 ```sh
 sublist3r -d example.com
@@ -112,8 +111,8 @@ sublist3r -d example.com
 
 ## All in one
 
-* **amass** \[[🔗](https://github.com/owasp-amass/amass)]: network mapping and external asset discovery using open source information gathering and active reconnaissance techniques
-* **theHarvester** \[[🔗](https://github.com/laramies/theHarvester)]: gathers names, emails, IPs, subdomains, and URLs by using multiple public resources
+* [amass](https://github.com/owasp-amass/amass): network mapping and external asset discovery using open source information gathering and active reconnaissance techniques
+* [theHarvester](https://github.com/laramies/theHarvester): gathers names, emails, IPs, subdomains, and URLs by using multiple public resources
 
 ```sh
 theHarvester -d example.com -b google,linkedin,dnsdumpster,duckduckgo
@@ -123,7 +122,7 @@ theHarvester -d example.com -b google,linkedin,dnsdumpster,duckduckgo
 
 ## Port Scanning
 
-**Netcat** \[[🔗](https://sourceforge.net/p/nc110/git/ci/master/tree/)]
+[Netcat](https://sourceforge.net/p/nc110/git/ci/master/tree/)
 
 Use Netcat when Nmap isn't available.
 
@@ -139,7 +138,7 @@ for i in $(seq 1 254); do nc -nvv -w 1 -z 192.168.1.$i 445; done
 nc -nv -u -z -w 1 192.168.5.5 120-123
 ```
 
-**Nmap** \[[🔗](https://nmap.org/)]
+[Nmap](https://nmap.org/)
 
 ```sh
 # [TCP] Stealth scan (default if you're root)

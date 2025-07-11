@@ -53,7 +53,7 @@ V&~~D8{"min-api":26,"version":"v0.1.14"}ÅÄÃ
 
 {{< /details >}}
 
-So there are tools out there to convert to and from a human readable representation. The most common human readable format is known as **Smali.** We can say that Smali acting like assembly language \[[🔗](https://payatu.com/blog/an-introduction-to-smali/)]. You can convert ("disassembler") dex to smali using baksmali \[[🔗](https://github.com/JesusFreke/smali)] tool.
+So there are tools out there to convert to and from a human readable representation. The most common human readable format is known as **Smali.** We can say that Smali acting like assembly language \[[🔗](https://payatu.com/blog/an-introduction-to-smali/)]. You can convert ("disassembler") dex to smali using [baksmali](https://github.com/JesusFreke/smali) tool.
 
 **Example**
 
@@ -87,7 +87,7 @@ adb pull <path>
 
 ## Disassemble & Assemble
 
-Apktool \[[🔗](https://github.com/iBotPeaches/Apktool)] is a tool for reverse engineering Android apps. It can decode (and disassemble) resources to **nearly** original form and **rebuild** them after making some modifications (and other stuff).
+[Apktool](https://github.com/iBotPeaches/Apktool) is a tool for reverse engineering Android apps. It can decode (and disassemble) resources to **nearly** original form and **rebuild** them after making some modifications (and other stuff).
 
 In this way you can read `.smali` code (so you don't need baksmali), `AndroidManifest.xml`, etc.
 
@@ -136,7 +136,7 @@ apktool d -f -r target.apk
 
 ## Dex to Java
 
-Decompile to (near) source code (Dex to Java) using jadx \[[🔗](https://github.com/skylot/jadx)].
+Decompile to (near) source code (Dex to Java) using [jadx](https://github.com/skylot/jadx).
 
 ```sh
 # Open jadx-gui

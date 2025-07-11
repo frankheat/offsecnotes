@@ -6,7 +6,7 @@ description: "Learn how to use frida-trace for dynamic analysis in mobile pentes
 
 # frida-trace
 
-Frida trace \[[🔗](https://frida.re/docs/frida-trace/)] allows us to directly trace function calls. This is useful to see what happen when you perform an action. For example: open an app -> start frida-trace -> perform an action (press a button). In this way you can see what happen when you press a button.
+[Frida trace](https://frida.re/docs/frida-trace/) allows us to directly trace function calls. This is useful to see what happen when you perform an action. For example: open an app -> start frida-trace -> perform an action (press a button). In this way you can see what happen when you press a button.
 
 ```sh
 $ frida-ps -Uai

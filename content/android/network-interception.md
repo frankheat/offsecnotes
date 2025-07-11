@@ -35,7 +35,7 @@ Example `network_security_config.xml`:
 
 {{< details summary="Default configuration" >}}
 
-Source <a href="https://developer.android.com/privacy-and-security/security-config#CustomTrust">[🔗]</a>.
+Source \[[🔗](https://developer.android.com/privacy-and-security/security-config#CustomTrust)].
 
 Android 7.0 (API level 24) and higher.
 
@@ -88,30 +88,31 @@ openssl x509 -inform DER -in cacert.der -out cacert.pem
 
 * Rooted physical device
 * Rooted emulator
-* With Android (AVD) using non-Google emulator image
+* With Android (AVD) using non-Google emulator image (or [root it](https://8ksec.io/rooting-an-android-emulator-for-mobile-security-testing/))
 
-{{< details summary="Install system certificate guide" >}}
+{{< details summary="Install system certificate guide (temporary)" >}}
+
+This method use a **temporary RAM-based filesystem** (tmpfs) to override the system certificate directory in memory without actually modifying the read-only system image.
 
 1. Install the proxy certificate as a regular user certificate
 2. `adb shell`
 3. Run this script:
 
 ```sh
+# 1. Copy original system certs to a tmp location
+mkdir /data/local/tmp/cacerts-added/
+
 su
 
-# Backup the existing system certificates to the user certs folder
-cp /system/etc/security/cacerts/* /data/misc/user/0/cacerts-added/
+# 2. Add your custom cert to the same dir
+cp /system/etc/security/cacerts/* /data/local/tmp/cacerts-added/
+cp /data/misc/user/0/cacerts-added/* /data/local/tmp/cacerts-added/
 
-# Create the in-memory mount on top of the system certs folder
+# 3. Mount tmpfs over system certs
 mount -t tmpfs tmpfs /system/etc/security/cacerts
 
-# copy all system certs and our user cert into the tmpfs system certs folder
-cp /data/misc/user/0/cacerts-added/* /system/etc/security/cacerts/
-
-# Fix any permissions & selinux context labels
-chown root:root /system/etc/security/cacerts/*
-chmod 644 /system/etc/security/cacerts/*
-chcon u:object_r:system_file:s0 /system/etc/security/cacerts/*
+# 4. Copy combined certs into the tmpfs mount
+cp /data/local/tmp/cacerts-added/* /system/etc/security/cacerts/
 ```
 
 {{< /details >}}
@@ -122,7 +123,7 @@ chcon u:object_r:system_file:s0 /system/etc/security/cacerts/*
 
 1. Install the proxy certificate as a regular user certificate
 2. `adb shell`
-3. Run this script by Tim Perry \[[🔗](https://httptoolkit.com/blog/android-14-install-system-ca-certificate/)]
+3. Run [this script](https://httptoolkit.com/blog/android-14-install-system-ca-certificate/) by Tim Perry
 
 ```sh
 # Create a separate temp directory, to hold the current certificates
@@ -300,7 +301,7 @@ In a normal proxy, the client (e.g., a browser or app) is explicitly configured 
 * The request contains both the relative path (/path) and the full address (e.g. `GET http://www.example.com/path HTTP/1.1`)
 
 **Invisible Proxy**\
-An invisible proxy \[[🔗](https://portswigger.net/burp/documentation/desktop/tools/proxy/invisible)] operates without the client being explicitly configured to use it. This is useful when the client does not support proxy configurations. Therefore, the client remains unaware of the proxy. However:
+An [invisible proxy](https://portswigger.net/burp/documentation/desktop/tools/proxy/invisible) operates without the client being explicitly configured to use it. This is useful when the client does not support proxy configurations. Therefore, the client remains unaware of the proxy. However:
 
 With plain HTTP, a proxy-style request looks like this:
 

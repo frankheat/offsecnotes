@@ -35,7 +35,7 @@ When the back button is pressed on `Bank-Main-Activity`, the user will go to the
 
 ## Testing
 
-You can use malware apk by ivan sincek \[[🔗](https://github.com/ivan-sincek/malware-apk)].
+You can use [malware apk](https://github.com/ivan-sincek/malware-apk) by ivan sincek.
 
 To hijack a task, modify the task affinity in `AndroidManifest.xml` of `malware.apk` under `MainActivity`. Set it to `PackageNameVictim` and rebuild the APK.
 

@@ -5,7 +5,7 @@ weight: 5
 
 # Android debug bridge (ADB)
 
-Android Debug Bridge (ADB) \[[🔗](https://developer.android.com/tools/adb)] is a powerful command-line tool that allows you to communicate with Android devices. In penetration testing, ADB is essential for analyzing Android applications, examining device configurations, and performing security assessments on mobile targets.
+[Android Debug Bridge (ADB)](https://developer.android.com/tools/adb) is a powerful command-line tool that allows you to communicate with Android devices. In penetration testing, ADB is essential for analyzing Android applications, examining device configurations, and performing security assessments on mobile targets.
 
 ---
 
