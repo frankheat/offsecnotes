@@ -86,17 +86,21 @@
         border-left: 3px solid orange;
     }
 
+    .details {
+        margin-bottom: 10px;
+    }
+
     .btn-dark {
         padding-top: 2%;
         padding-bottom: 2%;
         font-weight: 400;
-        border: 1px solid rgb(82, 82, 82);
+        border-radius: 0px;
+
     }
 
     .card {
         background-color: #1e1f22;
-        border: 1px solid rgb(82, 82, 82);
-
+        border-radius: 0px;
     }
 
     figure {
@@ -106,10 +110,6 @@
     figcaption {
         margin-top: 1%;
         font-size: smaller;
-    }
-
-    .details {
-        margin-bottom: 10px;
     }
 
     thead {
