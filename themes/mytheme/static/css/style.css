@@ -26,29 +26,22 @@
         margin-top: 5%
     }
 
-    pre {
-        background-color: rgb(32, 32, 32) !important;
-        border-radius: 0.375rem;
+    code:not(pre > code) {
+        color: rgb(138, 180, 248);
+        background-color: rgb(54, 55, 58) !important;
+        padding: 4px 8px;
+        font-size: 90%;
+        border-radius: 0.5rem;
     }
 
-    .highlight {
-        margin-bottom: 2%;
+    pre {
+        padding: 20px 15px;
+        border-radius: 1rem;
+        background-color: rgb(40, 44, 52) !important;
     }
 
     strong {
         color: rgb(195, 208, 229);
-    }
-
-    code {
-        color: rgb(255, 255, 255);
-        background-color: #282c34 !important;
-        padding: 4px 6px;
-        font-size: 90%;
-        border-radius: 0.25rem;
-    }
-
-    .highlight code {
-        padding: 20px 15px !important;
     }
 
     hr {
@@ -78,7 +71,7 @@
         padding: 2% 2%;
         margin-bottom: 3%;
         margin-top: 3%;
-        background-color: rgb(33, 37, 41);
+        background-color: rgb(40, 44, 52);
     }
 
     .tips {

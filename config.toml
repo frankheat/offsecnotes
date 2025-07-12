@@ -10,3 +10,7 @@ enableRobotsTXT = true
   GITHUB_PROJECT = "https://github.com/frankheat/offsecnotes"
   GITHUB_PROFILE = "https://github.com/frankheat"
   LINKEDIN_PROFILE = "https://www.linkedin.com/in/francesco-volpe98/"
+
+[markup]
+  [markup.highlight]
+    style = "base16-snazzy"
