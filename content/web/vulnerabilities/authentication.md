@@ -57,8 +57,9 @@ Some systems check passwords only if the username is valid. Sending an excessive
 Check if accounts lock after multiple failed attempts (e.g., 3 or 5 attempts). Understand the lockout mechanism:
 
 - **Testing Responses**: Attempt logins with an incorrect password on a locked account, then with the correct password. If responses differ, the lock might be bypassable.
-- **IP-Based Lockout**: The failed attempts counter resets if the IP owner logs in successfully. (Make sure that concurrent requests is set to 1)
-Try bypassing with an `X-Forwarded-For` header.
+- **IP-Based Lockout**: 
+    - Try to see if the failed attempts counter resets if the IP owner logs in successfully. (Make sure that concurrent requests is set to 1)
+    - Try bypassing by adding the `X-Forwarded-For` header.
 
 
 ---

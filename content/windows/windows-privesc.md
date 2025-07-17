@@ -39,7 +39,7 @@ Get-ModifiableServiceFile
 ```
 
 {{< hint style=warning >}}
-**Warning**: You should **never fully trust the output of a tool**, as it can sometimes be incorrect—even on simple tasks like detecting the target machine’s operating system.
+**Warning**: You should **never fully trust the output of a tool**, as it can sometimes be incorrect even on simple tasks like detecting the target machine’s operating system.
 {{< /hint >}}
 
 
@@ -65,7 +65,7 @@ After entering the password, a new command-line window opens, running under the 
 `Get-History` only shows commands executed before the current one in the same session.
 
 {{< hint style=warning >}}
-**Warning**: The history is session-based — it doesn’t persist across PowerShell windows by default. Each time you open a new console, the history starts fresh.
+**Warning**: The history is session-based, it doesn’t persist across PowerShell windows by default. Each time you open a new console, the history starts fresh.
 {{< /hint >}}
 
 **Clear-History**
@@ -206,7 +206,7 @@ net start mysql
 Restart-Service -Name "mysql"
 ```
 
-2. If your user doesn't have sufficient permissions to stop the service our alternative is to reboot the machine—if the service’s Startup Type is set to `Auto`, it should restart on boot
+2. If your user doesn't have sufficient permissions to stop the service our alternative is to reboot the machine. If the service’s Startup Type is set to `Auto`, it should restart on boot
 
 ```powershell
 Get-CimInstance -ClassName win32_service | Select Name, StartMode | Where-Object {$_.Name -like 'mysql'} 

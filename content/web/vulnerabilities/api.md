@@ -132,7 +132,7 @@ Send two request with:
 }
 ```
 
-If the app behaves differently, the invalid value may affect the query, while the valid one doesn’t — suggesting the user can update the parameter.
+If the app behaves differently, the invalid value may affect the query, while the valid one doesn’t suggesting the user can update the parameter.
 
 
 ---

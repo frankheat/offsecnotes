@@ -9,7 +9,7 @@ description: "Learn about Android application structure, APK file format, and th
 ## Android Application Project
 
 {{< hint style=notes >}}
-**Note**: the directory names are conventional — they could be any name. Additionally, the contents of each directory could be spread across multiple folders.
+**Note**: the directory names are conventional so they could be any name. Additionally, the contents of each directory could be spread across multiple folders.
 {{< /hint >}}
 
 Mandatory:
@@ -42,7 +42,7 @@ It almost always embodies the following files and directories, though only `Andr
 * 🗎 **classes.dex** or classesN.dex.  It's/they're Dalvik Executable (`.dex`)
 * 🗎 **resources.arsc** is the resource table file in binary format, optimizing the access to the UI resources
 * 📁 **META-INF**: incorporates the `CERT.SF` and `CERT.RSA` signature files, as well as the `MANIFEST.MF` manifest file.
-* 📁 **res**: includes all UI resources — except those from the `res/values`
+* 📁 **res**: includes all UI resources except those from the `res/values`
 * 📁 **assets**: comprises further resources packed as-is into the `.apk` file.
 * 📁 **lib**: contains native shared libraries of the package
 * An APK may contain further files and folders

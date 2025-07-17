@@ -70,7 +70,7 @@ SameSite is a cookie attribute that controls whether cookies are sent with cross
 
 {{< details summary="Referer Header Validation" >}}
 
-Some applications check the `Referer` header to verify that requests are coming from their own domain. This can help prevent CSRF attacks—but it's not foolproof.
+Some applications check the `Referer` header to verify that requests are coming from their own domain. This can help prevent CSRF attacks, but it's not foolproof.
 
 {{< hint style=warning >}}
 Don't rely solely on referer validation. Users or browsers may strip or modify this header.
