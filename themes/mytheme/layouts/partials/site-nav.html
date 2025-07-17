@@ -44,7 +44,7 @@
                     <div class="collapse" id="{{ $s }}">
                         <ul>
                             {{ range .Pages.ByWeight }}
-                            <li><a href="{{ .RelPermalink }}">{{ .Title }}</a></li>
+                            <li><a href="{{ .RelPermalink }}" data-test>{{ .Title }}</a></li>
                             {{ end }}
                         </ul>
                     </div>

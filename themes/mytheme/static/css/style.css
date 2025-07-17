@@ -188,11 +188,9 @@
     #index li a {
         display: block;
         padding-top: 5px;
-        padding-bottom: 5x;
         text-decoration: none;
         transition: 0.3s;
         color: rgb(185, 194, 214);
-        opacity: 0.8;
         font-size: 15px;
     }
 
