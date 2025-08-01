@@ -113,6 +113,11 @@ mount -t tmpfs tmpfs /system/etc/security/cacerts
 
 # 4. Copy combined certs into the tmpfs mount
 cp /data/local/tmp/cacerts-added/* /system/etc/security/cacerts/
+
+# 5. Update the perms & selinux context labels
+chown root:root /system/etc/security/cacerts/*
+chmod 644 /system/etc/security/cacerts/*
+chcon u:object_r:system_file:s0 /system/etc/security/cacerts/*
 ```
 
 {{< /details >}}
@@ -224,7 +229,7 @@ java -jar uber-apk-signer.jar -apk <app_name>.apk
 
 ## Intercepting Without Proxy Support
 
-If you configure an HTTP proxy in Android settings, you can intercept network traffic. However,&#x20;
+If you configure an HTTP proxy in Android settings, you can intercept network traffic. However;
 
 * Connections made directly via TCP sockets bypass the proxy and cannot be intercepted.
 * Applications may bypass the HTTP proxy settings if the developer configures them to disallow proxy usage. E.g. with **OkHttp**:
@@ -237,7 +242,23 @@ OkHttpClient client = new OkHttpClient.Builder()
 
 * Also framework like **Flutter** and **Xamarin** application does not respect system proxy.
 
-### HTTP Interception with VPN
+### Android Studio emulator
+
+**Requirement**: the proxy certificate must be installed in the system certificate store.
+
+In Android Studio, you can configure a global proxy for an emulated device by going to the device’s **Settings > Proxy -> Manual proxy configuration**.
+In the host name field set burp suite proxy with `http` protocol: e.g. `http://192.168.1.90` and port number.
+
+{{< hint style=warning >}}
+**Warning**: If **your proxy is unreachable**, try changing the emulator version. You can find other versions here: https://developer.android.com/studio/emulator_archive.
+{{< /hint >}}
+
+
+### HTTP Interception with VPN (Rethink app)
+
+{{< hint style=warning >}}
+**Warning**: This method is not recommended when using the Android Studio emulator. Strange things could happen. 
+{{< /hint >}}
 
 **Requirement**: the proxy certificate must be installed in the system certificate store.
 
@@ -246,10 +267,14 @@ If the proxy settings are ignored, use an Android VPN service app to intercept a
 Steps:
 
 1. Set DNS settings to "System DNS"
-2. Add an HTTP(S) CONNECT proxy (your burpsuite ip:port)
+2. Add an HTTP(S) CONNECT proxy (your `http://burpsuiteip:port`)
 3. Start the VPN service
 
-### DNS Spoofing & Transparent Proxy
+### DNS Spoofing & Transparent Proxy (Rethink app)
+
+{{< hint style=warning >}}
+**Warning**: This method is not recommended when using the Android Studio emulator. Strange things could happen. 
+{{< /hint >}}
 
 **Requirement**: The proxy certificate must be installed in the system certificate store.
 
@@ -285,8 +310,8 @@ docker run --name my-dnsmasq --rm -it -p 0.0.0.0:53:53/udp -v /tmp/dnsmasq.conf:
 
 3. Enforce DNS usage using Android's VPN feature with tools like RethinkDNS.
 
-* From "configure" -> "DNS" -> Change DNS settings to "Other DNS"&#x20;
-* Select "DNS Proxy"&#x20;
+* From "configure" -> "DNS" -> Change DNS settings to "Other DNS";
+* Select "DNS Proxy";
 * Create a new entry pointing at your local DNS server host
 
 4. Finally, configure your proxy tool for invisible proxying. Burp will act as an HTTP(S) server, parse the `HOST` header, and forward requests. Ensure an invisible proxy listener is set on ports 443 and 80.
