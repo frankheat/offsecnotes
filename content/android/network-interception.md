@@ -66,21 +66,27 @@ If the application doesn't accept user certificates you need to install system c
 
 Install it in the user CA store via Android settings. In general apps trust user certificates if it targets Android 6 (API 23) or lower, or network security config allows it.
 
-{{< details summary="Install user certificate guide" >}}
 
+{{< details summary="Install user certificate guide" >}}
 
 1. Download the certificate from `http://<burp_proxy_listener>`
 2. Go on setting, search certificate and install by selected it
 
 **Install on older Android ≤ 11**
 
-Same as above but you need to run this command because it expected another file format.
+If you try to install this certificate, it'll be grayed out and you'll not be able to install it. To install it you need to change its extension.
 
 ```sh
-openssl x509 -inform DER -in cacert.der -out cacert.pem
+mv cacert.der cacert.crt
 ```
 
 {{< /details >}}
+
+
+{{< hint style=notes >}}
+**Note**: Keep in mind that Android accepts both **DER** and **PEM** formats. When you install a certificate as a **user** (regardless of the format), Android automatically converts it to **DER** format.
+{{< /hint >}}
+
 
 ### System Certificate
 
@@ -94,27 +100,50 @@ openssl x509 -inform DER -in cacert.der -out cacert.pem
 
 This method use a **temporary RAM-based filesystem** (tmpfs) to override the system certificate directory in memory without actually modifying the read-only system image.
 
-1. Install the proxy certificate as a regular user certificate
-2. `adb shell`
-3. Run this script:
+1. Export certificate in DER format from Burp Suite
+2. By default, all Android system certificates are in PEM format. While Android can handle certificates in DER format, I recommend converting them to PEM to ensure broader compatibility. Some libraries may behave inconsistently with DER certificates. For example, I've observed that Flutter applications fail to work properly with DER-formatted certificates. In this step, you'll convert the certificate from **DER to PEM** format and rename it using its subject hash.
+
 
 ```sh
-# 1. Copy original system certs to a tmp location
-mkdir /data/local/tmp/cacerts-added/
+openssl x509 -inform DER -in cacert.der -out cacert.pem
+mv cacert.pem $(openssl x509 -inform PEM -subject_hash_old -in cacert.pem | head -1).0
+```
 
+3. Create a folder on the device
+
+```sh
+adb shell
+
+mkdir /data/local/tmp/cacerts-added/
+```
+
+4. Push the certificate in the created folder
+```sh
+adb push <subject_hash.0> /data/local/tmp/cacerts-added/
+```
+
+5. Add your custom cert to the same folder
+
+```sh
+cp /system/etc/security/cacerts/* /data/local/tmp/cacerts-added/
+```
+
+6. Mount tmpfs over system certs
+
+```sh
+mount -t tmpfs tmpfs /system/etc/security/cacerts
+```
+
+7. Copy combined certs into the tmpfs mount
+```sh
+cp /data/local/tmp/cacerts-added/* /system/etc/security/cacerts/
+```
+
+8. Update the perms & selinux context labels
+
+```sh
 su
 
-# 2. Add your custom cert to the same dir
-cp /system/etc/security/cacerts/* /data/local/tmp/cacerts-added/
-cp /data/misc/user/0/cacerts-added/* /data/local/tmp/cacerts-added/
-
-# 3. Mount tmpfs over system certs
-mount -t tmpfs tmpfs /system/etc/security/cacerts
-
-# 4. Copy combined certs into the tmpfs mount
-cp /data/local/tmp/cacerts-added/* /system/etc/security/cacerts/
-
-# 5. Update the perms & selinux context labels
 chown root:root /system/etc/security/cacerts/*
 chmod 644 /system/etc/security/cacerts/*
 chcon u:object_r:system_file:s0 /system/etc/security/cacerts/*
