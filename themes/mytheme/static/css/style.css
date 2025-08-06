@@ -1,7 +1,7 @@
     /* General style */
     a {
         text-decoration: none;
-        color: rgb(33, 122, 253)
+        color: rgb(10, 132, 255)
     }
 
     h1 {
@@ -9,6 +9,7 @@
         padding-top: 4%;
         padding-bottom: 1%;
         margin-bottom: 3%;
+        font-size: 3rem;
     }
 
     h2,
@@ -19,19 +20,29 @@
 
     h2 {
         color: rgb(195, 208, 229);
+        font-size: 2.3rem;
     }
 
     h3 {
-        font-size: 1.3rem;
-        margin-top: 5%
+        font-size: 1.6rem;
+        margin-top: 7%
     }
+
+
 
     code:not(pre > code) {
         color: rgb(138, 180, 248);
         background-color: rgb(54, 55, 58) !important;
-        padding: 4px 8px;
+        padding: 1px 8px;
         font-size: 90%;
         border-radius: 0.5rem;
+
+        white-space: nowrap;
+        overflow-x: auto;
+        display: inline-block;
+        max-width: 100%;
+        vertical-align: middle;
+
     }
 
     pre {
@@ -95,7 +106,6 @@
         padding-bottom: 2%;
         font-weight: 400;
         border-radius: 0px;
-
     }
 
     .card {
@@ -124,6 +134,44 @@
 
     input::placeholder {
         color: rgb(121, 121, 121) !important;
+    }
+
+    
+    .main-content ul>li::marker {
+        font-size: 1.3rem;
+        color: white;
+    }
+
+
+    /* Ordered list style */
+    ol {
+        list-style: none;
+        padding-left: 0px;
+        counter-reset: markdown-ordered-list;
+    }
+
+    .main-content ol>li {
+        position: relative;
+        padding-left: 2.2em;
+        counter-increment: markdown-ordered-list;
+        padding-bottom: 0.5rem;
+    }
+
+    .main-content ol>li::before {
+        content: counter(markdown-ordered-list);
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1.7rem;
+        height: 1.7rem;
+        border-radius: 50%;
+        display: inline-block;
+        line-height: 1.7rem;
+        color: black;
+        text-align: center;
+        margin-right: 0.5rem;
+        background: white;
+        font-weight: 500;
     }
 
 
