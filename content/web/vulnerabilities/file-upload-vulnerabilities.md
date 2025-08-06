@@ -82,7 +82,7 @@ Many servers allow configuration files in directories to override global setting
 
 If the file extension is blacklisted, you might trick the server into mapping a custom file extension to an executable MIME type.
 
-* Apache servers → `.htaccess`
+* Apache servers ➜ `.htaccess`
 * Example: `AddType application/x-httpd-php .<EXTENSION>`
 
 ---
@@ -120,8 +120,8 @@ Content-Disposition: form-data; name="avatar"; filename="../exploit.php"
 
 Even without remote code execution, you can still cause harm:
 
-- Upload `.html` or `.svg` files with embedded JavaScript → **Stored XSS**
-- Upload XML files like `.docx`, `.xlsx` → Possible **XXE injection**
+- Upload `.html` or `.svg` files with embedded JavaScript ➜ **Stored XSS**
+- Upload XML files like `.docx`, `.xlsx` ➜ Possible **XXE injection**
 
 ---
 

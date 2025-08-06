@@ -41,7 +41,7 @@ objection patchapk -s target.apk
 objection patchapk -V 14.2.8 -s target.apk
 ```
 
-This quickly extracts, patches, re-packs, aligns, and signs the APK \[[🔗](https://github.com/sensepost/objection/wiki/Patching-Android-Applications#patching---patching-an-apk)]. The patch is applied with the **frida-gadget.so**
+This quickly extracts, patches, re-packs, aligns, and signs the APK \[[↗](https://github.com/sensepost/objection/wiki/Patching-Android-Applications#patching---patching-an-apk)]. The patch is applied with the **frida-gadget.so**
 
 **Note:** The app will pause at launch, waiting for Frida. Start it with:
 
@@ -59,30 +59,30 @@ frida -U <package_name>
 2. Extract it
 3. Push it on the device
 
-```sh
-adb push frida-server /data/local/tmp/
-```
+    ```sh
+    adb push frida-server /data/local/tmp/
+    ```
 
-**Note**: We choose this path because other parts, such as `/sdcard`, are commonly mounted no-exec.
+    **Note**: We choose this path because other parts, such as `/sdcard`, are commonly mounted no-exec.
 
 4. Run frida-server
 
-```sh
-adb shell
+    ```sh
+    adb shell
 
-su
-cd /data/local/tmp
-chmod +x frida-server
+    su
+    cd /data/local/tmp
+    chmod +x frida-server
 
-# Launch the server
-./frida-server
-```
+    # Launch the server
+    ./frida-server
+    ```
 
 5. Now we can connect to the application by running:
 
-```sh
-frida -U <package_name>
-```
+    ```sh
+    frida -U <package_name>
+    ```
 
 {{< /details >}}
 

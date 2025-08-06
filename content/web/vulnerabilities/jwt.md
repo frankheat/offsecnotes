@@ -77,36 +77,36 @@ According to the JWS specification, only the `alg` header parameter is mandatory
 
 * `jwk` (JSON Web Key): An embedded JSON object representing the key.
 
-```json
-"jwk": {
-    "kty": "RSA",
-    "e": "AQAB",
-    "kid": "ed2Nf8sb-sD6ng0-scs5390g-fFD8sfxG",
-    "n": "yy1wpYmffgXBxhAUJzHHocCuJolwDqql75ZWuCQ_cb33K2vh9m"
-}
-```
+    ```json
+    "jwk": {
+        "kty": "RSA",
+        "e": "AQAB",
+        "kid": "ed2Nf8sb-sD6ng0-scs5390g-fFD8sfxG",
+        "n": "yy1wpYmffgXBxhAUJzHHocCuJolwDqql75ZWuCQ_cb33K2vh9m"
+    }
+    ```
 
 * `jku` (JSON Web Key Set URL): A URL for servers to fetch the correct key set.
 
-```json
-"jku": "https://example.com/.well-known/jwks.json"
-```
+    ```json
+    "jku": "https://example.com/.well-known/jwks.json"
+    ```
 
-https://example.com/.well-known/jwks.json
+    https://example.com/.well-known/jwks.json
 
-```json
-{
-  "keys": [
+    ```json
     {
-      "kty": "RSA",
-      "kid": "1234567890",
-      "use": "sig",
-      "n": "modulus_value_here",
-      "e": "AQAB"
+      "keys": [
+        {
+          "kty": "RSA",
+          "kid": "1234567890",
+          "use": "sig",
+          "n": "modulus_value_here",
+          "e": "AQAB"
+        }
+      ]
     }
-  ]
-}
-```
+    ```
 
 * `kid` (Key ID): An ID for servers to identify the correct key among multiple keys.
 
@@ -138,18 +138,18 @@ Some servers use the `jku`  header parameter to reference a JWK Set containing t
 3. Create JWK Set (JSON Web Token tab -> select key -> create JWK Set).
 4. Create webpage on your exploit server with JWK Set. So, from JWT Editor, select "Copy Public Key" and paste inside "keys" array.
 
-```json
-{
-    "keys": [
-        {
-           "kty": "RSA",
-            "e": "AQAB",
-            "kid": "893d8f0b-061f-42c2-a4aa-5056e12b8ae7",
-            "n": "yy1wpYmffgXBxhAUJzHHocCuJolwDqql75ZWuCQ_cb33K2vh9mk6GPM9gNN4Y_qTVX67WhsN3JvaFYw
-        }
-    ]
-}
-```
+    ```json
+    {
+        "keys": [
+            {
+              "kty": "RSA",
+                "e": "AQAB",
+                "kid": "893d8f0b-061f-42c2-a4aa-5056e12b8ae7",
+                "n": "yy1wpYmffgXBxhAUJzHHocCuJolwDqql75ZWuCQ_cb33K2vh9mk6GPM9gNN4Y_qTVX67WhsN3JvaFYw
+            }
+        ]
+    }
+    ```
 
 5. Tamper the data (in exploit phase).
 6. Add a new `jku` parameter to the header and set its value to the URL of your JWK Set on the exploit server.

@@ -108,15 +108,16 @@ Don't rely solely on referer validation. Users or browsers may strip or modify t
 
 - Using GET requests (bypass lax)
 
-```html
-<script>
-    document.location = 'https://vulnerable-website.com/account/transfer-payment?recipient=hacker&amount=1000000';
-</script>
-```
+    ```html
+    <script>
+        document.location = 'https://vulnerable-website.com/account/transfer-payment?recipient=hacker&amount=1000000';
+    </script>
+    ```
 
 - GET method override (bypass lax)
   - Even if an ordinary `GET` request isn't allowed, some frameworks supports `_method` parameter. (Other frameworks support a variety of similar parameters)
-  - ```http
+  
+    ```http
     GET /my-account/change-email?email=a@a.com&_method=POST HTTP/1.1
     ```
 
@@ -198,4 +199,4 @@ You need to add `Referrer-Policy` to `unsafe-url`:
 ```
 {{< /hint >}}
 
-Firefox 87 new default Referrer Policy `strict-origin-when-cross-origin` trimming user sensitive information like path and query string to protect privacy \[[🔗](https://blog.mozilla.org/security/2021/03/22/firefox-87-trims-http-referrers-by-default-to-protect-user-privacy/)] .
+Firefox 87 new default Referrer Policy `strict-origin-when-cross-origin` trimming user sensitive information like path and query string to protect privacy \[[↗](https://blog.mozilla.org/security/2021/03/22/firefox-87-trims-http-referrers-by-default-to-protect-user-privacy/)] .

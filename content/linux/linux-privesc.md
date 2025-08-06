@@ -93,7 +93,7 @@ gcc binary.c -o <loaded_binary>
 
 ## Capabilities
 
-Since Linux version 2.2, the system has divided the traditional superuser privileges into distinct units called capabilities \[[🔗](https://man7.org/linux/man-pages/man7/capabilities.7.html)]. These capabilities can be independently enabled or disabled, offering more fine-grained control over process privileges. However, if misconfigured, they can be exploited by an attacker to escalate privileges and gain root access.
+Since Linux version 2.2, the system has divided the traditional superuser privileges into distinct units called capabilities \[[↗](https://man7.org/linux/man-pages/man7/capabilities.7.html)]. These capabilities can be independently enabled or disabled, offering more fine-grained control over process privileges. However, if misconfigured, they can be exploited by an attacker to escalate privileges and gain root access.
 
 ```sh
 /usr/sbin/getcap -r / 2>/dev/null

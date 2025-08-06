@@ -12,42 +12,42 @@ For additional details, refer to the [official documentation](https://frida.re/d
 
 There are two ways to know which classes are actually available:
 
-1. &#x20;`Java.enumerateLoadedClasses(callbacks)` use this if you want to do something when the class is loaded or when the enumeration is terminated.
+1. `Java.enumerateLoadedClasses(callbacks)` use this if you want to do something when the class is loaded or when the enumeration is terminated.
 
-```javascript
-Java.enumerateLoadedClasses({
-    onMatch: function(className) {
-        console.log("[*] Class found: " + className);
-    },
-    onComplete: function() {
-        console.log("[*] Enumeration completed.");
-    }
-});
+    ```javascript
+    Java.enumerateLoadedClasses({
+        onMatch: function(className) {
+            console.log("[*] Class found: " + className);
+        },
+        onComplete: function() {
+            console.log("[*] Enumeration completed.");
+        }
+    });
 
-/* Output
-[*] Class found: com.test.a
-[*] Class found: com.test.b
-[...]
-[*] Enumeration completed.
-*/
-```
+    /* Output
+    [*] Class found: com.test.a
+    [*] Class found: com.test.b
+    [...]
+    [*] Enumeration completed.
+    */
+    ```
 
 2. `Java.enumerateLoadedClassesSync()` that returns the class names in an array.
 
-```javascript
-var classes = Java.enumerateLoadedClassesSync();
-console.log(JSON.stringify(classes, null, 2));
-console.log("[*] Loaded classes: " + classes.length);
+    ```javascript
+    var classes = Java.enumerateLoadedClassesSync();
+    console.log(JSON.stringify(classes, null, 2));
+    console.log("[*] Loaded classes: " + classes.length);
 
-/* Output
-[
-  "com.test.a",
-  "com.test.b",
-  [...]
-]
-[*] Loaded classes: 342
-*/
-```
+    /* Output
+    [
+      "com.test.a",
+      "com.test.b",
+      [...]
+    ]
+    [*] Loaded classes: 342
+    */
+    ```
 
 ---
 

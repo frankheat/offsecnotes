@@ -82,15 +82,15 @@ if ($user->isAdmin === true) {
 1. Identify serialized object (here in the cookie)
 2. Decode it
 
-```php
-O:4:"User":2:{s:8:"username";s:6:"carlos";s:7:"isAdmin";b:0;}
-```
+    ```php
+    O:4:"User":2:{s:8:"username";s:6:"carlos";s:7:"isAdmin";b:0;}
+    ```
 
 3. Modify attributes&#x20;
 
-```php
-O:4:"User":2:{s:8:"username";s:6:"carlos";s:7:"isAdmin";b:1;}
-```
+    ```php
+    O:4:"User":2:{s:8:"username";s:6:"carlos";s:7:"isAdmin";b:1;}
+    ```
 
 4. Re-encode the object and overwrite (the cookie)
 
@@ -136,12 +136,12 @@ Attacker can modify the password attribute so that it contained the integer `0` 
 * Magic methods are a special type of method that are automatically triggered by specific events or scenarios, without explicit invocation. Developers use them to define code execution for these events (e.g., `__construct()`). Some languages have magic methods that are invoked automatically during deserialization.
 * In Java deserialization, the `ObjectInputStream.readObject()` method is used to read data from the initial byte stream and essentially acts like a constructor for "re-initializing" a serialized object.
 
-```java
-private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException
-{
-    // implementation
-}
-```
+    ```java
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException
+    {
+        // implementation
+    }
+    ```
 
 * They allow you to pass data from a serialized object into the website's code before the object is fully deserialized.
 

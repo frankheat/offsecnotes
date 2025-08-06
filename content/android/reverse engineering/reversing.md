@@ -14,7 +14,7 @@ Binary Dalvik bytecode (.dex files) are not easy to read or modify
 
 {{< details summary="Dex format" >}}
 
-More details \[[🔗](https://www.bugsnag.com/blog/dex-and-d8/)].
+More details \[[↗](https://www.bugsnag.com/blog/dex-and-d8/)].
 
 **HEX**
 
@@ -53,7 +53,7 @@ V&~~D8{"min-api":26,"version":"v0.1.14"}ÅÄÃ
 
 {{< /details >}}
 
-So there are tools out there to convert to and from a human readable representation. The most common human readable format is known as **Smali.** We can say that Smali acting like assembly language \[[🔗](https://payatu.com/blog/an-introduction-to-smali/)]. You can convert ("disassembler") dex to smali using [baksmali](https://github.com/JesusFreke/smali) tool.
+So there are tools out there to convert to and from a human readable representation. The most common human readable format is known as **Smali.** We can say that Smali acting like assembly language \[[↗](https://payatu.com/blog/an-introduction-to-smali/)]. You can convert ("disassembler") dex to smali using [baksmali](https://github.com/JesusFreke/smali) tool.
 
 **Example**
 
@@ -127,10 +127,10 @@ java -jar uber-apk-signer.jar -a merged.apk --allowResign -o <merged_signed>
   * This error occurs in some apktool versions with apps containing native libraries. To fix it, set `extractNativeLibs` to `true` in `AndroidManifest.xml`, then repackage and re-sign the APK.
 * If you have errors when you assemble try this:
 
-```sh
-apktool d -f -r target.apk
-# Note: This do not decode resources
-```
+    ```sh
+    apktool d -f -r target.apk
+    # Note: This do not decode resources
+    ```
 
 ---
 

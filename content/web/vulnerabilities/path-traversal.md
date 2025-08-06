@@ -67,38 +67,39 @@ An attacker can request the following URL to retrieve the `/etc/passwd` file fro
 ## Identify Windows version
 
 1. Retrieve a Microsoft executable from the target system:
-- `C:/Windows/explorer.exe`
-- `C:/Windows/notepad.exe`
-- `C:/Windows/system32/ntoskrnl.exe`
+   - `C:/Windows/explorer.exe`
+   - `C:/Windows/notepad.exe`
+   - `C:/Windows/system32/ntoskrnl.exe`
 
 2. Check version information:
-```bash
-exiftool explorer.exe
 
-[...]
-OS Version                      : 10.0
-Image Version                   : 10.0
-Subsystem Version               : 10.0
-Subsystem                       : Windows GUI
-File Version Number             : 10.0.14393.7513
-Product Version Number          : 10.0.14393.7513
-File Flags Mask                 : 0x003f
-File Flags                      : (none)
-File OS                         : Windows NT 32-bit
-Object File Type                : Executable application
-File Subtype                    : 0
-Language Code                   : English (U.S.)
-Character Set                   : Unicode
-Company Name                    : Microsoft Corporation
-File Description                : Windows Explorer
-File Version                    : 10.0.14393.7513 (rs1_release.241021-1750)
-Internal Name                   : explorer
-Legal Copyright                 : © Microsoft Corporation. All rights reserved.
-Original File Name              : EXPLORER.EXE
-Product Name                    : Microsoft® Windows® Operating System
-Product Version                 : 10.0.14393.7513
-[...]
-```
+    ```bash
+    exiftool explorer.exe
+
+    [...]
+    OS Version                      : 10.0
+    Image Version                   : 10.0
+    Subsystem Version               : 10.0
+    Subsystem                       : Windows GUI
+    File Version Number             : 10.0.14393.7513
+    Product Version Number          : 10.0.14393.7513
+    File Flags Mask                 : 0x003f
+    File Flags                      : (none)
+    File OS                         : Windows NT 32-bit
+    Object File Type                : Executable application
+    File Subtype                    : 0
+    Language Code                   : English (U.S.)
+    Character Set                   : Unicode
+    Company Name                    : Microsoft Corporation
+    File Description                : Windows Explorer
+    File Version                    : 10.0.14393.7513 (rs1_release.241021-1750)
+    Internal Name                   : explorer
+    Legal Copyright                 : © Microsoft Corporation. All rights reserved.
+    Original File Name              : EXPLORER.EXE
+    Product Name                    : Microsoft® Windows® Operating System
+    Product Version                 : 10.0.14393.7513
+    [...]
+    ```
 
 3. Compare the version number with the following official table: https://learn.microsoft.com/en-us/windows/win32/sysinfo/operating-system-version.
 

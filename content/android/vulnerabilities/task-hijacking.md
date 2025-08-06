@@ -21,14 +21,14 @@ When the back button is pressed on `Bank-Main-Activity`, the user will go to the
 {{< hint style=notes >}}
 **Note**:&#x20;
 
-* There are many other scenarios, in this case we focus only on this one. For more details on other scenarios, refer to \[[🔗](https://www.youtube.com/watch?v=lLBeoufO_Bc)]. Slides \[[🔗](https://www.slideshare.net/slideshow/android-task-hijacking/76515201)].
+* There are many other scenarios, in this case we focus only on this one. For more details on other scenarios, refer to \[[↗](https://www.youtube.com/watch?v=lLBeoufO_Bc)]. Slides \[[↗](https://www.slideshare.net/slideshow/android-task-hijacking/76515201)].
 * The only real remediation is update to `android:minSdkVersion="28"`.
 {{< /hint >}}
 
 **Requirements:**
 
 * The app can be installed on **Android SDK version < 28 (Android 9)**. Check `android:minSdkVersion` is < 28 in `AndroidManifest.xml`
-  * This vulnerability is patched from **Android SDK version 28**. \[[🔗](https://developer.android.com/privacy-and-security/risks/strandhogg)]&#x20;
+  * This vulnerability is patched from **Android SDK version 28**. \[[↗](https://developer.android.com/privacy-and-security/risks/strandhogg)]&#x20;
 * `android:launchMode="singleTask"` in `AndroidManifest.xml` (necessary for this scenario)
 
 ---

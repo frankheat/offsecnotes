@@ -16,9 +16,9 @@ Three scenario:
     - Analyze and modify the legitimate behavior
     - Extract, without root privileges, all files inside the app internal storage
 
-{{< hint style=notes >}}
-**Note**: This scenario is often impossible because no release application on the Play Store can have `android:debuggable="true"` \[[🔗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[🔗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)]. It means that the user has installed the app from a third-party store.
-{{< /hint >}}
+   {{< hint style=notes >}}
+   **Note**: This scenario is often impossible because no release application on the Play Store can have `android:debuggable="true"` \[[↗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[↗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)]. It means that the user has installed the app from a third-party store.
+   {{< /hint >}}
 
 3. You might have the app Java source code. Again, this scenario is highly unlikely, but not impossible.
 
@@ -27,7 +27,7 @@ Three scenario:
 
 ## Prerequisites
 
-You need to have an application debuggable. If the app is not debuggable you can \[[🔗](https://www.pnfsoftware.com/jeb/manual/android-debugging/#debugging-non-debuggable-apps)]:
+You need to have an application debuggable. If the app is not debuggable you can \[[↗](https://www.pnfsoftware.com/jeb/manual/android-debugging/#debugging-non-debuggable-apps)]:
 
 
 * Repackage the app and set `android:debuggable="true"` in `AndroidManifest.xml`. **You don't need to be root**.
@@ -75,40 +75,44 @@ This is the simpler approach. You can follow the official guide: [Debug pre-buil
 ### jdb
 
 1. (optional) Set app to wait
-```sh
-am set-debug-app -w app_package_name
-```
-If we open the app, we're going to get waiting for debugger.
+
+    ```sh
+    am set-debug-app -w app_package_name
+    ```
+    If we open the app, we're going to get waiting for debugger.
 
 2. Find app process id
-```sh
-adb shell ps | grep -i app_package_name
-```
+
+    ```sh
+    adb shell ps | grep -i app_package_name
+    ```
 
 3. Set Up Port Forwarding 
-```sh
-adb forward tcp:8000 jdwp:<PROCESS_ID>
-```
+
+    ```sh
+    adb forward tcp:8000 jdwp:<PROCESS_ID>
+    ```
 
 4. Start JDB
-```sh
-jdb -attach localhost:8000 -sourcepath <source_file>
 
-# If you set app to wait you also need to suspend all threads
-{ echo "suspend" ; cat ; } | jdb -attach localhost:8000 -sourcepath <source_file>
-```
+    ```sh
+    jdb -attach localhost:8000 -sourcepath <source_file>
 
-{{< hint style=tips >}}
-**Tips**: Other useful commands 
-```sh
-# List all forward socket connections
-adb forward --list
+    # If you set app to wait you also need to suspend all threads
+    { echo "suspend" ; cat ; } | jdb -attach localhost:8000 -sourcepath <source_file>
+    ```
 
-# Remove specific/all forward socket connection
-forward --remove LOCAL
-forward --remove-all
-```
-{{< /hint >}}
+   {{< hint style=tips >}}
+   **Tips**: Other useful commands 
+   ```sh
+   # List all forward socket connections
+   adb forward --list
+
+   # Remove specific/all forward socket connection
+   forward --remove LOCAL
+   forward --remove-all
+   ```
+   {{< /hint >}}
 
 
 **jdb commands**

@@ -41,29 +41,29 @@ This context is easily missed during assessment because it doesn't result in obv
 
 1. First establish that the parameter doesn't contain a direct XSS vulnerability by injecting HTML
 
-```sh
-http://vulnerable-website.com/?greeting=data.username<tag>
-```
+    ```sh
+    http://vulnerable-website.com/?greeting=data.username<tag>
+    ```
 
-Without XSS, this usually results in a blank output, encoded tags, or an error message.&#x20;
+    Without XSS, this usually results in a blank output, encoded tags, or an error message.&#x20;
 
 2. Next, break out of the statement with common templating syntax and inject arbitrary HTML
 
-```sh
-http://vulnerable-website.com/?greeting=data.username}}<tag>
-```
+    ```sh
+    http://vulnerable-website.com/?greeting=data.username}}<tag>
+    ```
 
-If this results in an error or blank output, you may have used the wrong templating syntax, or SSTI isn't possible. If the output renders correctly with the arbitrary HTML, it indicates a SSTI vulnerability.
+    If this results in an error or blank output, you may have used the wrong templating syntax, or SSTI isn't possible. If the output renders correctly with the arbitrary HTML, it indicates a SSTI vulnerability.
 
-```sh
-Hello user<tag>
-```
+    ```sh
+    Hello user<tag>
+    ```
 
 3. Exploit
 
-```sh
-http://vulnerable-website.com/?greeting=data.username}}<PAYLOAD>
-```
+    ```sh
+    http://vulnerable-website.com/?greeting=data.username}}<PAYLOAD>
+    ```
 
 ---
 

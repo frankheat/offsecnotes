@@ -36,27 +36,26 @@ bu restore backup.ab
 
 ## Debuggable
 
-The `android:debuggable` attribute indicates if the application is debuggable and it is set to `false` by default \[[🔗](https://developer.android.com/privacy-and-security/risks/android-debuggable)]. Check `android:debuggable="true"` in the `AndroidManifest.xml`.
+The `android:debuggable` attribute indicates if the application is debuggable and it is set to `false` by default \[[↗](https://developer.android.com/privacy-and-security/risks/android-debuggable)]. Check `android:debuggable="true"` in the `AndroidManifest.xml`.
 
 {{< hint style=notes >}}
-**Note**: you cannot release a debuggable app on Google Play Store \[[🔗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[🔗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)].
+**Note**: you cannot release a debuggable app on Google Play Store \[[↗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[↗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)].
 {{< /hint >}}
 
 **Impact**
 
 1. Debug an application. See [Debug application code](/android/debug-application-code/)
+2. You can use `run-as` command to read and extract, **without root privileges**, all files inside the app internal storage. \[[↗](https://android.googlesource.com/platform/system/core.git/+/android-4.2.2_r1/run-as/run-as.c)].
 
-2. You can use `run-as` command to read and extract, **without root privileges**, all files inside the app internal storage. \[[🔗](https://android.googlesource.com/platform/system/core.git/+/android-4.2.2_r1/run-as/run-as.c)].
+    ```sh
+    adb shell
+    run-as com.package id
+    ```
 
-```sh
-adb shell
-run-as com.package id
-```
-
-**Extract data from internal storage**
-```sh
-adb exec-out run-as <package_name> tar c . > output.tar
-```
+    **Extract data from internal storage**
+    ```sh
+    adb exec-out run-as <package_name> tar c . > output.tar
+    ```
 
 ---
 

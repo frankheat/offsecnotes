@@ -16,7 +16,7 @@ CORS (Cross-Origin Resource Sharing) is a browser security feature that controls
 
 {{< hint style=notes >}}
 **Note**: An "origin" in CORS includes the protocol, domain, and port. So `https://example.com` and `http://example.com` are considered different origins
-\[[🔗](https://developer.mozilla.org/en-US/docs/Glossary/Origin)].
+\[[↗](https://developer.mozilla.org/en-US/docs/Glossary/Origin)].
 {{< /hint >}}
 
 ---

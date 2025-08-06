@@ -51,9 +51,9 @@ It almost always embodies the following files and directories, though only `Andr
 
 ## Building process
 
-Awesome resource written by Michael Zent \[[🔗](https://timeout.userpage.fu-berlin.de/apk-building-on-mobile/en/index.php)] .
+Awesome resource written by Michael Zent \[[↗](https://timeout.userpage.fu-berlin.de/apk-building-on-mobile/en/index.php)] .
 
-1.  `📁 res` (without `res/values`) and `🗎 AndroidManifest.xml` are compiled (aapt \[compile] tool)
+1. `📁 res` (without `res/values`) and `🗎 AndroidManifest.xml` are compiled (aapt \[compile] tool)
 
     * -> `🗎 R.java`, `🗎 resources.asrc`, `📁 res (compiled)`, `🗎 AndroidManifest.xml` (compiled)
 

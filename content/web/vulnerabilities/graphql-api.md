@@ -202,21 +202,21 @@ Suggestions are a feature of the Apollo GraphQL platform where the server sugges
 
 * Developers might use a regex to exclude the `__schema` keyword. Try spaces, new lines, and commas, which GraphQL ignores but flawed regex does not.
 
-```json
-    #Introspection query with newline
-    {
-        "query": "query{__schema
-        {queryType{name}}}"
-    }
-```
+    ```json
+        #Introspection query with newline
+        {
+            "query": "query{__schema
+            {queryType{name}}}"
+        }
+    ```
 
 * Try a GET request
 
-```json
-    # Introspection probe as GET request
+    ```json
+        # Introspection probe as GET request
 
-    GET /graphql?query=query%7B__schema%0A%7BqueryType%7Bname%7D%7D%7D
-```
+        GET /graphql?query=query%7B__schema%0A%7BqueryType%7Bname%7D%7D%7D
+    ```
 
 * POST request with a content-type of `x-www-form-urlencoded`
 

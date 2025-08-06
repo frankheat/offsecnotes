@@ -54,8 +54,8 @@ To begin with, it's important to understand how a native library is loaded in an
 
 Standard, convenient.
 
-* `System.loadLibrary(String libname)` \[[🔗](https://developer.android.com/reference/java/lang/System#loadLibrary(java.lang.String))] 
-* `System.load(String libname)` \[[🔗](https://developer.android.com/reference/java/lang/System#load(java.lang.String))]
+* `System.loadLibrary(String libname)` \[[↗](https://developer.android.com/reference/java/lang/System#loadLibrary(java.lang.String))] 
+* `System.load(String libname)` \[[↗](https://developer.android.com/reference/java/lang/System#load(java.lang.String))]
 
 ```java
 // System.loadLibrary

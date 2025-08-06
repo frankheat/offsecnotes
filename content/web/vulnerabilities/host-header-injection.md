@@ -96,46 +96,46 @@ E.g. SQLi, etc.
 
 * Parsing flaws
 
-```http
-Host: vulnerable-website.com:bad-stuff-here
-Host: notvulnerable-website.com
-Host: hacked-subdomain.vulnerable-website.com
-```
+    ```http
+    Host: vulnerable-website.com:bad-stuff-here
+    Host: notvulnerable-website.com
+    Host: hacked-subdomain.vulnerable-website.com
+    ```
 
 * Override headers (`X-Host`, `X-Forwarded-Server`, `Forwarded`, etc.). You can also find with param miner -> guess headers
 
-```http
-GET /example HTTP/1.1
-Host: vulnerable-website.com
-X-Forwarded-Host: bad-stuff-here
-```
+    ```http
+    GET /example HTTP/1.1
+    Host: vulnerable-website.com
+    X-Forwarded-Host: bad-stuff-here
+    ```
 
 * Inject duplicate Host headers
 
-```http
-GET /example HTTP/1.1
-Host: vulnerable-website.com
-Host: bad-stuff-here
-```
+    ```http
+    GET /example HTTP/1.1
+    Host: vulnerable-website.com
+    Host: bad-stuff-here
+    ```
 
 * Supply an absolute URL (many servers are also configured to understand requests for absolute URLs).
   * Officially, the request line should be given precedence when routing the request but, in practice, this isn't always the case
   * Try also change protocol `HTTP`, `HTTPS`
 
-```http
-GET https://vulnerable-website.com/ HTTP/1.1
-Host: bad-stuff-here
-```
+  ```http
+  GET https://vulnerable-website.com/ HTTP/1.1
+  Host: bad-stuff-here
+  ```
 
 * Add line wrapping
   * Some servers will interpret the indented header as a wrapped line and, therefore, treat it as part of the preceding header's value
     * If the front-end ignores the indented header, the request will be processed as an ordinary request for vulnerable-website.com
     * Now let's say the back-end ignores the leading space and gives precedence to the first header in the case of duplicates. This discrepancy might allow you to pass arbitrary values via the "wrapped" Host header
 
-```http
-GET /example HTTP/1.1
-    Host: bad-stuff-here
-Host: vulnerable-website.com
-```
+  ```http
+  GET /example HTTP/1.1
+      Host: bad-stuff-here
+  Host: vulnerable-website.com
+  ```
 
 * Other techniques you can find on the web "common domain-validation flaws"
