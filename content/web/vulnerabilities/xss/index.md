@@ -10,7 +10,7 @@ Cross-site scripting (XSS) works by manipulating a vulnerable web site so that i
 
 XSS cheatsheet: [PortSwigger XSS cheat-sheet](https://portswigger.net/web-security/cross-site-scripting/cheat-sheet)
 
-More info about Javascript & obfuscation: [Javascript & Obfuscation]({{< ref "web/web-security/javascript-and-obfuscation" >}})
+More info about Javascript & obfuscation: [Javascript & Obfuscation]({{< ref "web/web-security/javascript and obfuscation/index" >}})
 
 {{< hint style=warning >}}
 

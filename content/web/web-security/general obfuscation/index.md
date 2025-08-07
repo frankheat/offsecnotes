@@ -6,7 +6,7 @@ weight: 1
 # General obfuscation
 
 {{< hint style=notes >}}
-**Note**: for Javascript obfuscation go on [Javascript & Obfuscation]({{< ref "web/web-security/javascript-and-obfuscation" >}})
+**Note**: for Javascript obfuscation go on [Javascript & Obfuscation]({{< ref "web/web-security/javascript and obfuscation/index" >}})
 {{< /hint >}}
 
 ## URL encoding

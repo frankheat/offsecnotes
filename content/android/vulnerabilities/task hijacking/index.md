@@ -12,14 +12,14 @@ Task hijacking is a vulnerability that affects Android applications due to the c
 
 **Scenario**
 
-{{< figure path=images/task-hijacking.png caption="Based on 'Android Task hijacking' by Evgeny Blashko & Yury Shabalin in 'Positive Hack Days - PHDays VII Hacking conference'" >}}
+{{< figure path=task-hijacking.png caption="Based on 'Android Task hijacking' by Evgeny Blashko & Yury Shabalin in 'Positive Hack Days - PHDays VII Hacking conference'" >}}
 
 **Security implication (this scenario)**
 
 When the back button is pressed on `Bank-Main-Activity`, the user will go to the `Mal-Activity 2`.
 
 {{< hint style=notes >}}
-**Note**:&#x20;
+**Note**:
 
 * There are many other scenarios, in this case we focus only on this one. For more details on other scenarios, refer to \[[↗](https://www.youtube.com/watch?v=lLBeoufO_Bc)]. Slides \[[↗](https://www.slideshare.net/slideshow/android-task-hijacking/76515201)].
 * The only real remediation is update to `android:minSdkVersion="28"`.
@@ -28,7 +28,7 @@ When the back button is pressed on `Bank-Main-Activity`, the user will go to the
 **Requirements:**
 
 * The app can be installed on **Android SDK version < 28 (Android 9)**. Check `android:minSdkVersion` is < 28 in `AndroidManifest.xml`
-  * This vulnerability is patched from **Android SDK version 28**. \[[↗](https://developer.android.com/privacy-and-security/risks/strandhogg)]&#x20;
+  * This vulnerability is patched from **Android SDK version 28**. \[[↗](https://developer.android.com/privacy-and-security/risks/strandhogg)]
 * `android:launchMode="singleTask"` in `AndroidManifest.xml` (necessary for this scenario)
 
 ---
