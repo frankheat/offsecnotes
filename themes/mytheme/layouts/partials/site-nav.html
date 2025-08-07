@@ -1,46 +1,50 @@
-
 <nav id="index">
     <input id="filter-input" type="text" class="form-control mb-2 rounded-pill" placeholder="Filter" autocomplete="off">
     <div>
         {{ range site.Sections.ByWeight }}
         <hr class="hr-sitenav">
         <div class="sections">
-            <strong>{{ .Title }}</strong>
+            <div class="section-title">
+                {{ with .Params.icon }}
+                    <img src="{{ . }}" class="section-icon">
+                {{ end }}
+                <strong>{{ .Title }}</strong>
+            </div>
+
             <ul>
                 {{ range .Sections.ByWeight }}
                 <li>
-    
+
                     {{ $s := "" }}
                     {{ with .File }}
-                        {{ $s = .Path }}
+                    {{ $s = .Path }}
                     {{ end }}
                     {{ $s = replace $s "/_index.md" "" }}
                     {{ $s = replace $s "/" "-" }}
                     {{ $s = replace $s " " "-" }}
-    
+
                     <a data-bs-toggle="collapse" href="#{{ $s }}" role="button" aria-expanded="false"
                         aria-controls="{{ $s }}" style="display: flex; justify-content: space-between;"
                         onclick="toggleRotation(this)">
                         {{ .Title }}
                         <span class="icon-expand" id="{{ $s }}-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
-                                viewBox="0 0 512 512">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 512 512">
                                 <path fill="#cfcfcf"
                                     d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 73.4 86.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l192 192z" />
                             </svg>
                         </span>
                     </a>
-    
+
                     {{ if .Pages }}
-    
+
                     {{ $s := "" }}
                     {{ with .File }}
-                        {{ $s = .Path }}
+                    {{ $s = .Path }}
                     {{ end }}
                     {{ $s = replace $s "/_index.md" "" }}
                     {{ $s = replace $s "/" "-" }}
                     {{ $s = replace $s " " "-" }}
-    
+
                     <div class="collapse" id="{{ $s }}">
                         <ul>
                             {{ range .Pages.ByWeight }}
@@ -49,17 +53,17 @@
                         </ul>
                     </div>
                     {{ end }}
-    
+
                 </li>
                 {{ end }}
-    
+
                 {{ range .Pages.ByWeight }}
                 {{ if not .IsSection }}
                 <li><a href="{{ .RelPermalink }}">{{ .Title }}</a></li>
                 {{ end }}
                 {{ end }}
             </ul>
-            
+
         </div>
         {{ end }}
     </div>

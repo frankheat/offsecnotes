@@ -1,8 +1,13 @@
-{{ $image := .Get "path" }}
-<figure><img src='{{ $image | absURL }}' class="img-fluid">
-     {{ with .Get "caption" }}
-     <figcaption>
-          {{ . }}
-     </figcaption>
-     {{ end }}
-</figure>
+{{- $src := .Get "path" -}}
+{{- $img := .Page.Resources.GetMatch $src -}}
+
+{{ if $img }}
+  <figure>
+    <img src="{{ $img.RelPermalink }}" class="img-fluid">
+    {{ with .Get "caption" }}
+      <figcaption>{{ . }}</figcaption>
+    {{ end }}
+  </figure>
+{{ else }}
+  {{ errorf "Image '%s' not found in Page Resources." $src }}
+{{ end }}

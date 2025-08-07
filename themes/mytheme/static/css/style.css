@@ -136,7 +136,7 @@
         color: rgb(121, 121, 121) !important;
     }
 
-    
+
     .main-content ul>li::marker {
         font-size: 1.3rem;
         color: white;
@@ -172,6 +172,19 @@
         margin-right: 0.5rem;
         background: white;
         font-weight: 500;
+    }
+
+
+    /* Section titles style */
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-icon {
+        height: 1em; 
+        width: auto;
     }
 
 
