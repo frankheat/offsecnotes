@@ -97,8 +97,20 @@
         border-left: 3px solid orange;
     }
 
+    .tip-alert-title {
+        color: greenyellow
+    }
+
+    .note-alert-title {
+        color: #3b82f6
+    }
+
+    .warning-alert-title {
+        color: orange
+    }
+
     .details {
-        margin-bottom: 10px;
+        margin-bottom: 3%;
     }
 
     .btn-dark {

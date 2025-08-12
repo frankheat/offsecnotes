@@ -1,3 +1,13 @@
 <div class='{{ .Get "style" }}'>
+
+    {{ $style := .Get "style" }}
+    {{ if eq $style "notes" }}
+        <p><strong class="note-alert-title">Note</strong></p>
+    {{ else if eq $style "tips" }}
+        <p><strong class="tip-alert-title">Tip</strong></p>
+    {{ else if eq $style "warning" }}
+        <p><strong class="warning-alert-title">Warning</strong></p>
+    {{ end }}
+
     {{ .Inner | markdownify }}
 </div>
