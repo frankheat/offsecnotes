@@ -25,7 +25,7 @@ https://insecure-website.com/administrator-panel-yb556
 - The **Autorize** Burp Suite extension can help automate this check.
 
 {{< hint style=tips >}}
-**Tip**: Applications may hide sensitive URLs in JavaScript files. Analyze them to discover potential admin endpoints.
+Applications may hide sensitive URLs in JavaScript files. Analyze them to discover potential admin endpoints.
 {{< /hint >}}
 
 ---

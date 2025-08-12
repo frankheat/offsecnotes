@@ -32,7 +32,7 @@ An attacker can request the following URL to retrieve the `/etc/passwd` file fro
 * Others
 
 {{< hint style=notes >}}
-**Note**: On Windows, both `../` and `..\` are valid directory traversal sequences.
+On Windows, both `../` and `..\` are valid directory traversal sequences.
 {{< /hint >}}
 
 ---
@@ -59,7 +59,7 @@ An attacker can request the following URL to retrieve the `/etc/passwd` file fro
 - Long list: https://github.com/soffensive/windowsblindread/tree/master
 
 {{< hint style=tips >}}
-**Tip**: On Windows, you can also try using a different drive letter than *C:*.
+On Windows, you can also try using a different drive letter than *C:*.
 {{< /hint >}}
 
 ---
@@ -104,11 +104,9 @@ An attacker can request the following URL to retrieve the `/etc/passwd` file fro
 3. Compare the version number with the following official table: https://learn.microsoft.com/en-us/windows/win32/sysinfo/operating-system-version.
 
 {{< hint style=tips >}}
-**Tip**: Some operating systems may share the same version name (e.g., Windows 10 and Windows 11), which can make identification tricky. To accurately determine the OS version, check the build number (e.g., `14393`) and refer to this resource: https://www.gaijin.at/en/infos/windows-version-numbers.
+Some operating systems may share the same version name (e.g., Windows 10 and Windows 11), which can make identification tricky. To accurately determine the OS version, check the build number (e.g., `14393`) and refer to this resource: https://www.gaijin.at/en/infos/windows-version-numbers.
 Alternatively, you can search the product version on Google for more information.
 {{< /hint >}}
-
-
 
 ---
 

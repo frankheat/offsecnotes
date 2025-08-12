@@ -17,7 +17,7 @@ ps aux
 ```
 
 {{< hint style=notes >}}
-**Note**: it's possible that another user (e.g., root) is running a cron job that executes a script periodically, which you may not be able to see. Therefore, it's crucial to identify and enumerate all potential programs that could be vulnerable.
+It's possible that another user (e.g., root) is running a cron job that executes a script periodically, which you may not be able to see. Therefore, it's crucial to identify and enumerate all potential programs that could be vulnerable.
 {{< /hint >}}
 
 ---

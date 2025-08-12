@@ -74,5 +74,5 @@ Unfortunately, the package name is missing here. So you can use two ways to get 
     ```
 
    {{< hint style=notes >}}
-   **Note**: keep in mind that not all classes are loaded at startup. Therefore, you may need to execute `frida-trace` after the application has started running (and when your class/method has been loaded).
+   Keep in mind that not all classes are loaded at startup. Therefore, you may need to execute `frida-trace` after the application has started running (and when your class/method has been loaded).
    {{< /hint >}}

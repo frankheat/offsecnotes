@@ -84,7 +84,7 @@ mv cacert.der cacert.crt
 
 
 {{< hint style=notes >}}
-**Note**: Keep in mind that Android accepts both **DER** and **PEM** formats. When you install a certificate as a **user** (regardless of the format), Android automatically converts it to **DER** format.
+Keep in mind that Android accepts both **DER** and **PEM** formats. When you install a certificate as a **user** (regardless of the format), Android automatically converts it to **DER** format.
 {{< /hint >}}
 
 
@@ -253,7 +253,7 @@ This method use a **temporary RAM-based filesystem** (tmpfs) to override the sys
     ```
 
    {{< hint style=notes >}}
-   **Note**: unpacking and repacking an app can break stuff.
+   Unpacking and repacking an app can break stuff.
    {{< /hint >}}
 
 ---
@@ -265,11 +265,11 @@ If you configure an HTTP proxy in Android settings, you can intercept network tr
 * Connections made directly via TCP sockets bypass the proxy and cannot be intercepted.
 * Applications may bypass the HTTP proxy settings if the developer configures them to disallow proxy usage. E.g. with **OkHttp**:
 
-```java
-OkHttpClient client = new OkHttpClient.Builder()
-    .proxy(java.net.Proxy.NO_PROXY) // Disables proxy usage
-    .build();
-```
+    ```java
+    OkHttpClient client = new OkHttpClient.Builder()
+        .proxy(java.net.Proxy.NO_PROXY) // Disables proxy usage
+        .build();
+    ```
 
 * Also framework like **Flutter** and **Xamarin** application does not respect system proxy.
 
@@ -281,14 +281,14 @@ In Android Studio, you can configure a global proxy for an emulated device by go
 In the host name field set burp suite proxy with `http` protocol: e.g. `http://192.168.1.90` and port number.
 
 {{< hint style=warning >}}
-**Warning**: If **your proxy is unreachable**, try changing the emulator version. You can find other versions here: https://developer.android.com/studio/emulator_archive.
+If **your proxy is unreachable**, try changing the emulator version. You can find other versions here: https://developer.android.com/studio/emulator_archive.
 {{< /hint >}}
 
 
 ### HTTP Interception with VPN (Rethink app)
 
 {{< hint style=warning >}}
-**Warning**: This method is not recommended when using the Android Studio emulator. Strange things could happen. 
+This method is not recommended when using the Android Studio emulator. Strange things could happen. 
 {{< /hint >}}
 
 **Requirement**: the proxy certificate must be installed in the system certificate store.
@@ -304,7 +304,7 @@ Steps:
 ### DNS Spoofing & Transparent Proxy (Rethink app)
 
 {{< hint style=warning >}}
-**Warning**: This method is not recommended when using the Android Studio emulator. Strange things could happen. 
+This method is not recommended when using the Android Studio emulator. Strange things could happen. 
 {{< /hint >}}
 
 **Requirement**: The proxy certificate must be installed in the system certificate store.

@@ -72,7 +72,7 @@ Both `System.load()` and `System.loadLibrary()` are simply convenient wrappers a
 * `System.loadLibrary(name)` calls `Runtime.getRuntime().loadLibrary(name)`
 
 {{< hint style=notes >}}
-**Note**: `Runtime.getRuntime().load()` and `Runtime.getRuntime().loadLibrary()` use `android_dlopen_ext()` under the hood.
+`Runtime.getRuntime().load()` and `Runtime.getRuntime().loadLibrary()` use `android_dlopen_ext()` under the hood.
 {{< /hint >}}
 
 
@@ -88,7 +88,7 @@ This is done using `dlopen()` and `android_dlopen_ext()`.
 
 An application is not a monolith. It's a complex assembly of your code, the Android Framework, and many third-party native libraries. Within a single running app, **both loading mechanisms will likely be used**:
 
-1. Your app starts, and `MainActivity` calls `System.loadLibrary("my-app-logic")`. `android_dlopen_ext()` is called.
+1. Your app starts, and `MainActivity` calls `System.loadLibrary("libmy-app-logic")`. `android_dlopen_ext()` is called.
 2. Inside `libmy-app-logic.so`, you initialize a third-party analytics SDK. Its initialization function calls `dlopen("libanalytics-core.so")` to load its own dependency. `dlopen()` is called.
 
 If you only hook one, you will miss the other, giving you an incomplete picture of the app's behavior. That is why a robust interception script always hooks both `dlopen()` and `android_dlopen_ext()` to guarantee full coverage.
@@ -110,7 +110,7 @@ try {
 ```
 
 {{< hint style=notes >}}
-**Note**: A Frida script that hooks `System.loadLibrary` or `System.load` will successfully intercept a call made via reflection.
+A Frida script that hooks `System.loadLibrary` or `System.load` will successfully intercept a call made via reflection.
 {{< /hint >}}
 
 **Method 4. Manual ELF Mapper (In-Memory Loading)**
@@ -152,7 +152,7 @@ if (android_dlopen_ext_ptr) {
 ```
 
 {{< hint style=warning >}}
-**Warning**: On my **x86_64 emulator** running Android 11, attempting to hook `dlopen` results in a crash with the error: **Process crashed: Trace/BPT trap**. However, it **works perfectly on my physical Android 12 device**. At the moment, I’m not sure of the exact cause. 
+On my **x86_64 emulator** running Android 11, attempting to hook `dlopen` results in a crash with the error: **Process crashed: Trace/BPT trap**. However, it **works perfectly on my physical Android 12 device**. At the moment, I’m not sure of the exact cause. 
 
 I'm using Frida 16.6.6.
 {{< /hint >}}
@@ -366,7 +366,7 @@ Each event has a type field and other fields depending on the type. To better un
 
 
 {{< hint style=tips >}}
-**Tip**: you can see the code istruction in that address with `Instruction.parse()`.
+You can see the code istruction in that address with `Instruction.parse()`.
 
 Example:
 
@@ -510,7 +510,7 @@ The loop continues until `iterator.next()` returns `null` (meaning no more instr
 You can insert your own instructions before or after using `iterator.put...()` or `iterator.putCallout()`.
 
 {{< hint style=notes >}}
-**Notes**: keep in mind `transform()` is for rewriting instructions. It always runs if you provide it - **independent of events**.
+Keep in mind `transform()` is for rewriting instructions. It always runs if you provide it - **independent of events**.
 
 `events` is for emitting runtime data. So they are used for collecting execution data Frida generates internally, like:
 * `{ call: true }` - logs when a call happens

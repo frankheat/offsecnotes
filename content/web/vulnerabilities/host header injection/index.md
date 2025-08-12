@@ -83,7 +83,7 @@ You can also brute force `192.168.0.0/16` , `10.0.0.0/8`, etc.
 You may encounter servers that only perform thorough validation on the first request they receive over a new connection. So, you can potentially bypass this validation by sending an innocent-looking initial request then following up with your malicious one down the same connection.
 
 {{< hint style=notes >}}
-**Note**: you need to set up a single connection.
+You need to set up a single connection.
 {{< /hint >}}
 
 ### Exploiting server-side vulnerabilities

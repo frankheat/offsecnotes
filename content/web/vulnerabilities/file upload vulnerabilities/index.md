@@ -9,7 +9,7 @@ description: "Understand how to exploit file upload functionalities through flaw
 Improper handling of file uploads is a common security weakness in web applications. If not carefully validated, uploaded files can lead to remote code execution (RCE), cross-site scripting (XSS), and other types of attacks.
 
 {{< hint style=warning >}}
-**Warning**: By default, servers do not execute uploaded files unless they are explicitly configured to do so.
+By default, servers do not execute uploaded files unless they are explicitly configured to do so.
 {{< /hint >}}
 
 ---
@@ -111,7 +111,7 @@ Content-Disposition: form-data; name="avatar"; filename="../exploit.php"
 ```
 
 {{< hint style=tips >}}
-**Tip**: If directory traversal is filtered, try encoding it: `filename="..%2fexploit.php"`.
+If directory traversal is filtered, try encoding it: `filename="..%2fexploit.php"`.
 {{< /hint >}}
 
 ---

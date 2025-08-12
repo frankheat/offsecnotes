@@ -22,7 +22,7 @@ weight: 5
 * There are several different grant types, each with varying levels of complexity and security considerations.
 
 {{< hint style=notes >}}
-**Note**: We'll focus on the "authorization code" and "implicit" grant types as these are by far the most common.
+We'll focus on the "authorization code" and "implicit" grant types as these are by far the most common.
 {{< /hint >}}
 
 ---

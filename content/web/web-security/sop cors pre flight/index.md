@@ -31,7 +31,7 @@ The cross-origin resource sharing specification provides controlled relaxation o
 This means that the browser will allow code running on normal-website.com to access the response because the origins match.
 
 {{< hint style=notes >}}
-**Note**: `Access-Control-Allow-Origin` is returned only if the whitelisted values or `*` or `null` matched the Origin.
+`Access-Control-Allow-Origin` is returned only if the whitelisted values or `*` or `null` matched the Origin.
 {{< /hint >}}
 
 **Access-Control-Allow-Origin: \***

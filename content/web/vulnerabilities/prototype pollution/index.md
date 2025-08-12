@@ -146,7 +146,7 @@ Test any kind of JSON. E.g. a JWT could be parsed client-side for example, witho
 Being able to affect the global `__proto__` property is not very useful unless you can use it to affect other parts of the code.
 
 {{< hint style=tips >}}
-**Tip**: Third-party libraries of prototype pollution gadgets [https://github.com/BlackFan/client-side-prototype-pollution](https://github.com/BlackFan/client-side-prototype-pollution)
+Third-party libraries of prototype pollution gadgets [https://github.com/BlackFan/client-side-prototype-pollution](https://github.com/BlackFan/client-side-prototype-pollution).
 {{< /hint >}}
 
 ---
@@ -241,7 +241,7 @@ for(const arrayKey in myArray){
 {{< /details >}}
 
 {{< hint style=warning >}}
-**Warning**: It's easy to unintentionally cause a denial-of-service (DoS), making testing in production risky. In addition, once a server-side prototype is polluted, the change persists for the entire lifetime of the Node process, with no way to reset it.
+It's easy to unintentionally cause a denial-of-service (DoS), making testing in production risky. In addition, once a server-side prototype is polluted, the change persists for the entire lifetime of the Node process, with no way to reset it.
 {{< /hint >}}
 
 **Detection - (polluted property reflection)**

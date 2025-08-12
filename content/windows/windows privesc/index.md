@@ -7,7 +7,7 @@ description: "Learn about various techniques and methods for privilege escalatio
 # Windows privilege escalation
 
 {{< hint style=notes >}}
-**Note**: if you have a valid user credential you can authenticate in windows target from SMB, RDP, WinRM.
+If you have a valid user credential you can authenticate in windows target from SMB, RDP, WinRM.
 {{< /hint >}}
 
 ---
@@ -39,7 +39,7 @@ Get-ModifiableServiceFile
 ```
 
 {{< hint style=warning >}}
-**Warning**: You should **never fully trust the output of a tool**, as it can sometimes be incorrect even on simple tasks like detecting the target machine’s operating system.
+You should **never fully trust the output of a tool**, as it can sometimes be incorrect even on simple tasks like detecting the target machine’s operating system.
 {{< /hint >}}
 
 
@@ -65,7 +65,7 @@ After entering the password, a new command-line window opens, running under the 
 `Get-History` only shows commands executed before the current one in the same session.
 
 {{< hint style=warning >}}
-**Warning**: The history is session-based, it doesn’t persist across PowerShell windows by default. Each time you open a new console, the history starts fresh.
+The history is session-based, it doesn’t persist across PowerShell windows by default. Each time you open a new console, the history starts fresh.
 {{< /hint >}}
 
 **Clear-History**
@@ -73,7 +73,7 @@ After entering the password, a new command-line window opens, running under the 
 If a user runs `Clear-History`, it will only clear PowerShell’s in-session history, which can be retrieved using `Get-History`. 
 
 {{< hint style=warning >}}
-**Warning**: `Clear-History` **does not remove**:
+`Clear-History` **does not remove**:
 * The command history saved by PSReadLine to disk (`ConsoleHost_history.txt`).
 * The content seen with `Ctrl+R` or arrow keys if PSReadLine is still managing that memory buffer.
 {{< /hint >}}
@@ -99,7 +99,7 @@ By default, it stores the transcript in the following location using the default
 The default filename is `PowerShell_transcript.<computername>.<random>.<timestamp>.txt`.
 
 {{< hint style=notes >}}
-**Notes**: A user can change the location of the transcript file by using the command: `Start-Transcript -Path "C:\transcripts\transcript0.txt"`. So, be sure to look for files that have names containing the word **transcript**.
+A user can change the location of the transcript file by using the command: `Start-Transcript -Path "C:\transcripts\transcript0.txt"`. So, be sure to look for files that have names containing the word **transcript**.
 {{< /hint >}}
 
 ---
@@ -163,7 +163,7 @@ Get-CimInstance -ClassName win32_service | Select Name,State,PathName
 ```
 
 {{< hint style=notes >}}
-**Note**: When using network logons like WinRM or bind shells, non-admin users get “permission denied” errors with `Get-CimInstance` when querying services. Interactive logons (e.g., RDP) avoid this issue.
+When using network logons like WinRM or bind shells, non-admin users get “permission denied” errors with `Get-CimInstance` when querying services. Interactive logons (e.g., RDP) avoid this issue.
 {{< /hint >}}
 
 Focus on services installed by users and enumerate the permissions:
@@ -191,7 +191,7 @@ int main ()
 ```
 
 {{< hint style=notes >}}
-**Note**: Create a backup of the original binary service (C:\xampp\mysql\bin\mysqld.exe) before proceeding.
+Create a backup of the original binary service (`C:\xampp\mysql\bin\mysqld.exe`) before proceeding.
 {{< /hint >}}
 
 Now there are two way:
@@ -227,7 +227,7 @@ Now there are two way:
     ```
 
    {{< hint style=notes >}}
-   **Note**: The `Disabled` state means the privilege isn't active in the current process. Here, it shows whoami hasn't requested `SeShutdownPrivilege` privilege.
+   The `Disabled` state means the privilege isn't active in the current process. Here, it shows whoami hasn't requested `SeShutdownPrivilege` privilege.
    {{< /hint >}}
 
     Reboot:
@@ -258,7 +258,7 @@ To perform this attack, we first need to identify all the DLLs loaded by a speci
 We can use Process Monitor (Procmon) to capture and filter events related to the target service:
 
 {{< hint style=notes >}}
-**Note**: Using Process Monitor requires administrative privileges, so you’ll need to copy the service binary to a local machine.
+Using Process Monitor requires administrative privileges, so you’ll need to copy the service binary to a local machine.
 {{< /hint >}}
 
 * Launch **Process Monitor**.
@@ -435,7 +435,7 @@ This works on **Windows 10** and **Server 2016/2019**
     {{< /details >}}
 
    {{< hint style=notes >}}
-   **Note**: There are other tools available to accomplish this, such as **Juicy Potato**, **Rogue Potato**, etc.
+   There are other tools available to accomplish this, such as **Juicy Potato**, **Rogue Potato**, etc.
    {{< /hint >}}
 
 ---
@@ -547,8 +547,6 @@ msf > run
 ```
 
 {{< hint style=notes >}}
-**Notes**:
-
 * Empty LM hash: `AAD3B435B51404EEAAD3B435B51404EE` (means its non-use).
   * `AAD3B435B51404EEAAD3B435B51404EE:<NTLM>`
 * With `hashdump` you have the right format
@@ -558,9 +556,7 @@ msf > run
 
 ### Dumping Credentials from Memory & SAM
 
-{{< hint style=warning >}}
 **Prerequisites**: User must be a member a local Administrators.
-{{< /hint >}}
 
 **(1) hashdump (Metasploit - Meterpreter)**
 
@@ -670,9 +666,7 @@ If you cannot dump hashes directly, you can capture a **Net-NTLMv2** hash. This 
 
 This technique is used when you have captured a user's Net-NTLMv2 hash but cannot crack it. The core idea is to forward this hash to another machine for authentication, hoping the user has administrative privileges on that target machine.
 
-{{< hint style=warning >}}
 **Requirement**: The success of this attack against a user who is not the default local Administrator depends on UAC Remote Restrictions being disabled on the target machine.
-{{< /hint >}}
 
 1. **Setup (on Attacker Machine)**: Use `impacket-ntlmrelayx` to listen for a connection and relay it to the target, executing a command upon success.
 

@@ -46,11 +46,11 @@ The JWT header contains an `alg` parameter.
 JWTs can be left unsigned (`alg` set to `none`). Servers usually reject unsigned tokens, but obfuscation (mixed capitalization) can bypass filters.
 
 {{< hint style=notes >}}
-**Note**: even if unsigned, the token's payload must end with a trailing **dot**.
+Even if unsigned, the token's payload must end with a trailing **dot**.
 {{< /hint >}}
 
 {{< hint style=tips >}}
-**Tip**: Use JSON Web Tokens Burp Extension. Go to the request -> JSON Web Tokens and test "Alg None  Attack".
+Use JSON Web Tokens Burp Extension. Go to the request -> JSON Web Tokens and test "Alg None  Attack".
 {{< /hint >}}
 
 ---
@@ -124,7 +124,7 @@ Servers should use a limited whitelist of public keys to verify JWTs. However, m
 4. Finally, click on Attack -> Embedded JWK. (you can do it manually but pay attention to match `kid`) .
 
 {{< hint style=notes >}}
-**Note**: you can also perform this attack manually by adding the `jwk` header yourself. So test it even if the token doesn't have `jwk` header.
+You can also perform this attack manually by adding the `jwk` header yourself. So test it even if the token doesn't have `jwk` header.
 {{< /hint >}}
 
 ### Injecting self-signed JWTs via jku
@@ -156,7 +156,7 @@ Some servers use the `jku`  header parameter to reference a JWK Set containing t
 7. Sign and update `kid` parameter.
 
 {{< hint style=tips >}}
-**Tip**: to see if the server makes the request, add `jku` header and insert Burp collaborator.
+To see if the server makes the request, add `jku` header and insert Burp collaborator.
 {{< /hint >}}
 
 ### Injecting self-signed JWTs via kid
@@ -182,5 +182,5 @@ If the server supports JWTs signed with a symmetric algorithm, you could point t
 4. Repeat the process with different path traversal payload
 
 {{< hint style=tips >}}
-**Tip**: try also SQL injection
+Try also SQL injection.
 {{< /hint >}}

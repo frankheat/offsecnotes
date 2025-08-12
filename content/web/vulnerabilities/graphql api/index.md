@@ -61,7 +61,7 @@ Try with POST, GET or POST with `application/x-www-form-urlencoded`
 More endpoint: [SecLists discovery graphql](https://github.com/danielmiessler/SecLists/blob/fe2aa9e7b04b98d94432320d09b5987f39a17de8/Discovery/Web-Content/graphql.txt)
 
 {{< hint style=notes >}}
-**Note**: Response could be "query not present" or similar. (meaning it's present)
+Response could be "query not present" or similar. (meaning it's present)
 {{< /hint >}}
 
 ---

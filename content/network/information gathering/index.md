@@ -87,7 +87,7 @@ nslookup example.com              # Works on Windows
 ```
 
 {{< hint style=notes >}}
-**Note**: AXFR offers no authentication, so any client can ask a DNS server for a copy of the entire zone.
+AXFR offers no authentication, so any client can ask a DNS server for a copy of the entire zone.
 {{< /hint >}}
 
 **Automatic**
@@ -159,7 +159,7 @@ nmap -p 5 192.168.5.5
 ```
 
 {{< hint style=notes >}}
-**Note**: 1000-port scan generate around 72KB of traffic. Scanning all ports generate about 4 MB. 254 hosts \* 4 MB = 1000 MB of traffic.
+1000-port scan generate around 72KB of traffic. Scanning all ports generate about 4 MB. 254 hosts \* 4 MB = 1000 MB of traffic.
 {{< /hint >}}
 
 ---
@@ -183,7 +183,7 @@ nmap -sn -PS 192.168.1.5
 This option sends an empty TCP packet with the SYN flag set. The default destination port is 80.
 
 {{< hint style=notes >}}
-**Note**: you should also use other ports to better detect hosts.&#x20;
+You should also use other ports to better detect hosts.&#x20;
 
 `nmap -sn -PS22-25 192.168.1.5`
 {{< /hint >}}
@@ -215,7 +215,7 @@ nmap --script "default or safe" # Load all scripts that are in the default, safe
 ```
 
 {{< hint style=notes >}}
-**Note**: there are many categories. Some of the scripts in this category are considered intrusive and may not run on a network target without permissions.
+There are many categories. Some of the scripts in this category are considered intrusive and may not run on a network target without permissions.
 {{< /hint >}}
 
 ---

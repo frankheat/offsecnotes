@@ -50,8 +50,6 @@ run autoroute -p
 ```
 
 {{< hint style=notes >}}
-**Notes**
-
 * Scanning with metasploit is limited (we can't discover software version etc...) so it's better to use nmap. To do that we need to perform port forwarding.
 * Since **target\_sys\_2 does not have a route back to attacker\_sys,** when you user an exploi&#x74;**, use bind\_shell payload.** E.g. `windows/meterpreter/bind_tcp`.
 {{< /hint >}}

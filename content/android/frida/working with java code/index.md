@@ -113,7 +113,7 @@ Java.perform(function() {
 ```
 
 {{< hint style=notes >}}
-**Note**: you don't need to specify the arguments. Do it when you want to see or manipulate their value.
+You don't need to specify the arguments. Do it when you want to see or manipulate their value.
 {{< /hint >}}
 
 {{< details summary="Example 1" >}}
@@ -151,7 +151,7 @@ Java.perform(function() {
 ```
 
 {{< hint style=tips >}}
-**Tip**: if you don't know what are the overload available, try to hook the method without the overload. Frida automatically tell you that the method has more than one overload and it will show you the ones available.
+If you don't know what are the overload available, try to hook the method without the overload. Frida automatically tell you that the method has more than one overload and it will show you the ones available.
 {{< /hint >}}
 
 ---

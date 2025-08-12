@@ -36,7 +36,7 @@ Compare server responses when entering:
 Even minor differences in error messages can reveal valid usernames.
 
 {{< hint style=tips >}}
-**Tip**: Use Burp Suite's "Grep - Match" feature in Intruder to detect response variations.
+Use Burp Suite's "Grep - Match" feature in Intruder to detect response variations.
 {{< /hint >}}
 
 ### Response Timing Analysis

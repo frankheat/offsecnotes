@@ -63,5 +63,5 @@ Many companies filtering and block outbound traffic to the default collaborator 
 
 ## Custom actions
 
-Race Condition
-- https://gist.github.com/albinowax/101e3b2e605496db1ddf84d14f5d0485
+* Race Condition
+  * https://gist.github.com/albinowax/101e3b2e605496db1ddf84d14f5d0485

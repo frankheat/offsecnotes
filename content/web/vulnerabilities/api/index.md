@@ -36,14 +36,14 @@ Even if documentation is available, manually exploring the application can uncov
 - Analyze JavaScript files for hidden API calls.
 
 {{< hint style=tips >}}
-**Tip**: Use the **JS Link Finder** (Burp extension) to extract API endpoints from JavaScript files.
+Use the **JS Link Finder** (Burp extension) to extract API endpoints from JavaScript files.
 {{< /hint >}}
 
 ### Testing HTTP Methods
 Test all possible HTTP methods (`GET`, `POST`, `PUT`, `DELETE`, etc.) to check for unintended access control weaknesses.
 
 {{< hint style=tips >}}
-**Tip**: Use Burp Intruder with a list of HTTP verbs to automate testing.
+Use Burp Intruder with a list of HTTP verbs to automate testing.
 {{< /hint >}}
 
 ### Hidden Parameters
@@ -66,7 +66,7 @@ Changing the `Content-Type` header can lead to:
 Modify the `Content-Type` header and reformat request data to test for such issues.
 
 {{< hint style=tips >}}
-**Tip**: The **Content-Type Converter** BApp in Burp Suite can automatically switch data formats between JSON and XML.
+The **Content-Type Converter** BApp in Burp Suite can automatically switch data formats between JSON and XML.
 {{< /hint >}}
 
 

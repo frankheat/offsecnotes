@@ -13,8 +13,7 @@ XSS cheatsheet: [PortSwigger XSS cheat-sheet](https://portswigger.net/web-securi
 More info about Javascript & obfuscation: [Javascript & Obfuscation]({{< ref "web/web-security/javascript and obfuscation/index" >}})
 
 {{< hint style=warning >}}
-
-**Warning**: Do not use `alert(1)` -> use `alert(document.domain)`.
+Do not use `alert(1)` -> use `alert(document.domain)`.
 
 ```html
 <textarea id="script" onchange=("unsafe(this.value)"></textarea><br>
@@ -38,8 +37,7 @@ function unsafe(t) {
 {{< /hint >}}
 
 {{< hint style=warning >}}
-
-**Warning**: Do not use `<script>` tag -> use `<img>`.
+Do not use `<script>` tag -> use `<img>`.
 
 If your target is using the innerHTML sink, the most common sink vulnerable to DOM XSS so your script might not work as expected. This is because innerHTML won't render a `<script>` tag \[[↗](https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML#security_considerations)]. However, if you use an `<img>` tag with an onerror attribute instead, the script will execute normally. 
 
@@ -97,8 +95,6 @@ https://insecure-website.com/index?search="><script>alert(document.domain)</scri
 3. Exploit it
 
 {{< hint style=tips >}}
-**Tips**:
-
 1.  Here there are some sources and sinks
 
     https://github.com/wisec/domxsswiki/wiki
@@ -160,7 +156,7 @@ Exploit
 ```
 
 {{< hint style=notes >}}
-**Note**: Recent versions of jQuery have patched this specific vulnerability by preventing HTML injection into a selector if the input begins with a hash (#). But remember, this is just an example, the real problem is how `$()` selector works .
+Recent versions of jQuery have patched this specific vulnerability by preventing HTML injection into a selector if the input begins with a hash (#). But remember, this is just an example, the real problem is how `$()` selector works .
 {{< /hint >}}
 
 ### AngularJS
@@ -238,7 +234,7 @@ element.innerHTML = comment.author
 ```
 
 {{< hint style=notes >}}
-**Note**: understand how a payload works
+Understand how a payload works
 
 * `<body onresize="print()">` with this payload (for reflected XSS) you need an exploit server and iframe tag
 {{< /hint >}}
@@ -274,8 +270,6 @@ element.innerHTML = comment.author
     ```
 
    {{< hint style=notes >}}
-   **Tips**:
-
    * Substitute `'` `"` and vice versa
    * Space is not needed
 
@@ -329,7 +323,7 @@ var input = 'controllable data here';
     * HTML encode: https://html.spec.whatwg.org/multipage/named-characters.html
 
    {{< hint style=notes >}}
-   **Note**: you cannot use `&quot;` -> `"` to close onclick attribute. Remember: The browser HTML-decode the value of the onlick attribute but not the entire structure
+   You cannot use `&quot;` -> `"` to close onclick attribute. Remember: The browser HTML-decode the value of the onlick attribute but not the entire structure.
    {{< /hint >}}
 
 * XSS in JavaScript template literals

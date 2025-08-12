@@ -9,7 +9,7 @@ description: "Learn about password cracking techniques, including identifying ha
 
 ## Identify hash
 
-* [_https://hashes.com/en/tools/hash\_identifier_](https://hashes.com/en/tools/hash_identifier)
+Online tool: [_https://hashes.com/en/tools/hash\_identifier_](https://hashes.com/en/tools/hash_identifier)
 
 ---
 
@@ -17,7 +17,7 @@ description: "Learn about password cracking techniques, including identifying ha
 
 ### Hash (with rainbow tables)
 
-[https://crackstation.net](https://crackstation.net/) _CrackStation uses massive pre-computed lookup tables to crack password hashes_
+[CrackStation](https://crackstation.net/) uses massive pre-computed lookup tables to crack password hashes
 
 ### Shadow file
 
@@ -49,7 +49,8 @@ hydra -L user.txt -P pass.txt <ip> <protocol>
 hydra -L users.txt -P password.txt -vV example.com http-get /basic # Basic Authentication
 ```
 {{< hint style=notes >}}
-**Note**: /basic and /basic/ are different... so pay attention to set the correct path{{< /hint >}}
+`/basic` and `/basic/` are different... so pay attention to set the correct path
+{{< /hint >}}
 
 ### HTTP login
 
@@ -65,14 +66,14 @@ hydra -L <users_file> -P <password_file> <url> http[s]-[post|get]-form \ "index.
     keepass2john Database.kdbx > keepass.hash
 
     cat keepass.hash
-    Database:$keepass$*2*60*0*d74e29a727e9338717d27a7d457ba[...]
+    # Database:$keepass$*2*60*0*d74e29a727e9338717d27a7d457ba[...]
     ```
 
 2. The script adds filename to the beginning of the hash to use it as the username. Because KeePass uses only a master password and no username, we need to delete the filename string part. You can use a text editor.
 
     ```bash
     cat keepass.hash
-    $keepass$*2*60*0*d74e29a727e9338717d27a7d457ba[...]
+    # $keepass$*2*60*0*d74e29a727e9338717d27a7d457ba[...]
     ```
 
 3. Crack the hash

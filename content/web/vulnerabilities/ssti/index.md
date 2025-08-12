@@ -91,7 +91,7 @@ This context is easily missed during assessment because it doesn't result in obv
   * In this case these payloads don't have to work
 
 {{< hint style=notes >}}
-**Note**: there are many other template languages.
+There are many other template languages.
 {{< /hint >}}
 
 ---

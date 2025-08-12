@@ -61,8 +61,6 @@ Consider the following example:
 ```
 
 {{< hint style=notes >}}
-**Note**:
-
 * This attack is limited to the specific endpoint that you tested, as the origin server often has different abstraction rules for different endpoints.
 * Try various extensions, such as `.css`, `.ico`, and `.exe`, as caches may have rules for specific extensions.
 {{< /hint >}}
@@ -97,8 +95,6 @@ Objective: identify a character that is used as a delimiter by the origin server
 ```
 
 {{< hint style=notes >}}
-**Note**:
-
 * Because delimiters are generally used consistently within each server, you can often use this attack on many different endpoints.
 *   Some delimiter characters may be processed by the victim's browser before it forwards the request to the cache. This means that some delimiters can't be used in an exploit. For example, browsers URL-encode characters like `{`, `}`, `<`, and `>`, and use `#` to truncate the path.
 

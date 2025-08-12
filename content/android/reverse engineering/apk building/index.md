@@ -9,7 +9,7 @@ description: "Learn about Android application structure, APK file format, and th
 ## Android Application Project
 
 {{< hint style=notes >}}
-**Note**: the directory names are conventional so they could be any name. Additionally, the contents of each directory could be spread across multiple folders.
+The directory names are conventional so they could be any name. Additionally, the contents of each directory could be spread across multiple folders.
 {{< /hint >}}
 
 Mandatory:

@@ -39,7 +39,7 @@ bu restore backup.ab
 The `android:debuggable` attribute indicates if the application is debuggable and it is set to `false` by default \[[↗](https://developer.android.com/privacy-and-security/risks/android-debuggable)]. Check `android:debuggable="true"` in the `AndroidManifest.xml`.
 
 {{< hint style=notes >}}
-**Note**: you cannot release a debuggable app on Google Play Store \[[↗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[↗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)].
+You cannot release a debuggable app on Google Play Store \[[↗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[↗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)].
 {{< /hint >}}
 
 **Impact**

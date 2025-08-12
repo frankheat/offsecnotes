@@ -7,7 +7,7 @@ weight: 6
 
 ## React Native
 
-**Read React Native JavaScript source code**
+If you're working on a React Native app, you’ll probably want to read through the code at some point.
 
 ### Without Hermes engine
 

@@ -92,7 +92,7 @@ adb pull <path>
 In this way you can read `.smali` code (so you don't need baksmali), `AndroidManifest.xml`, etc.
 
 {{< hint style=notes >}}
-**Note**: even if you can extract apk like it was a zip, you can't read file such as `AndroidManifest.xml` because it's compiled. Here's why you should use a tool like apktool.
+Even if you can extract apk like it was a zip, you can't read file such as `AndroidManifest.xml` because it's compiled. Here's why you should use a tool like apktool.
 {{< /hint >}}
 
 **Disassemble**

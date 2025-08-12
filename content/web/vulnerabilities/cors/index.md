@@ -15,7 +15,7 @@ description: "Learn how misconfigured CORS policies can expose sensitive data th
 CORS (Cross-Origin Resource Sharing) is a browser security feature that controls how web applications interact with resources hosted on different origins. It's designed to prevent malicious websites from making unauthorized requests to other sites on behalf of the user.
 
 {{< hint style=notes >}}
-**Note**: An "origin" in CORS includes the protocol, domain, and port. So `https://example.com` and `http://example.com` are considered different origins
+An "origin" in CORS includes the protocol, domain, and port. So `https://example.com` and `http://example.com` are considered different origins
 \[[↗](https://developer.mozilla.org/en-US/docs/Glossary/Origin)].
 {{< /hint >}}
 
@@ -34,7 +34,7 @@ Access-Control-Allow-Origin: https://evil.com
 ```
 
 {{< hint style=warning >}}
-**Warning**: If `Access-Control-Allow-Credentials: true` is also present, an attacker can send authenticated requests from a malicious origin.
+If `Access-Control-Allow-Credentials: true` is also present, an attacker can send authenticated requests from a malicious origin.
 {{< /hint >}}
 
 **Exploitation Example**
@@ -63,7 +63,7 @@ Some applications whitelist trusted origins without strict validation, making it
 - `normal-website.com.attacker.com`
 
 {{< hint style=notes >}}
-**Note**: You need to know or guess the whitelisted origins to attempt this.
+You need to know or guess the whitelisted origins to attempt this.
 {{< /hint >}}
 
 ---

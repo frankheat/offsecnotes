@@ -29,7 +29,7 @@ If you can control the protocol you can change it.
 `file://`, `sftp://`, `gopher://`, etc.
 
 {{< hint style=tips >}}
-**Tip**: with gopher in some case it is possible to get a shell. E.g. interacting with mysql, redis PostgreSQL, etc. [https://github.com/tarunkant/Gopherus](https://github.com/tarunkant/Gopherus)
+With gopher in some case it is possible to get a shell. E.g. interacting with mysql, redis PostgreSQL, etc. [https://github.com/tarunkant/Gopherus](https://github.com/tarunkant/Gopherus).
 {{< /hint >}}
 
 ---

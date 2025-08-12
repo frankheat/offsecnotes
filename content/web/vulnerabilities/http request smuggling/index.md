@@ -89,7 +89,7 @@ X
 The back-end server, relying on the Content-Length header, waits for additional message body content, resulting in a noticeable time delay.
 
 {{< hint style=warning >}}
-**Warning**: The timing-based test for TE.CL vulnerabilities will potentially disrupt other application users if the application is vulnerable to the CL.TE variant of the vulnerability. So to be stealthy and minimize disruption, you should use the CL.TE test first and continue to the TE.CL test only if the first test is unsuccessful.
+The timing-based test for TE.CL vulnerabilities will potentially disrupt other application users if the application is vulnerable to the CL.TE variant of the vulnerability. So to be stealthy and minimize disruption, you should use the CL.TE test first and continue to the TE.CL test only if the first test is unsuccessful.
 {{< /hint >}}
 
 ---
@@ -167,7 +167,7 @@ x=
 `Content-Length: 4` -> `7` `c` `\r` `\n`
 
 {{< hint style=notes >}}
-**Note**: Update Content-Length must be unchecked
+Update Content-Length must be unchecked.
 {{< /hint >}}
 
 ---
@@ -276,11 +276,11 @@ csrf=ihmEx8D&postId=1&name=test&email=test@test.test&comment=
 ```
 
 {{< hint style=notes >}}
-**Note**: One limitation with this technique is that it will generally only capture data up until the parameter delimiter that is applicable for the smuggled request. For URL-encoded form submissions, this will be the `&` character, meaning that the content that is stored from the victim user's request will end at the first `&`, which might even appear in the query string
+One limitation with this technique is that it will generally only capture data up until the parameter delimiter that is applicable for the smuggled request. For URL-encoded form submissions, this will be the `&` character, meaning that the content that is stored from the victim user's request will end at the first `&`, which might even appear in the query string.
 {{< /hint >}}
 
 {{< hint style=tips >}}
-**Tip**: Another way to steal other users' responses is with the [Response queue poisoning](/web/vulnerabilities/http-request-smuggling/#response-queue-poisoning) technique.
+Another way to steal other users' responses is with the [Response queue poisoning](/web/vulnerabilities/http-request-smuggling/#response-queue-poisoning) technique.
 {{< /hint >}}
 
 ### Exploit reflected XSS
@@ -436,7 +436,7 @@ Foo: x
 ```
 
 {{< hint style=notes >}}
-**Note**: to inject newlines into HTTP/2 headers, in burp use the Inspector to drill down into the header, then press the `Shift + Return` keys.
+To inject newlines into HTTP/2 headers, in burp use the Inspector to drill down into the header, then press the `Shift + Return` keys.
 {{< /hint >}}
 
 ---
@@ -500,7 +500,7 @@ foo             bar\r\n
 ```
 
 {{< hint style=notes >}}
-**Note**: here the request trigger response queue poisoning, but you can also smuggle prefixes for classic request smuggling.
+Here the request trigger response queue poisoning, but you can also smuggle prefixes for classic request smuggling.
 {{< /hint >}}
 
 ---

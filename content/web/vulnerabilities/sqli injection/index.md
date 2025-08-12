@@ -24,7 +24,7 @@ description: "Comprehensive guide on detecting and exploiting SQL injection vuln
 * OAST payloads designed to trigger an out-of-band network interaction when executed within a SQL query, and monitor any resulting interactions.
 
 {{< hint style=warning >}}
-**Warning: `OR 1=1`** If your condition reaches an `UPDATE` or `DELETE` statement, for example, it can result in an accidental loss of data.
+`OR 1=1`** If your condition reaches an `UPDATE` or `DELETE` statement, for example, it can result in an accidental loss of data.
 {{< /hint >}}
 
 **Database-specific syntax**
@@ -65,7 +65,7 @@ Requirements:
 ```
 
 {{< hint style=notes >}}
-**Note**: the application might actually return the database error in its HTTP response, but may return a generic error or simply return no results
+The application might actually return the database error in its HTTP response, but may return a generic error or simply return no results.
 {{< /hint >}}
 
 ### Column data types
@@ -163,7 +163,7 @@ Problem: Some applications carry out SQL queries but their behavior doesn't chan
 * `xyz' AND (SELECT CASE WHEN (Username = 'Administrator' AND SUBSTRING(Password, 1, 1) > 'm') THEN 1/0 ELSE 'a' END FROM Users)='a`
 
 {{< hint style=notes >}}
-**Note**: There are different ways of triggering conditional errors, and different techniques work best on different database types. See SQL cheat sheet from tib3rius -> (Boolean Error Inferential Exploitation)
+There are different ways of triggering conditional errors, and different techniques work best on different database types. See SQL cheat sheet from tib3rius -> (Boolean Error Inferential Exploitation).
 {{< /hint >}}
 
 {{< details summary="Example" >}}

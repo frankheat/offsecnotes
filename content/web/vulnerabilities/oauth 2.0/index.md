@@ -67,7 +67,7 @@ https://oauth-x.oauth-server.net/auth?client_id=xyz&redirect_uri=https://attack.
 ```
 
 {{< hint style=notes >}}
-**Note**: using `state` or `nonce` protection does not necessarily prevent these attacks because an attacker can generate new values from their own browser.
+Using `state` or `nonce` protection does not necessarily prevent these attacks because an attacker can generate new values from their own browser.
 {{< /hint >}}
 
 **Flawed redirect\_uri validation**
@@ -95,7 +95,7 @@ If you are unable to successfully submit an external domain as the `redirect_uri
     ```
 
 {{< hint style=tips >}}
-**Tip**: the default URI will often be on an OAuth-specific path, such as `/oauth/callback`, so you can use directory traversal tricks `https://client-app.com/oauth/callback/../../example/path`
+The default URI will often be on an OAuth-specific path, such as `/oauth/callback`, so you can use directory traversal tricks `https://client-app.com/oauth/callback/../../example/path`.
 {{< /hint >}}
 
 ### Flawed CSRF protection

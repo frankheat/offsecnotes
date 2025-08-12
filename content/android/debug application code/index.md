@@ -17,7 +17,7 @@ Three scenario:
     - Extract, without root privileges, all files inside the app internal storage
 
    {{< hint style=notes >}}
-   **Note**: This scenario is often impossible because no release application on the Play Store can have `android:debuggable="true"` \[[↗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[↗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)]. It means that the user has installed the app from a third-party store.
+   This scenario is often impossible because no release application on the Play Store can have `android:debuggable="true"` \[[↗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[↗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)]. It means that the user has installed the app from a third-party store.
    {{< /hint >}}
 
 3. You might have the app Java source code. Again, this scenario is highly unlikely, but not impossible.
@@ -63,9 +63,7 @@ For more info: https://github.com/skylot/jadx/wiki/Smali-debugger.
 
 ## Debug java code
 
-You need to have the original java code. You can use tools like: 
-* Android studio
-* jdb
+You need to have the original java code. You can use tools like **Android studio** and **jdb**.
 
 ### Android studio
 
@@ -103,7 +101,7 @@ This is the simpler approach. You can follow the official guide: [Debug pre-buil
     ```
 
    {{< hint style=tips >}}
-   **Tips**: Other useful commands 
+   Other useful commands:
    ```sh
    # List all forward socket connections
    adb forward --list

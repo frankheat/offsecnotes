@@ -146,7 +146,7 @@ Now trigger redirect to a sensitive endpoint:
 ```
 
 {{< hint style=notes >}}
-**Note**: this attack isn't possible with server-side redirects, as browsers recognize the cross-site request and apply cookie restrictions.
+This attack isn't possible with server-side redirects, as browsers recognize the cross-site request and apply cookie restrictions.
 {{< /hint >}}
 
 ---
@@ -179,7 +179,7 @@ You need to add `Referrer-Policy` to `unsafe-url`:
 ```
 
 {{< hint style=tips >}}
-**Tip**: Instead of use `http://attacker-website.com/vulnerable-website.com`, you can use `http://attacker-website.com/` and add `<script>history.pushState('', '', '/vulnerable-website.com')</script>`
+Instead of use `http://attacker-website.com/vulnerable-website.com`, you can use `http://attacker-website.com/` and add `<script>history.pushState('', '', '/vulnerable-website.com')</script>`
 
 ```html
 <!-- http://attacker-website.com/ -->

