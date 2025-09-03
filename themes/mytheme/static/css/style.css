@@ -36,13 +36,11 @@
         padding: 1px 8px;
         font-size: 90%;
         border-radius: 0.5rem;
-
         white-space: nowrap;
         overflow-x: auto;
         display: inline-block;
         max-width: 100%;
         vertical-align: middle;
-
     }
 
     pre {
@@ -182,7 +180,7 @@
         color: black;
         text-align: center;
         margin-right: 0.5rem;
-        background: white;
+        background: rgb(195, 208, 229);
         font-weight: 500;
     }
 
