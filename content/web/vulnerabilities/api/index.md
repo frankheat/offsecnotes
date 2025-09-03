@@ -8,6 +8,7 @@ description: "Learn effective techniques for API security testing, including end
 
 APIs are a common target for attackers because they expose underlying business logic and data.
 
+---
 
 ## Discovering API Endpoints
 
