@@ -29,8 +29,10 @@ Historically, external storage was on an SD card, hence the `/sdcard/` folder na
 
 ```sh
 # Open the app and then run this command
-adb logcat | grep "$(adb shell ps | grep <package-name> | awk '{print $2}')"
+adb logcat --pid <PID>
 ```
+
+It is often better to run `adb --clear` beforehand to ensure a cleaner environment.
 
 ---
 

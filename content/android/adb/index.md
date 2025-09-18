@@ -30,18 +30,14 @@ Source: https://developer.android.com/studio/debug/dev-options#enable
 
 ## Device Connection and Management
 
-**Check connected devices:**
 ```bash
+# Check connected devices
 adb devices
-```
 
-**Connect to a specific device (when multiple devices are connected):**
-```bash
+# Connect to a specific device (when multiple devices are connected)
 adb -s <device_id> <command>
-```
 
-**Connect over network (for wireless testing):**
-```bash
+# Connect over network (for wireless testing)
 adb connect <ip_address>:5555
 ```
 
@@ -49,47 +45,36 @@ adb connect <ip_address>:5555
 
 ## Application Management
 
-**Install an APK file:**
 ```bash
+# Install an APK file
 adb install <path_to_apk>
-```
 
-**Uninstall an application:**
-```bash
+# Install multiple APK file
+adb install-multiple base.apk split_config.arm64_v8a.apk split_config.en.apk split_config.xxhdpi.apk
+
+# Uninstall an application
 adb uninstall <package_name>
-```
 
-**List all installed packages:**
-```bash
+# List all installed packages
 adb shell pm list packages
-```
 
-**List only third-party packages (user-installed apps):**
-```bash
+# List only third-party packages (user-installed apps)
 adb shell pm list packages -3
-```
 
-**List system packages:**
-```bash
+# List system packages
 adb shell pm list packages -s
-```
 
-**Search for specific package**
-```bash
+# Search for specific package
 adb shell pm list packages | grep <package_name>
-```
 
-**Get detailed information about a package:**
-```bash
+# Get detailed information about a package
 adb shell dumpsys package <package_name>
-```
 
-**Get application paths:**
-```bash
+# Get application paths
 adb shell pm path <package_name>
 ```
 
-**Extract APK file from device:**
+**Extract APK file from device**
 ```bash
 # First, get the APK path
 adb shell pm path <package_name>
@@ -101,18 +86,14 @@ adb pull <apk_path> <local_destination>
 
 ## Application Control and Testing
 
-**Start a specific activity:**
 ```bash
+# Start a specific activity
 adb shell am start <package_name>/<activity_name>
-```
 
-**Start activity with intent extras (useful for testing deep links):**
-```bash
+# Start activity with intent extras (useful for testing deep links)
 adb shell am start -n <package_name>/<activity_name> -e <key> <value>
-```
 
-**Clear application data (useful for testing first-run scenarios):**
-```bash
+# Clear application data (useful for testing first-run scenarios)
 adb shell pm clear <package_name>
 ```
 
@@ -120,13 +101,11 @@ adb shell pm clear <package_name>
 
 ## File System Operations
 
-**Copy files from device to local system:**
 ```bash
+# Copy files from device to local system
 adb pull <remote_path> <local_path>
-```
 
-**Copy files from local system to device:**
-```bash
+# Copy files from local system to device
 adb push <local_path> <remote_path>
 ```
 
@@ -134,18 +113,13 @@ adb push <local_path> <remote_path>
 
 ## Advanced Shell Operations
 
-**Access device shell:**
 ```bash
+# Access device shell
 adb shell
-```
 
-**Execute single command:**
-```bash
+# Execute single command
 adb shell <command>
-```
 
-**Useful shell commands:**
-```bash
 # Check device information
 adb shell getprop
 
