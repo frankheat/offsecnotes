@@ -32,7 +32,15 @@ You need to have an application debuggable. If the app is not debuggable you can
 
 * Repackage the app and set `android:debuggable="true"` in `AndroidManifest.xml`. **You don't need to be root**.
 * Run the app in an emulator without Google services. Emulators have the `ro.debuggable` property set to `1`. In some cases, this may not suffice as OS or app components may check the Manifest's debuggable flag before or during execution.
-* Use a rooted phone so you can modify `ro.debuggable`.
+* Use a rooted phone so you can modify `ro.debuggable`. Normally this value is read only. However with **magisk** we can use `resetprop`.
+    *   ```sh
+        # Set ro.debuggable
+        resetprop ro.debuggable 1
+
+        # Restart
+        stop
+        start
+        ```
 
 ---
 

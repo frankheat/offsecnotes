@@ -75,6 +75,9 @@ adb shell pm path <package_name>
 ```
 
 **Extract APK file from device**
+
+This operation does not require a rooted device
+
 ```bash
 # First, get the APK path
 adb shell pm path <package_name>
