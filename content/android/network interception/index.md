@@ -94,7 +94,7 @@ Keep in mind that Android accepts both **DER** and **PEM** formats. When you ins
 
 * Rooted physical device
 * Rooted emulator
-* With Android (AVD) using non-Google emulator image (or [root it](https://8ksec.io/rooting-an-android-emulator-for-mobile-security-testing/))
+* Android Virtual Device (AVD) using non Google Play Store emulator image (If you need it you could [root it](https://8ksec.io/rooting-an-android-emulator-for-mobile-security-testing/))
 
 {{< details summary="Install system certificate guide (temporary)" >}}
 
@@ -129,27 +129,33 @@ This method use a **temporary RAM-based filesystem** (tmpfs) to override the sys
     cp /system/etc/security/cacerts/* /data/local/tmp/cacerts-added/
     ```
 
-6. Mount tmpfs over system certs
+6. Switch to root user
 
     ```sh
+    su
+    ```
+
+7. Mount tmpfs over system certs
+
+    ```sh    
     mount -t tmpfs tmpfs /system/etc/security/cacerts
     ```
 
-7. Copy combined certs into the tmpfs mount
+8. Copy combined certs into the tmpfs mount
 
     ```sh
     cp /data/local/tmp/cacerts-added/* /system/etc/security/cacerts/
     ```
 
-8. Update the perms & selinux context labels
+9. Update the perms & SELinux context labels
 
     ```sh
-    su
-
     chown root:root /system/etc/security/cacerts/*
     chmod 644 /system/etc/security/cacerts/*
     chcon u:object_r:system_file:s0 /system/etc/security/cacerts/*
     ```
+
+The next time you could just run the step 6-9.
 
 {{< /details >}}
 
@@ -230,6 +236,20 @@ This method use a **temporary RAM-based filesystem** (tmpfs) to override the sys
     ```
 
 2. Modify the `AndroidManifest.xml` to add a `networkSecurityConfig` (`xml/network_security_config.xml`). If it's already present edit the file.
+
+    **AndroidManifest.xml**
+
+    ```xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <manifest ... >
+        <application android:networkSecurityConfig="@xml/network_security_config"
+                        ... >
+            ...
+        </application>
+    </manifest>
+    ```
+
+    **network_security_config.xml**
 
     ```xml
     <!-- Example -->

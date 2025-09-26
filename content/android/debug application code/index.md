@@ -37,9 +37,8 @@ You need to have an application debuggable. If the app is not debuggable you can
         # Set ro.debuggable
         resetprop ro.debuggable 1
 
-        # Restart
-        stop
-        start
+        # Restart Android zygote process
+        stop; start;
         ```
 
 ---
@@ -78,9 +77,9 @@ You need to have the original java code. You can use tools like **Android studio
 This is the simpler approach. You can follow the official guide: [Debug pre-built APKs](https://developer.android.com/studio/debug/apk-debugger).
 
 
-### jdb
+### Java Debugger (JDB)
 
-1. (optional) Set app to wait
+1. Set app to wait (optional)
 
     ```sh
     am set-debug-app -w app_package_name

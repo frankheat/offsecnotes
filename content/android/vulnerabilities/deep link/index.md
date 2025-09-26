@@ -86,7 +86,7 @@ Suppose that:
 | < 12        | N                        | Web Links          | `https://google.com` | {{< text-color color=orange >}}Dialog appear (browser, malicious app){{< /text-color >}}             |
 | < 12        | Y                        | Web Links          | `https://google.com` | {{< text-color color=orange >}}Dialog appear (browser, malicious app, victim app){{< /text-color >}} |
 | > 12        | N / Y                    | Web Links          | `https://google.com` | {{< text-color color=green >}}Open in default browser{{< /text-color >}}                            |
-| > 6         | Y                        | App Links          | `https://google.com` | {{< text-color color=green >}}Open Victim App{{< /text-color >}}                                    |
+| > 6         | Y                        | App Links          | `https://google.com` | {{< text-color color=green >}}Open victim app{{< /text-color >}}                                    |
 
 ---
 
