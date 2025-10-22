@@ -68,7 +68,7 @@ See [Webview debug](/android/vulnerabilities/security-misconfiguration/#webview-
 
 ## Root Detection
 * **Missing root detection**
-* **Bypass with frida**
+* **Bypass with generic frida script**
 
     ```sh
     frida --codeshare dzonerzy/fridantiroot -f <com.package.app> -U

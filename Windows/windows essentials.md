@@ -7,6 +7,7 @@ description: "Learn about various techniques and methods for privilege escalatio
 ## Types of users in Windows
 
 **1. Local User Accounts**
+
   * Created and managed on the local machine.
   * Stored in the **SAM** database.
   * Use `net user` or `Computer Management > Local Users and Groups` to manage.
@@ -26,6 +27,7 @@ WDAGUtilityAccount	|Used in Windows Defender Application Guard|
 
 
 **2. Domain User Accounts**
+
   * Managed by Active Directory (on a Windows domain).
   * Authenticated by domain controllers, not local machines.
 
@@ -37,6 +39,7 @@ Format: `DOMAIN\Username`
 These accounts run services, not user sessions.
 
 * a. System Accounts
+
 |Account	|	Description|
 | --- | --- |
 |LocalSystem	(NT AUTHORITY\SYSTEM)	|Full privileges on the machine|

@@ -22,5 +22,6 @@ title: "Android"
     * [Working with native code](Frida/working with native code.html)
 * [Network interception](network interception.html)
 * [Android debug bridge (ADB)](adb.html)
+* [Filesystem monitor with fsmon](fsmon.html)
 * [Framework](framework.html)
 * [Debug application code](debug application code.html)

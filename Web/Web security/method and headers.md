@@ -54,7 +54,7 @@ Some applications support non-standard headers such these in order to allow over
 **Security implication**
 
 * This behavior can be used when access control is based on the request URL.
-* More info: [Platform misconfiguration](/web/vulnerabilities/bac/#platform-misconfigurations)
+* More info: [Platform misconfiguration](/Web/Vulnerabilities/bac.md#platform-misconfigurations)
 
 ---
 

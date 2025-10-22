@@ -19,6 +19,7 @@ https://insecure-website.com/administrator-panel-yb556
 ```
 
 **How to Test**
+
 - If you have an admin account, try accessing the same resource using a **normal user session**.
 - The **Autorize** Burp Suite extension can help automate this check.
 

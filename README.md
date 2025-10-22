@@ -30,6 +30,7 @@ Welcome to offsecnotes, a website dedicated to Offensive Security notes. This pr
 * Frida
 * Network interception
 * Android debug bridge (ADB)
+* Filesystem monitor with fsmon
 * Framework
 * Debug application code
 
