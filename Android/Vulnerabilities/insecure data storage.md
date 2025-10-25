@@ -84,7 +84,7 @@ In Android terminology, “external storage” does not necessarily mean a physi
 
 This is the rest of external storage. It's the public space intended for files that the user expects to be able to access directly and share between apps.
 
-**Location**: 
+**Location** (from Android 11):
 
 * External storage, excluding app-specific external storage. For example:
     * Well-defined public directories like `DCIM/`, `Pictures/`, `Music/`, `Downloads/`, etc.
