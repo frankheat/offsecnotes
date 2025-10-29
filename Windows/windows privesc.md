@@ -66,6 +66,7 @@ If a user runs `Clear-History`, it will only clear PowerShell’s in-session his
 
 > **Warning**:
 > `Clear-History` **does not remove**:
+>
 > * The command history saved by PSReadLine to disk (`ConsoleHost_history.txt`).
 > * The content seen with `Ctrl+R` or arrow keys if PSReadLine is still managing that memory buffer.
 
@@ -85,6 +86,7 @@ type C:\Users\<USERNAME>\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine
 `Start-Transcript` \[[↗](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.host/start-transcript?view=powershell-7.5)] starts recording everything that happens in your PowerShell session. 
 
 By default, it stores the transcript in the following location using the default name:
+
 * On Windows: `$HOME\Documents`
 * On Linux or macOS: `$HOME`
 
@@ -258,6 +260,7 @@ We can use Process Monitor (Procmon) to capture and filter events related to the
 In the Detail column of these events, if you see `NAME NOT FOUND`, it means the system attempted to locate the DLL in that path, but it wasn’t there. This indicates a potential opportunity to hijack the DLL.
 
 To exploit this:
+
 * Identify the first directory in the search order where the service attempts to load the missing DLL.
 * If you have write permissions to that location, **place a malicious DLL with the same name**.
 
@@ -314,6 +317,7 @@ Notice that the path has spaces and is not enclosed in quotes.
 
 Here's what Windows will try to do:
 Windows tries to execute the following, in this order:
+
 * `C:\Program.exe`
 * `C:\Program Files\My.exe`
 * `C:\Program Files\My App\bin\service.exe` (this is the real one)
@@ -323,6 +327,7 @@ If `C:\Program Files\My App\bin\service.exe` doesn't exist, you can place a file
 </details>
 
 **To exploit this**:
+
 * There must be an `unquoted service path` with spaces in it.
 
     ```dos
@@ -527,10 +532,10 @@ msf > run
 ```
 
 > **Note**
+>
 > * Empty LM hash: `AAD3B435B51404EEAAD3B435B51404EE` (means its non-use).
 >   * `AAD3B435B51404EEAAD3B435B51404EE:<NTLM>`
 > * With `hashdump` you have the right format
-
 
 ---
 

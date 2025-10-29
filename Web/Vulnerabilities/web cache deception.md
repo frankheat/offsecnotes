@@ -59,6 +59,7 @@ Consider the following example:
 ```
 
 > **Note**:
+>
 > * This attack is limited to the specific endpoint that you tested, as the origin server often has different abstraction rules for different endpoints.
 > * Try various extensions, such as `.css`, `.ico`, and `.exe`, as caches may have rules for specific extensions.
 

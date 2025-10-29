@@ -18,11 +18,13 @@ weight: 12
 <details><summary>How do HTTP request smuggling vulnerabilities arise?</summary>
 
 HTTP request smuggling vulnerabilities often occur due to the HTTP/1 specification offering two methods to define the request's end: the `Content-Length` header and `Transfer-Encoding` header.
+
   * The `Content-Length header` specifies the length of the message body in bytes
   * The `Transfer-Encoding` header specify that the message body uses chunked encoding. This means that the message body contains one or more chunks of data
     * Each chunk comprises a size in hexadecimal bytes, a newline, and the chunk's content. The message concludes with a zero-sized chunk.
 
 Type of HTTP-request-smuggling
+
   * **TE.CL**: the front-end server uses the `Transfer-Encoding` header and the back-end server uses the `Content-Length` header.
   * **CL.TE**: the front-end server uses the `Content-Length` header and the back-end server uses the `Transfer-Encoding` header.
   * **TE.TE**: the front-end and back-end servers both support the `Transfer-Encoding` header, but one of the servers can be induced not to process it by obfuscating the header in some way.

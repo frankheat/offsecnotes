@@ -3,14 +3,15 @@ title: "Android"
 ---
 
 * Vulnerabilities
-    * [Bypass binary protections](Vulnerabilities/bypass binary protections.html)
+    * [Intent attack surface](Vulnerabilities/intent attack surface.html)
+    * [Pending Intents](Vulnerabilities/pending intents.html)
     * [Deep link](Vulnerabilities/deep link.html)
     * [Exploiting exported activities](Vulnerabilities/exploiting exported activities.html)
-    * [Insecure data storage](Vulnerabilities/insecure data storage.html)
-    * [Intent attack surface](Vulnerabilities/intent attack surface.html)
     * [Security misconfiguration](Vulnerabilities/security misconfiguration.html)
+    * [Insecure data storage](Vulnerabilities/insecure data storage.html)
     * [Tapjacking](Vulnerabilities/tapjacking.html)
     * [Task hijacking](Vulnerabilities/task hijacking.html)
+    * [Bypass binary protections](Vulnerabilities/bypass binary protections.html)
 * Reverse Engineering
     * [Analyze native libraries](Reverse Engineering/analyze native libraries.html)
     * [Apk building](Reverse Engineering/apk building.html)

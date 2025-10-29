@@ -184,6 +184,7 @@ This can be useful to bypass char/string blocked.
 * If the response is `{"results":[],"searchTerm":"XSS"}` and you are able to change `XSS` keyword into `\"-alert(1)}//` the result will be `{"results":[],"searchTerm":"\\"-alert(1)}//"}` and an alert will appear
 
 > **Notes**:
+>
 > * Notice that JSON automatically escape the double quote `"` (standard feature of javascript string) so we need to use `\"`
 > * We add `//` to comment the rest
 > * This specific example with JSON works because the site didn't use `JSON.parse(this.responseText)`

