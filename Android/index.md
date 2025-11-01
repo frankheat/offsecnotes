@@ -5,9 +5,10 @@ title: "Android"
 * Vulnerabilities
     * [Intent attack surface](Vulnerabilities/intent attack surface.html)
     * [Pending Intents](Vulnerabilities/pending intents.html)
-    * [Deep link](Vulnerabilities/deep link.html)
+    * [Deep links](Vulnerabilities/deep links.html)
     * [Exploiting exported activities](Vulnerabilities/exploiting exported activities.html)
     * [Security misconfiguration](Vulnerabilities/security misconfiguration.html)
+    * [Deep link misconfiguration](Vulnerabilities/deep link misconfiguration.html)
     * [Insecure data storage](Vulnerabilities/insecure data storage.html)
     * [Tapjacking](Vulnerabilities/tapjacking.html)
     * [Task hijacking](Vulnerabilities/task hijacking.html)

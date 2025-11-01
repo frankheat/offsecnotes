@@ -32,6 +32,7 @@ bu restore backup.ab
 
 ---
 
+
 ## Debuggable
 
 The `android:debuggable` attribute indicates if the application is debuggable and it is set to `false` by default \[[↗](https://developer.android.com/privacy-and-security/risks/android-debuggable)]. Check `android:debuggable="true"` in the `AndroidManifest.xml`.

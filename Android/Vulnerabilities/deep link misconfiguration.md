@@ -1,5 +1,5 @@
 ---
-title: "Deep link"
+title: "Deep link misconfiguration"
 weight: 5
 description: "Learn about deep link security in mobile applications, including different types of deep links, potential vulnerabilities like Link Hijacking, and testing methodologies."
 ---

