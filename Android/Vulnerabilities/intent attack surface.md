@@ -468,7 +468,7 @@ startActivity(secondIntent);
 
 ### Intent redirect
 
-An *Intent Redirect* vulnerability means that an attacker can control the intent used by the other app to for example start an activity.
+An *Intent Redirect* vulnerability means that an attacker can control the intent used by the other app to for example start an activity. This can be particularly dangerous when an activity is not exported and therefore cannot normally be started externally. By exploiting the vulnerability, the attacker can trick the app into starting the activity internally on their behalf.
 
 Let's say that the app `io.hextree.attacksurface` has the following activity:
 
@@ -494,9 +494,7 @@ public class Flag6Activity extends AppCompactActivity {
 }
 ```
 
-You can't start this activity from another app because it's not exported. However, "not exported activities" can be started internally by the app itself.
-
-If we have a `startActivity` within the app where the attacker controls the intent we can craft an intent that when passed to `startActivity`, leads to the non-exported activity.
+We cannot start this activity from another app because it's not exported. However, if we have a `startActivity` within the app where the attacker controls the intent we can craft an intent that when passed to `startActivity`, leads to the non-exported activity.
 
 The [Innested intents](intent%20attack%20surface.html#innested-intents) chapter includes a useful code:
 
@@ -532,7 +530,7 @@ firstIntent.setComponent(new ComponentName(
 startActivity(firstIntent);
 ```
 
-### Returning Activity Results
+### Intercept activity results
 
 It's important to remember that starting activities is not just a one-way communication. When you start an activity with `startActivityForResult()`, you can also get a result back from the caller.
 
@@ -567,7 +565,7 @@ public class Flag9Activity extends AppCompactActivity {
 }
 ```
 
-Basically, when this Activity starts, it checks who launched it.
+Basically, when this activity starts, it checks who launched it.
 If the launcher’s class name contains "Hextree", it creates an Intent containing a “flag” value, marks the result as successful, sends it back to the caller, closes itself, and logs the success.
 
 In this case you can get the flag by using `onActivityResult()`.
@@ -595,9 +593,7 @@ public class MainHextreeActivity extends AppCompatActivity {
 }
 ```
 
----
-
-### Hijack Implicit Intents
+### Hijack implicit intents
 
 Receiving implicit intents can lead to common security issues. If an app uses implicit intents insecurely, for example, by transmitting sensitive data, then registering a handler for that intent could potentially be exploited by malicious components.
 
@@ -616,19 +612,15 @@ public class Flag10Activity extends AppCompactActivity {
     @Override
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
-        this.f182f = new LogHelper(this);
         if (getIntent().getAction() == null) {
-            Toast.makeText(this, "Sending implicit intent with the flag\nio.hextree.attacksurface.ATTACK_ME", 1).show();
             Intent intent = new Intent("io.hextree.attacksurface.ATTACK_ME");
             intent.addFlags(8);
-            this.f182f.addTag(intent);
             intent.putExtra("flag", this.f182f.appendLog(this.flag));
             try {
                 startActivity(intent);
                 success(this);
             } catch (RuntimeException e) {
                 e.printStackTrace();
-                Toast.makeText(this, "No app found to handle the intent\nio.hextree.attacksurface.ATTACK_ME", 1).show();
                 finish();
             }
         }
@@ -683,16 +675,13 @@ public class Flag11Activity extends AppCompactActivity {
     @Override
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
-        this.f182f = new LogHelper(this);
         if (getIntent().getAction() == null) {
-            Toast.makeText(this, "Sending implicit intent to\nio.hextree.attacksurface.ATTACK_ME", 1).show();
             Intent intent = new Intent("io.hextree.attacksurface.ATTACK_ME");
             intent.addFlags(8);
             try {
                 startActivityForResult(intent, 42);
             } catch (RuntimeException e) {
                 e.printStackTrace();
-                Toast.makeText(this, "No app found to handle the intent\nio.hextree.attacksurface.ATTACK_ME", 1).show();
                 finish();
             }
         }
@@ -701,7 +690,6 @@ public class Flag11Activity extends AppCompactActivity {
     @Override
     protected void onActivityResult(int i, int i2, Intent intent) {
         if (intent != null && intent.getIntExtra("token", -1) == 1094795585) {
-            this.f182f.addTag(1094795585);
             success(this);
         }
         super.onActivityResult(i, i2, intent);
@@ -756,14 +744,12 @@ public class Flag12Activity extends AppCompactActivity {
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
         if (getIntent().getAction() == null) {
-            Toast.makeText(this, "Sending implicit intent to\nio.hextree.attacksurface.ATTACK_ME", 1).show();
             Intent intent = new Intent("io.hextree.attacksurface.ATTACK_ME");
             intent.addFlags(8);
             try {
                 startActivityForResult(intent, 42);
             } catch (RuntimeException e) {
                 e.printStackTrace();
-                Toast.makeText(this, "No app found to handle the intent\nio.hextree.attacksurface.ATTACK_ME", 1).show();
                 finish();
             }
         }

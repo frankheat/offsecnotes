@@ -6,6 +6,7 @@ title: "Android"
     * [Intent attack surface](Vulnerabilities/intent attack surface.html)
     * [Pending Intents](Vulnerabilities/pending intents.html)
     * [Deep links](Vulnerabilities/deep links.html)
+    * [Broadcast Receivers](Vulnerabilities/broadcast receivers.html)
     * [Exploiting exported activities](Vulnerabilities/exploiting exported activities.html)
     * [Security misconfiguration](Vulnerabilities/security misconfiguration.html)
     * [Deep link misconfiguration](Vulnerabilities/deep link misconfiguration.html)

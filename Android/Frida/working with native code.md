@@ -500,9 +500,10 @@ The loop continues until `iterator.next()` returns `null` (meaning no more instr
 
 You can insert your own instructions before or after using `iterator.put...()` or `iterator.putCallout()`.
 
-> **Note**:Keep in mind `transform()` is for rewriting instructions. It always runs if you provide it - **independent of events**.
+> **Note**: Keep in mind `transform()` is for rewriting instructions. It always runs if you provide it - **independent of events**.
 > 
 > `events` is for emitting runtime data. So they are used for collecting execution data Frida generates internally, like:
+>
 > *  `{ call: true }` - logs when a call happens
 > * `{ ret: true }` - logs ret instructions
 > * `{ block: true }` - logs blocks entered

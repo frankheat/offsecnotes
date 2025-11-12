@@ -28,6 +28,7 @@ If the application states "Account already exists" when registering a known emai
 ### Response Comparison
 
 Compare server responses when entering:
+
 - A valid username with incorrect passwords
 - An invalid username with incorrect passwords
 

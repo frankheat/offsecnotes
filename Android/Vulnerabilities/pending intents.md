@@ -15,7 +15,7 @@ Let's say we have two apps:
     * This app allows a user to create a home screen widget.
     * The goal is for this widget, when tapped, to open the SecondActivity directly inside the app A.
 
-**The Problem Without PendingIntent**
+**The Problem**
 
 If App B tried to launch the diary entry screen directly, it would fail.
 

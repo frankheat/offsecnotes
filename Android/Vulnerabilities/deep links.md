@@ -310,3 +310,7 @@ To get the flag you can create a link like the follows:
 ```
 intent:#Intent;action=io.hextree.action.GIVE_FLAG;package=io.hextree.attacksurface;component=io.hextree.attacksurface/io.hextree.attacksurface.activities.Flag15Activity;S.action=flag;B.flag=true;end
 ```
+
+> **Note**:
+>
+> The target `<intent-filter>` does not contain a host or path filter, so do not create a data URI `intent://`, instead do `intent:`.
