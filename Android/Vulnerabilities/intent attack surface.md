@@ -10,13 +10,13 @@ An **Intent** is an object that facilitates communication between components of 
 
 An Intent can encapsulate several types of information \[[↗](https://developer.android.com/guide/components/intents-filters#Building)]:
 
-* Component name - The name of the component to start (optional)
-* Action – Specifies the general action to be performed (e.g., view, send, or edit).
-* Category – Provides additional information about the action, helping Android determine the appropriate component to handle it.
-* Type – Defines the MIME type of the data being handled (e.g., "image/png", "text/plain").
-* Data – Refers to the actual data the Intent operates on, often represented as a URI.
+* Component name - The name of the component to start (optional).
+* Action - Specifies the general action to be performed (e.g., view, send, or edit).
+* Category - Provides additional information about the action, helping Android determine the appropriate component to handle it.
+* Type - Defines the MIME type of the data being handled (e.g., "image/png", "text/plain").
+* Data - Refers to the actual data the Intent operates on, often represented as a URI.
 * Extras - Key-value pairs that carry additional information required to accomplish the requested action.
-* Flags – Provide additional instructions on how the component should be launched (e.g., start in a new task or clear existing activities).
+* Flags - Provide additional instructions on how the component should be launched (e.g., start in a new task or clear existing activities).
 
 Intents can be explicit or implicit.
 

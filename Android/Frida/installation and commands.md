@@ -31,6 +31,8 @@ pip3 install objection
 
 <details><summary>(1 way) Patching APKs with Objection</summary>
 
+Pro: you don't need to have a rooted device.
+
 ```sh
 # Inject Frida into an APK
 objection patchapk -s target.apk
@@ -83,6 +85,12 @@ frida -U <package_name>
     ```
 
 </details>
+
+---
+
+## Installing & Using Frida in Termux
+
+Guide: https://github.com/frida/frida/discussions/2411
 
 ---
 

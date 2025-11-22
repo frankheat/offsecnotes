@@ -15,8 +15,8 @@ title: "Android"
     * [Task hijacking](Vulnerabilities/task hijacking.html)
     * [Bypass binary protections](Vulnerabilities/bypass binary protections.html)
 * Reverse Engineering
-    * [Analyze native libraries](Reverse Engineering/analyze native libraries.html)
     * [Apk building](Reverse Engineering/apk building.html)
+    * [Analyze native libraries](Reverse Engineering/analyze native libraries.html)
     * [Reversing](Reverse Engineering/reversing.html)
 * Frida
     * [Installation and commands](Frida/installation and commands.html)
@@ -24,6 +24,7 @@ title: "Android"
     * [Working with java code](Frida/working with java code.html)
     * [Working with native code](Frida/working with native code.html)
 * [Network interception](network interception.html)
+* [Android Permissions](permissions.html)
 * [Android debug bridge (ADB)](adb.html)
 * [Filesystem monitor with fsmon](fsmon.html)
 * [Framework](framework.html)

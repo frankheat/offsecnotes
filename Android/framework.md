@@ -1,9 +1,10 @@
 ---
 title: "Framework"
-weight: 6
 ---
 
 ## React Native
+
+Useful source: https://pilfer.github.io/mobile-reverse-engineering/react-native/reverse-engineering-and-instrumenting-react-native-apps/
 
 If you're working on a React Native app, you’ll probably want to read through the code at some point.
 

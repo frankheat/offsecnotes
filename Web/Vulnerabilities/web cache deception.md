@@ -94,6 +94,7 @@ Objective: identify a character that is used as a delimiter by the origin server
 ```
 
 > **Note**: 
+>
 > * Because delimiters are generally used consistently within each server, you can often use this attack on many different endpoints.
 > *   Some delimiter characters may be processed by the victim's browser before it forwards the request to the cache. This means that some delimiters can't be used in an exploit. For example, browsers URL-encode characters like `{`, `}`, `<`, and `>`, and use `#` to truncate the path.
 > 

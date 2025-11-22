@@ -42,12 +42,6 @@ Unfortunately, the package name is missing here. So you can use two ways to get 
     com.package.target.ui.InterceptionFragment
     [...]
     ```
-    ```sh
-    $ ls __handlers__
-    [...]
-    com.package.target.ui.InterceptionFragment
-    [...]
-    ```
 
 2. By using frida. E.g. inside frida REPL
 
