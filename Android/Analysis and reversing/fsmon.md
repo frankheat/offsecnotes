@@ -26,7 +26,7 @@ adb shell chmod +x /data/local/tmp/fsmon
 ./fsmon /data/data/<package-name>
 
 # Monitor /proc access
-# This can be useful to check frida detection and bypass
+# This can be useful, for example, to check frida detection and bypass
 ./fsmon /proc/<pid>
 ./fsmon /proc
 

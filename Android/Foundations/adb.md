@@ -1,13 +1,12 @@
 ---
 title: "Android debug bridge (ADB)"
-weight: 5
 ---
 
 [Android Debug Bridge (ADB)](https://developer.android.com/tools/adb) is a powerful command-line tool that allows you to communicate with Android devices. In penetration testing, ADB is essential for analyzing Android applications, examining device configurations, and performing security assessments on mobile targets.
 
 ---
 
-## Prerequisites and Setup
+## Prerequisites and setup
 
 Before using ADB for penetration testing, ensure you have:
 
@@ -29,7 +28,7 @@ Source: [https://developer.android.com/studio/debug/dev-options#enable](https://
 
 ---
 
-## Device Connection and Management
+## Device connection and management
 
 ```bash
 # Check connected devices
@@ -44,7 +43,7 @@ adb connect <ip_address>:5555
 
 ---
 
-## Application Management
+## Application management
 
 ```bash
 # Install an APK file
@@ -88,7 +87,7 @@ adb pull <apk_path> <local_destination>
 
 ---
 
-## Application Control and Testing
+## Application control and testing
 
 ```bash
 # Start a specific activity
@@ -103,7 +102,7 @@ adb shell pm clear <package_name>
 
 ---
 
-## File System Operations
+## File system operations
 
 ```bash
 # Copy files from device to local system
@@ -115,7 +114,7 @@ adb push <local_path> <remote_path>
 
 ---
 
-## Advanced Shell Operations
+## Shell operations
 
 ```bash
 # Access device shell
@@ -129,6 +128,7 @@ adb shell getprop
 
 # Monitor system logs
 adb shell logcat
+adb logcat
 
 # Check running processes
 adb shell ps

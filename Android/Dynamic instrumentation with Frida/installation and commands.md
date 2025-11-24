@@ -88,13 +88,13 @@ frida -U <package_name>
 
 ---
 
-## Installing & Using Frida in Termux
+## Installing & using frida in termux
 
 Guide: https://github.com/frida/frida/discussions/2411
 
 ---
 
-## Commands
+## Command examples
 
 ```sh
 # List the available devices for frida
@@ -127,6 +127,6 @@ frida -U <package_name>
 
 ---
 
-## Frida Troubleshooting
+## Frida troubleshooting
 
 When frida doesn't work correctly, try to downgrade. A lot of time it's a regression.

@@ -6,11 +6,11 @@ description: "Learn advanced techniques to debug Android applications using tool
 
 ## Why would you want to debug an application?
 
-Three scenario:
+Let's have a look at three different scenario:
 
 1. As an attacker you want to analyze and modify the app behavior. In this case the way I prefer is by frida because it is much simpler and works in the most cases. But sometimes an app can has a detection of frida. Of course you can hook the method(s) that make(s) frida detection to bypass it, but it's often not so simple. Moreover, debugging allow you to access to a local variable inside a method while frida doesn't allow you to do.
 
-2. A user has an a debuggable application installed on own device. If the application is debuggable you can:
+2. A user has a debuggable application installed on own device. If the application is debuggable you can:
     - Analyze and modify the legitimate behavior
     - Extract, without root privileges, all files inside the app internal storage
 
@@ -35,9 +35,7 @@ You need to have an application debuggable. If the app is not debuggable you can
         resetprop ro.debuggable 1
 
         # Restart Android zygote process
-        stop
-
-        start
+        stop; start
         ```
 
 ---
@@ -54,7 +52,7 @@ You can debug an application to a different levels:
 
 ## Debug smali code
 
-If you don't have the original Java code, you can debug the smali code. To do this, you can use IntelliJ/Android Studio + smalidea plugin or jadx.
+If you don't have the original Java code, you can debug the smali code. To do this, you can use IntelliJ/Android Studio + [smalidea plugin](https://github.com/JesusFreke/smalidea) or [jadx](https://github.com/skylot/jadx).
 
 **jadx-gui guide**
 
@@ -81,7 +79,7 @@ This is the simpler approach. You can follow the official guide: [Debug pre-buil
 1. Set app to wait (optional)
 
     ```sh
-    am set-debug-app -w app_package_name
+    adb shell am set-debug-app -w app_package_name
     ```
     If we open the app, we're going to get waiting for debugger.
 
@@ -118,7 +116,7 @@ This is the simpler approach. You can follow the official guide: [Debug pre-buil
    
 
 
-**jdb commands**
+**jdb command examples**
 
 ```sh
 # List loaded class

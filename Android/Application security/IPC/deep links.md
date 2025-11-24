@@ -4,16 +4,14 @@ title: "Deep links"
 
 > **Note**: this section requires a full understanding of [Intent attack surface](intent attack surface.html).
 
-## Introduction
+## Overview
 
 Deep links bridge websites and mobile apps by allowing a webpage or link to launch a specific app screen.
 An app signals that it handles deep links by declaring an activity with an `intent-filter` that includes the `BROWSABLE` category; this means the activity can be started from a web browser. Such filters usually include one or more `<data>` tags, for example: `<data android:scheme="example" />`.
 
 Deep links are important from a security perspective because they expand the attack surface from app-to-app communication to the broader web. If a user clicks a malicious link, it can trigger the target activity. Although the amount of data that can be passed via a deep link is generally smaller than with direct app-to-app IPC, any vulnerability exposed through a deep link is often more serious because it can be exploited remotely via the web.
 
----
-
-## Working with deep links
+### Working with deep links
 
 Let's say that the app `io.hextree.attacksurface` has the following activity:
 

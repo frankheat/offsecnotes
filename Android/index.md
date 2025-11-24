@@ -2,30 +2,32 @@
 title: "Android"
 ---
 
-* Vulnerabilities
-    * [Intent attack surface](Vulnerabilities/intent attack surface.html)
-    * [Pending Intents](Vulnerabilities/pending intents.html)
-    * [Deep links](Vulnerabilities/deep links.html)
-    * [Broadcast Receivers](Vulnerabilities/broadcast receivers.html)
-    * [Exploiting exported activities](Vulnerabilities/exploiting exported activities.html)
-    * [Security misconfiguration](Vulnerabilities/security misconfiguration.html)
-    * [Deep link misconfiguration](Vulnerabilities/deep link misconfiguration.html)
-    * [Insecure data storage](Vulnerabilities/insecure data storage.html)
-    * [Tapjacking](Vulnerabilities/tapjacking.html)
-    * [Task hijacking](Vulnerabilities/task hijacking.html)
-    * [Bypass binary protections](Vulnerabilities/bypass binary protections.html)
-* Reverse Engineering
-    * [Apk building](Reverse Engineering/apk building.html)
-    * [Analyze native libraries](Reverse Engineering/analyze native libraries.html)
-    * [Reversing](Reverse Engineering/reversing.html)
-* Frida
-    * [Installation and commands](Frida/installation and commands.html)
-    * [Frida trace](Frida/frida trace.html)
-    * [Working with java code](Frida/working with java code.html)
-    * [Working with native code](Frida/working with native code.html)
-* [Network interception](network interception.html)
-* [Android Permissions](permissions.html)
-* [Android debug bridge (ADB)](adb.html)
-* [Filesystem monitor with fsmon](fsmon.html)
-* [Framework](framework.html)
-* [Debug application code](debug application code.html)
+* Foundations
+    * [Apk building](Foundations/apk building.html)
+    * [Android debug bridge (ADB)](Foundations/adb.html)
+* Application security
+    * IPC
+        * [Intent attack surface](Application security/IPC/intent attack surface.html)
+        * [Pending intents](Application security/IPC/pending intents.html)
+        * [Deep links](Application security/IPC/deep links.html)
+        * [Broadcast receivers](Application security/IPC/broadcast receivers.html)
+    * UI and logic attacks
+        * [Tapjacking](Application security/UI and logic attacks/tapjacking.html)
+        * [Task hijacking](Application security/UI and logic attacks/task hijacking.html)
+    * [Android permissions](Application security/permissions.html)
+    * [Security misconfiguration](Application security/security misconfiguration.html)
+    * [Deep link misconfiguration](Application security/deep link misconfiguration.html)
+    * [Insecure data storage](Application security/insecure data storage.html)
+* Dynamic instrumentation with Frida
+    * [Installation and commands](Dynamic instrumentation with Frida/installation and commands.html)
+    * [Frida trace](Dynamic instrumentation with Frida/frida trace.html)
+    * [Working with java code](Dynamic instrumentation with Frida/working with java code.html)
+    * [Working with native code](Dynamic instrumentation with Frida/working with native code.html)
+* Analysis and reversing
+    * [Apk analysis](Analysis and reversing/apk analysis.html)
+    * [Network interception](Analysis and reversing/network interception.html)
+    * [Filesystem monitor with fsmon](Analysis and reversing/fsmon.html)
+    * [Debug application code](Analysis and reversing/debug application code.html)
+    * [Analyze native libraries](Analysis and reversing/analyze native libraries.html)
+    * [Bypass binary protections](Analysis and reversing/bypass binary protections.html)
+    * [Framework](Analysis and reversing/framework.html)

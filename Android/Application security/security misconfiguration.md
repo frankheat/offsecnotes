@@ -1,7 +1,33 @@
 ---
 title: "Security misconfiguration"
-weight: 2
 description: "Learn about common Android security misconfigurations like adb backup, debuggable flags, and WebView debugging."
+---
+
+## Exploiting exported activities
+
+If an activity involving sensitive information is exported, it could potentially bypass authentication mechanisms, allowing unauthorized access.
+
+Example:
+
+```xml
+<activity android:name="com.example.demo.HiddenActivity" android:exported="true">
+</activity>
+```
+
+Test with adb:
+
+```sh
+adb shell am start -n com.example.demo/com.example.demo.MainActivity
+```
+
+Test with a custom android application:
+
+```java
+Intent intent = new Intent();
+intent.setClassName("com.example.myapplication", "com.example.myapplication.SecondActivity");
+startActivity(intent);
+```
+
 ---
 
 ## Backup

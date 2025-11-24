@@ -1,6 +1,5 @@
 ---
 title: "frida-trace"
-weight: 2
 description: "Learn how to use frida-trace for dynamic analysis in mobile pentesting. Trace function calls, identify methods, and understand application behavior during security assessments."
 ---
 

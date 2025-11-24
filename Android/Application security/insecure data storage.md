@@ -196,8 +196,6 @@ It is often better to run `adb --clear` beforehand to ensure a cleaner environme
 
 ### Application memory
 
-Example: after login see how long the app keeps the password in memory.
-
 ```sh
 # Start objection
 objection -g 'exampleapp' explore
