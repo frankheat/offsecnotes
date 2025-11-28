@@ -19,7 +19,7 @@ $ frida-ps -Uai
 frida-trace -U -j 'com.package.target.*!*' AppTarget
 ```
 
-Example
+Example:
 
 ```sh
 $ frida-trace -U -j 'com.package.target.*!*' AppTarget
@@ -42,7 +42,7 @@ Unfortunately, the package name is missing here. So you can use two ways to get 
     [...]
     ```
 
-2. By using frida. E.g. inside frida REPL
+2. By using frida. E.g. inside frida REPL:
 
 
     ```sh

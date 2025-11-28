@@ -199,7 +199,7 @@ sendOrderedBroadcast(intent, null, resultReceiver, null, RESULT_CANCELED, null, 
 
 **Example**
 
-Let’s say that the app io.hextree.attacksurface has the following Broadcast:
+Let’s say that the app io.hextree.attacksurface has the following BroadcastReceiver:
 
 ```xml
 <receiver

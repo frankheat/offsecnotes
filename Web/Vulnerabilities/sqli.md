@@ -277,7 +277,7 @@ An application might carry out a SQL query asynchronously (another thread execut
 * Remember that **SQLi can occur at any location** (UPDATE, INSERT, SELECT \[column, table], ORDER BY)
 * **SQLi can be even in XML/JSON**...
   * If there are some protection, try **XML encode**.
-* Use `— -`  instead of `--` . In many SQL systems, there must be at least one space after `--` for the comment to be recognised.
+* Use `-- -`  instead of `--` . In many SQL systems, there must be at least one space after `--` for the comment to be recognized.
 
 ---
 

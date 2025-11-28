@@ -14,7 +14,7 @@ apkid --scan-depth 0 -r target.apk
 
 ---
 
-## SSL Pinning
+## SSL pinning
 
 * **Missing SSL pinning**
 * **Bypass with objection**
@@ -66,7 +66,7 @@ See [Webview debug](/android/vulnerabilities/security-misconfiguration/#webview-
 
 ---
 
-## Root Detection
+## Root detection
 * **Missing root detection**
 * **Bypass with generic frida script**
 
@@ -82,7 +82,7 @@ See [Webview debug](/android/vulnerabilities/security-misconfiguration/#webview-
 
 ---
 
-## Emulator Detection
+## Emulator detection
 
 * Missing emulator detection
 * Bypass protection analyzing the code and/or with frida

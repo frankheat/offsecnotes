@@ -8,11 +8,11 @@ description: "Learn advanced techniques to debug Android applications using tool
 
 Let's have a look at three different scenario:
 
-1. As an attacker you want to analyze and modify the app behavior. In this case the way I prefer is by frida because it is much simpler and works in the most cases. But sometimes an app can has a detection of frida. Of course you can hook the method(s) that make(s) frida detection to bypass it, but it's often not so simple. Moreover, debugging allow you to access to a local variable inside a method while frida doesn't allow you to do.
+1. As an attacker, you want to analyze and modify the app's behavior. In this case, I prefer Frida because it is much simpler and works most of the time. However, sometimes an app can detect Frida. Of course, you can hook the method(s) that trigger the Frida detection to bypass it, but that's often not simple. Moreover, debugging allows you to access local variables inside a method, which Frida does not allow.
 
 2. A user has a debuggable application installed on own device. If the application is debuggable you can:
-    - Analyze and modify the legitimate behavior
-    - Extract, without root privileges, all files inside the app internal storage
+    - Analyze and modify the legitimate behavior.
+    - Extract, without root privileges, all files inside the app internal storage.
 
    
    > **Note**: This scenario is often impossible because no release application on the Play Store can have `android:debuggable="true"` \[[↗](https://developer.android.com/studio/publish/preparing.html#turn-off-debugging)] \[[↗](https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play)]. It means that the user has installed the app from a third-party store.
@@ -76,26 +76,26 @@ This is the simpler approach. You can follow the official guide: [Debug pre-buil
 
 ### Java Debugger (JDB)
 
-1. Set app to wait (optional)
+1. Set app to wait (optional).
 
     ```sh
     adb shell am set-debug-app -w app_package_name
     ```
     If we open the app, we're going to get waiting for debugger.
 
-2. Find app process id
+2. Find app process id.
 
     ```sh
     adb shell ps | grep -i app_package_name
     ```
 
-3. Set Up Port Forwarding 
+3. Set Up Port Forwarding.
 
     ```sh
     adb forward tcp:8000 jdwp:<PROCESS_ID>
     ```
 
-4. Start JDB
+4. Start JDB.
 
     ```sh
     jdb -attach localhost:8000 -sourcepath <source_file>

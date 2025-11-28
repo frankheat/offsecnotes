@@ -3,7 +3,7 @@ title: "APK building"
 description: "Learn about Android application structure, APK file format, and the APK building process for mobile security and pentesting."
 ---
 
-## Android Application Project
+## Android application project
 
 > **Note**: The directory names are conventional so they could be any name. Additionally, the contents of each directory could be spread across multiple folders.
 
@@ -28,20 +28,21 @@ Optionals:
 
 ---
 
-## Android Package (apk)
+## Android package (apk)
 
-Simply a ZIP archive with an `.apk` extension
+An APK is essentially a ZIP archive with an `.apk` extension.
 
-It almost always embodies the following files and directories, though only `AndroidManifest.xml` and `META-INF` are obligatory.
+While only `AndroidManifest.xml` and `META-INF` are mandatory, an APK almost always includes the following files and directories:
 
-* 🗎 **AndroidManifest.xml** is the app's manifest file in Android's **binary** XML format
-* 🗎 **classes.dex** or classesN.dex.  It's/they're Dalvik Executable (`.dex`)
-* 🗎 **resources.arsc** is the resource table file in binary format, optimizing the access to the UI resources
-* 📁 **META-INF**: incorporates the `CERT.SF` and `CERT.RSA` signature files, as well as the `MANIFEST.MF` manifest file.
+* 🗎 **AndroidManifest.xml**: the application's manifest file, stored in Android’s binary XML format.
+* 🗎 **classes.dex** (or classesN.dex): the compiled application code in the Dalvik Executable format. Multi-dex applications may contain multiple files (e.g., classes2.dex).
+* 🗎 **resources.arsc**: the resource table file in binary format, optimizing the access to the UI resources.
+* 📁 **META-INF**: contains the `CERT.SF` and `CERT.RSA` signature files, as well as the `MANIFEST.MF` manifest file.
 * 📁 **res**: includes all UI resources except those from the `res/values`
-* 📁 **assets**: comprises further resources packed as-is into the `.apk` file.
-* 📁 **lib**: contains native shared libraries of the package
-* An APK may contain further files and folders
+* 📁 **assets**: contains further resources packed as-is into the `.apk` file.
+* 📁 **lib**: contains native shared libraries of the package.
+
+> **Note**: An APK may contain further files and folders.
 
 ---
 
@@ -60,10 +61,10 @@ Awesome resource written by Michael Zent \[[↗](https://timeout.userpage.fu-ber
        * -> Dalvik bytecode (`.dex`) file/s
 
 
-3. C/C++ compilation process (Untreated)
+3. Native code is embedded as dynamic shared libraries called Shared Object (`.so`)
 4.  All the output are packaged (aapt \[link] tool)
 
     * -> .apk (unsigned)
 
 
-5. zipalign and apksigner to sign the APK and make it installable and updatable on an Android device
+5. zipalign and apksigner to sign the APK and make it installable and updatable on an Android device.

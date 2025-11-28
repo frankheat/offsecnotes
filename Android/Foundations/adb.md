@@ -11,16 +11,16 @@ title: "Android debug bridge (ADB)"
 Before using ADB for penetration testing, ensure you have:
 
 1. **Android SDK Platform Tools** installed on your system
-2. **USB Debugging** enabled on the target device
+2. **USB/Wireless debugging** enabled on the target device
 
 <details>
 <summary>
-How to Enable Developer Options and USB Debugging
+How to enable developer options and USB debugging
 </summary>
-1. Go to **Settings** > **About Phone**
-2. Tap **Build Number** seven times
-3. Navigate to **Settings** > **Developer Options**
-4. Enable **USB Debugging**
+1. Go to **Settings** > **About phone**
+2. Tap **Build number** seven times
+3. Navigate to **Settings** > **Developer options**
+4. Enable **USB debugging**
 5. Connect the device via USB and authorize the computer when prompted
 
 Source: [https://developer.android.com/studio/debug/dev-options#enable](https://developer.android.com/studio/debug/dev-options#enable)
@@ -76,7 +76,7 @@ adb shell pm path <package_name>
 
 **Extract APK file from device**
 
-This operation does not require a rooted device.
+> **Note**: This operation does not require a rooted device.
 
 ```bash
 # First, get the APK path

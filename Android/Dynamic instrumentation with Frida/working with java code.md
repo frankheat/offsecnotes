@@ -89,8 +89,8 @@ Java.perform(() => {
 
 Use this script when you want to:
 
-* See the arguments passed
-* Change the implementation of the method (e.g. print/change return value)
+* See the arguments passed.
+* Change the implementation of the method (e.g. print/change return value).
 
 ```javascript
 Java.perform(function() {
@@ -127,7 +127,7 @@ Java.perform(function() {
 
 </details>
 
-If a method has more than one overload (it means that the method can be called with different parameters), you must use `overloads` and specify which signature you want to choose.
+If a method has more than one overload (it means that the method can be called with different parameters), you must use `overload` and specify which signature you want to choose.
 
 ```java
 Java.perform(function() {
@@ -209,7 +209,7 @@ Java.perform(function (){
 
 <details><summary>Example 4</summary>
 
-Java app code
+Java app code:
 
 ```java
 public class Checker {
@@ -221,7 +221,7 @@ public class Checker {
 }
 ```
 
-Script
+Script:
 
 ```javascript
 Java.perform(function (){

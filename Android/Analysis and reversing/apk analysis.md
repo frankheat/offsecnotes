@@ -5,11 +5,11 @@ description: "Learn Android application reversing with detailed guides on unders
 
 ## Understanding .dex and .smali
 
-Binary Dalvik bytecode (.dex files) are not easy to read or modify
+Binary Dalvik bytecode (.dex files) are not easy to read or modify.
 
 <details><summary>Dex format</summary>
 
-More details \[[↗](https://www.bugsnag.com/blog/dex-and-d8/)].
+More details \[[↗](https://dzone.com/articles/the-dex-file-format/)].
 
 **HEX**
 
@@ -80,13 +80,13 @@ adb pull <path>
 
 ---
 
-## Disassemble & Assemble
+## Disassemble & assemble
 
-[Apktool](https://github.com/iBotPeaches/Apktool) is a tool for reverse engineering Android apps. It can decode (and disassemble) resources to **nearly** original form and **rebuild** them after making some modifications (and other stuff).
+[Apktool](https://github.com/iBotPeaches/Apktool) is a reverse engineering tool for Android apps. It can decode (and disassemble) resources to **nearly** original form and **rebuild** them after making some modifications.
 
 In this way you can read `.smali` code (so you don't need baksmali), `AndroidManifest.xml`, etc.
 
-> **Note**: Even if you can extract apk like it was a zip, you can't read file such as `AndroidManifest.xml` because it's compiled. Here's why you should use a tool like apktool.
+> **Note**: Even if you can extract an APK file as if it were a ZIP file, you can’t read a file such as `AndroidManifest.xml` because it’s been compiled. This is why you should use a tool like APKtool.
 
 
 **Disassemble**

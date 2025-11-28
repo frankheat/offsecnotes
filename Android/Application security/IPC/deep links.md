@@ -204,7 +204,7 @@ if (intent != null) {
 
 ---
 
-## Generic Chrome intent: Scheme
+## Generic chrome intent
 
 The `intent://` scheme is a specialized URI format used within Chrome for Android to allow web pages to trigger an Android Intent. This mechanism is primarily used for deep linking to launch a specific native Android application or an Activity within an app directly from a web page.
 

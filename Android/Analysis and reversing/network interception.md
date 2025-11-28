@@ -60,7 +60,7 @@ Android 6.0 (API level 23) and lower.
 ```
 </details>
 
-If the application doesn't accept user certificates you need to install system certificate (or patching network security config).
+If the application doesn't accept user certificates you need to install system certificate or patching network security config.
 
 ### User Certificate
 
@@ -69,8 +69,8 @@ Install it in the user CA store via Android settings. In general apps trust user
 
 <details><summary>Install user certificate guide</summary>
 
-1. Download the certificate from `http://<burp_proxy_listener>`
-2. Go on setting, search certificate and install by selected it
+1. Download the certificate from `http://<burp_proxy_listener>`.
+2. Go on setting, search certificate and install by selected it.
 
 **Install on older Android ≤ 11**
 
@@ -89,16 +89,16 @@ mv cacert.der cacert.crt
 
 **Requirement**: rooted device.
 
-* Rooted physical device
-* Rooted emulator
-* Android Virtual Device (AVD) using non Google Play Store emulator image (If you need it you could [root it](https://8ksec.io/rooting-an-android-emulator-for-mobile-security-testing/))
+* Rooted physical device.
+* Rooted emulator.
+* Android Virtual Device (AVD) using non Google Play Store emulator image (If you need it you could [root it](https://8ksec.io/rooting-an-android-emulator-for-mobile-security-testing/)).
 
 <details>
 <summary>Install system certificate guide (temporary)</summary>
 
 This method use a **temporary RAM-based filesystem** (tmpfs) to override the system certificate directory in memory without actually modifying the read-only system image.
 
-1. Export certificate in DER format from Burp Suite
+1. Export certificate in DER format from Burp Suite.
 2. By default, all Android system certificates are in PEM format. While Android can handle certificates in DER format, I recommend converting them to PEM to ensure broader compatibility. Some libraries may behave inconsistently with DER certificates. For example, I've observed that Flutter applications fail to work properly with DER-formatted certificates. In this step, you'll convert the certificate from **DER to PEM** format and rename it using its subject hash.
 
 
@@ -107,7 +107,7 @@ This method use a **temporary RAM-based filesystem** (tmpfs) to override the sys
     mv cacert.pem $(openssl x509 -inform PEM -subject_hash_old -in cacert.pem | head -1).0
     ```
 
-3. Create a folder on the device
+3. Create a folder on the device.
 
     ```sh
     adb shell
@@ -115,37 +115,37 @@ This method use a **temporary RAM-based filesystem** (tmpfs) to override the sys
     mkdir /data/local/tmp/cacerts-added/
     ```
 
-4. Push the certificate in the created folder
+4. Push the certificate in the created folder.
 
     ```sh
     adb push <subject_hash.0> /data/local/tmp/cacerts-added/
     ```
 
-5. Add your custom cert to the same folder
+5. Add your custom cert to the same folder.
 
     ```sh
     cp /system/etc/security/cacerts/* /data/local/tmp/cacerts-added/
     ```
 
-6. Switch to root user
+6. Switch to root user.
 
     ```sh
     su
     ```
 
-7. Mount tmpfs over system certs
+7. Mount tmpfs over system certs.
 
     ```sh    
     mount -t tmpfs tmpfs /system/etc/security/cacerts
     ```
 
-8. Copy combined certs into the tmpfs mount
+8. Copy combined certs into the tmpfs mount.
 
     ```sh
     cp /data/local/tmp/cacerts-added/* /system/etc/security/cacerts/
     ```
 
-9. Update the perms & SELinux context labels
+9. Update the perms & SELinux context labels.
 
     ```sh
     chown root:root /system/etc/security/cacerts/*
@@ -153,14 +153,14 @@ This method use a **temporary RAM-based filesystem** (tmpfs) to override the sys
     chcon u:object_r:system_file:s0 /system/etc/security/cacerts/*
     ```
 
-The next time you could just run the step 6-9.
+**If you reboot your phone, you can simply repeat steps 6–9.**
 </details>
 
 <details><summary>Install system certificate on Android ≥ 14 guide</summary>
 
-1. Install the proxy certificate as a regular user certificate
-2. `adb shell`
-3. Run [this script](https://httptoolkit.com/blog/android-14-install-system-ca-certificate/) by Tim Perry
+1. Install the proxy certificate as a regular user certificate.
+2. `adb shell`.
+3. Run [the following script](https://httptoolkit.com/blog/android-14-install-system-ca-certificate/) by Tim Perry.
 
     ```sh
     # Create a separate temp directory, to hold the current certificates
@@ -224,7 +224,7 @@ The next time you could just run the step 6-9.
 
 ### Patching Network Security Config
 
-1. Unpack the apk
+1. Unpack the apk.
 
     ```sh
     apktool d target.apk
@@ -237,8 +237,7 @@ The next time you could just run the step 6-9.
     ```xml
     <?xml version="1.0" encoding="utf-8"?>
     <manifest ... >
-        <application android:networkSecurityConfig="@xml/network_security_config"
-                        ... >
+        <application android:networkSecurityConfig="@xml/network_security_config" ... >
             ...
         </application>
     </manifest>
@@ -258,7 +257,7 @@ The next time you could just run the step 6-9.
     </network-security-config>
     ```
 
-3. Repack & sign the apk
+3. Repack & sign the apk.
 
     ```sh
     # Repack
@@ -296,9 +295,9 @@ In the host name field set burp suite proxy with `http` protocol: e.g. `http://1
 > **Warning**: If **your proxy is unreachable**, try changing the emulator version. You can find other versions here: https://developer.android.com/studio/emulator_archive.
 
 
-### HTTP Interception with VPN (Rethink app)
+### HTTP interception with VPN (Rethink app)
 
-> **Warning**: This method is not recommended when using the Android Studio emulator. Strange things could happen. 
+> **Warning**: This method is not recommended when using the Android Studio emulator. Strange things could happen...
 
 **Requirement**: the proxy certificate must be installed in the system certificate store.
 
@@ -306,11 +305,11 @@ If the proxy settings are ignored, use an Android VPN service app to intercept a
 
 Steps:
 
-1. Set DNS settings to "System DNS"
-2. Add an HTTP(S) CONNECT proxy (your `http://burpsuiteip:port`)
-3. Start the VPN service
+1. Set DNS settings to "System DNS".
+2. Add an HTTP(S) CONNECT proxy (your `http://burpsuiteip:port`).
+3. Start the VPN service.
 
-### DNS Spoofing & Transparent Proxy (Rethink app)
+### DNS spoofing & transparent proxy (Rethink app)
 
 > **Warning**: This method is not recommended when using the Android Studio emulator. Strange things could happen. 
 
@@ -320,7 +319,7 @@ Before starting, you need to bind Burp to a privileged port.
 
 <details><summary>Binding Burp to a privileged port (with authbind)</summary>
 
-Reference: \[[↗](https://www.mwells.org/coding/2016/authbind-port-80-443/)].
+Source: \[[↗](https://www.mwells.org/coding/2016/authbind-port-80-443/)].
 
 ```sh
 sudo touch /etc/authbind/byport/443
@@ -348,38 +347,38 @@ authbind --deep java -Djava.net.preferIPv4Stack=true -jar burpsuite.jar
 
 3. Enforce DNS usage using Android's VPN feature with tools like RethinkDNS.
 
-   * From "configure" -> "DNS" -> Change DNS settings to "Other DNS"
-   * Select "DNS Proxy"
-   * Create a new entry pointing at your local DNS server host
+   * From "configure" -> "DNS" -> Change DNS settings to "Other DNS".
+   * Select "DNS Proxy".
+   * Create a new entry pointing at your local DNS server host.
 
 4. Finally, configure your proxy tool for invisible proxying. Burp will act as an HTTP(S) server, parse the `HOST` header, and forward requests. Ensure an invisible proxy listener is set on ports 443 and 80.
 
-   <details><summary>Invisible proxying</summary>
+<details><summary>Invisible proxying</summary>
 
-   **Normal Proxy**\
-   In a normal proxy, the client (e.g., a browser or app) is explicitly configured to use the proxy. This means the client intentionally routes traffic through the proxy. Thus:
+**Normal Proxy**\
+In a normal proxy, the client (e.g., a browser or app) is explicitly configured to use the proxy. This means the client intentionally routes traffic through the proxy. Thus:
 
-   * The client is aware of the existence of the proxy.
-   * HTTPS requires the client to accept the certificate generated by the proxy (MITM).
-   * The request contains both the relative path (/path) and the full address (e.g. `GET http://www.example.com/path HTTP/1.1`)
+* The client is aware of the existence of the proxy.
+* HTTPS requires the client to accept the certificate generated by the proxy (MITM).
+* The request contains both the relative path (/path) and the full address (e.g. `GET http://www.example.com/path HTTP/1.1`)
 
-   **Invisible Proxy**\
-   An [invisible proxy](https://portswigger.net/burp/documentation/desktop/tools/proxy/invisible) operates without the client being explicitly configured to use it. This is useful when the client does not support proxy configurations. Therefore, the client remains unaware of the proxy. However:
+**Invisible Proxy**\
+An [invisible proxy](https://portswigger.net/burp/documentation/desktop/tools/proxy/invisible) operates without the client being explicitly configured to use it. This is useful when the client does not support proxy configurations. Therefore, the client remains unaware of the proxy. However:
 
-   With plain HTTP, a proxy-style request looks like this:
+With plain HTTP, a proxy-style request looks like this:
 
-   ```http
-   GET http://example.org/foo.php HTTP/1.1
-   Host: example.org
-   ```
+```http
+GET http://example.org/foo.php HTTP/1.1
+Host: example.org
+```
 
-   A non-proxy-style request looks like this:
+A non-proxy-style request looks like this:
 
-   ```http
-   GET /foo.php HTTP/1.1
-   Host: example.org
-   ```
+```http
+GET /foo.php HTTP/1.1
+Host: example.org
+```
 
-   Proxies usually use the full URL in the first line to determine the destination, ignoring the `Host` header. In invisible proxying, Burp parses the `Host` header from non-proxy-style requests to determine the destination.
+Proxies usually use the full URL in the first line to determine the destination, ignoring the `Host` header. In invisible proxying, Burp parses the `Host` header from non-proxy-style requests to determine the destination.
 
-   </details>
+</details>

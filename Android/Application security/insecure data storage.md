@@ -6,7 +6,7 @@ description: "Learn about insecure data storage vulnerabilities in Android appli
 
 ## Overview data storage
 
-### Internal Storage (app-private internal storage)
+### Internal storage (app-private internal storage)
 
 This is private device storage where apps save data that only they can access. It’s used to store private app data such as sensitive information, configurations, databases, temporary cache files, or anything that should not be accessed by the user or other apps.
 
@@ -21,7 +21,7 @@ This is private device storage where apps save data that only they can access. I
 
 **Lifecycle**: when the user uninstalls your app, the system automatically deletes all files in this directory
 
-### External Storage
+### External storage
 
 In Android terminology, “external storage” does not necessarily mean a physical SD card. It means: "storage that’s accessible to both apps and the user (shared, public area)".
 
