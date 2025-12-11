@@ -548,14 +548,11 @@ public class Flag9Activity extends AppCompactActivity {
     @Override
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
-        this.f182f = new LogHelper(this);
         ComponentName callingActivity = getCallingActivity();
         if (callingActivity == null || !callingActivity.getClassName().contains("Hextree")) {
             return;
         }
         Intent intent = new Intent("flag");
-        this.f182f.addTag(intent);
-        this.f182f.addTag(42);
         intent.putExtra("flag", this.f182f.appendLog(this.flag));
         setResult(-1, intent);
         finish();

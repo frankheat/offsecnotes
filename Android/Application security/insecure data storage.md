@@ -67,7 +67,7 @@ In Android terminology, “external storage” does not necessarily mean a physi
 >
 > * download [Marc Files](https://play.google.com/store/apps/details?id=com.marc.files) which is just a shortcut to the hidden android system file picker/manager
 > 
-> * send one on the following intent: 
+> * or send one on the following intent: 
 > ```sh
 > # First try
 > am start -a android.intent.action.VIEW -n com.google.android.documentsui/com.android.documentsui.files.FilesActivity

@@ -25,14 +25,10 @@ Welcome to offsecnotes, a website dedicated to Offensive Security notes. This pr
 
 **ANDROID**
 
-* Vulnerabilities
-* Reverse engineering
-* Frida
-* Network interception
-* Android debug bridge (ADB)
-* Filesystem monitor with fsmon
-* Framework
-* Debug application code
+* Foundations
+* Application security
+* Dynamic instrumentation with Frida
+* Analysis and reversing
 
 **WEB APPLICATION**
 

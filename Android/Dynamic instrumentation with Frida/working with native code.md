@@ -30,7 +30,7 @@ There are 2 different ways to do this pairing, or linking:
 
 **Dynamic Linking**
 
-The developer names the method and the function according to the specs. E.g. class `com.android.interesting.Stuff`. The function in the native library would need to be named
+The developer names the method and the function according to the specs. E.g. class `com.android.interesting.Stuff`. The function in the native library would need to be named.
 
 ```c
 Java_com_android_interesting_Stuff_doThingsInNativeLibrary
