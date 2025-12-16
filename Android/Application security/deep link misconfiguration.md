@@ -33,7 +33,7 @@ When the user clicks a deep link, a disambiguation dialog might appear. This dia
 
 Web links are deep links that use the HTTP and HTTPS schemes.
 
-**Note**: On Android 12 and higher, clicking a web link (not an Android App Link) opens it in a web browser. On earlier Android versions, users may see a disambiguation dialog if multiple apps can handle the web link.&#x20;
+**Note**: On Android 12 and higher, clicking a web link (not an Android App Link) opens it in a web browser. On earlier Android versions, users may see a disambiguation dialog if multiple apps can handle the web link.
 
 ```xml
 <intent-filter>
@@ -49,7 +49,7 @@ Web links are deep links that use the HTTP and HTTPS schemes.
 
 **[Android App Links](https://developer.android.com/training/app-links#android-app-links)**
 
-Android App Links, available on Android 6.0 (API level 23) and higher, are web links with the `autoVerify` attribute. This lets your app become the default handler for the link type, so when a user clicks an Android App Link, your app opens immediately if installed, without a disambiguation dialog.&#x20;
+Android App Links, available on Android 6.0 (API level 23) and higher, are web links with the `autoVerify` attribute. This lets your app become the default handler for the link type, so when a user clicks an Android App Link, your app opens immediately if installed, without a disambiguation dialog.
 
 ```xml
 <intent-filter android:autoVerify="true">
@@ -75,8 +75,8 @@ Suppose that:
 * The victim user has malicious app installed
 * Both apps (victim and malicious) manage `geo://`, `https://google.com`
 
-| **Android version** | **Victim App installed** | **Link supported** | **URI**            | **Behavior**                                 |
-|-------------|--------------------------|--------------------|--------------------|------------------------------------------------------|
+| **Android version** | **Victim app installed** | **Link supported** | **URI**            | **Behavior**                                 |
+| -- | -- | -- | --- | --- |
 | All         | N                        | Custom scheme URI         | `geo://`           | Open in malicious                             |
 | All         | Y                        | Custom scheme URI         | `geo://`           | Dialog appear (malicious app, victim app)     |
 | < 12        | N                        | Web Links          | `https://google.com` | Dialog appear (browser, malicious app)             |

@@ -12,6 +12,7 @@ title: "Android"
         * [Deep links](Application security/IPC/deep links.html)
         * [Broadcast receivers](Application security/IPC/broadcast receivers.html)
         * [Content providers](Application security/IPC/content providers.html)
+        * [FileProvider](Application security/IPC/file provider.html)
     * UI and logic attacks
         * [Tapjacking](Application security/UI and logic attacks/tapjacking.html)
         * [Task hijacking](Application security/UI and logic attacks/task hijacking.html)
