@@ -112,7 +112,7 @@ Java.perform(function() {
 
 > **Note**: You don't need to specify the arguments. Do it when you want to see or manipulate their value.
 
-<details><summary>Example 1</summary>
+<details><summary>Example</summary>
 
 ```javascript
 Java.perform(function() {
@@ -159,7 +159,7 @@ Java.perform(function() {
 })
 ```
 
-<details><summary>Example 2</summary>
+<details><summary>Example</summary>
 
 ```javascript
 Java.perform(function() {
@@ -182,7 +182,7 @@ Java.perform(function() {
 })
 ```
 
-<details><summary>Example 3</summary>
+<details><summary>Example</summary>
 
 ```javascript
 Java.perform(function() {
@@ -207,7 +207,7 @@ Java.perform(function (){
 })
 ```
 
-<details><summary>Example 4</summary>
+<details><summary>Example</summary>
 
 Java app code:
 

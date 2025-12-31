@@ -48,7 +48,7 @@ While only `AndroidManifest.xml` and `META-INF` are mandatory, an APK almost alw
 
 ## Building process
 
-Awesome resource written by Michael Zent \[[↗](https://timeout.userpage.fu-berlin.de/apk-building-on-mobile/en/index.php)] .
+Awesome [resource](https://timeout.userpage.fu-berlin.de/apk-building-on-mobile/en/index.php) written by Michael Zent.
 
 1. `📁 res` (without `res/values`) and `🗎 AndroidManifest.xml` are compiled (aapt \[compile] tool)
 

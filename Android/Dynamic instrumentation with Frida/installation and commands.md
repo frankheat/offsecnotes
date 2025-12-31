@@ -41,7 +41,7 @@ objection patchapk -s target.apk
 objection patchapk -V 14.2.8 -s target.apk
 ```
 
-This quickly extracts, patches, re-packs, aligns, and signs the APK \[[↗](https://github.com/sensepost/objection/wiki/Patching-Android-Applications#patching---patching-an-apk)]. The patch is applied with the **frida-gadget.so**
+This quickly extracts, patches, re-packs, aligns, and signs the APK \[[↗](https://github.com/sensepost/objection/wiki/Patching-Android-Applications#patching---patching-an-apk)]. The patch is applied with the `frida-gadget.so`
 
 **Note:** The app will pause at launch, waiting for Frida. Start it with:
 

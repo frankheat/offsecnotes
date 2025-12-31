@@ -52,8 +52,8 @@ To begin with, it's important to understand how a native library is loaded in an
 
 Standard, convenient.
 
-* `System.loadLibrary(String libname)` \[[↗](https://developer.android.com/reference/java/lang/System#loadLibrary(java.lang.String))] 
-* `System.load(String libname)` \[[↗](https://developer.android.com/reference/java/lang/System#load(java.lang.String))]
+* [`System.loadLibrary(String libname)`](<https://developer.android.com/reference/java/lang/System#loadLibrary(java.lang.String>)
+* [`System.load(String libname)`](<https://developer.android.com/reference/java/lang/System#load(java.lang.String>)
 
 ```java
 // System.loadLibrary
@@ -80,7 +80,7 @@ This is done using `dlopen()` and `android_dlopen_ext()`.
 * `android_dlopen_ext()` is used by the Android System itself, primarily by the Android Runtime (ART) when it fulfills a Java-level request like `System.loadLibrary()`.
 * `dlopen()` is used by "regular" native code, such as third-party libraries, game engines, or any C/C++ code that is written to be portable and doesn't need Android-specific linker features.
 
-> **Note**: **You must hook both** `android_dlopen_ext()` and `dlopen()`.
+> **Note**: **You should hook both** `android_dlopen_ext()` and `dlopen()`.
 >
 > An application is not a monolith. It's a complex assembly of your code, the Android Framework, and many third-party native libraries. Within a single running app, **both loading mechanisms will likely be used**:
 > 

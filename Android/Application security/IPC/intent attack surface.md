@@ -5,17 +5,17 @@ description: "Learn about Android Intent attack surfaces, how to start activitie
 
 ## Introduction
 
-An **Intent** is an object that facilitates communication between components of an Android application. It is commonly used to **start activities**, **start services**, or **deliver broadcasts** to a **receiver**.
+An [**Intent**](https://developer.android.com/reference/android/content/Intent) is an object that facilitates communication between components of an Android application. It is commonly used to **start activities**, **start services**, or **deliver broadcasts** to a **receiver**.
 
-An Intent can encapsulate several types of information \[[↗](https://developer.android.com/guide/components/intents-filters#Building)]:
+An Intent can encapsulate [several types of information](https://developer.android.com/guide/components/intents-filters#Building):
 
-* Component name - The name of the component to start (optional).
-* Action - Specifies the general action to be performed (e.g., view, send, or edit).
-* Category - Provides additional information about the action, helping Android determine the appropriate component to handle it.
-* Type - Defines the MIME type of the data being handled (e.g., "image/png", "text/plain").
-* Data - Refers to the actual data the Intent operates on, often represented as a URI.
-* Extras - Key-value pairs that carry additional information required to accomplish the requested action.
-* Flags - Provide additional instructions on how the component should be launched (e.g., start in a new task or clear existing activities).
+* **Component name**: The name of the component to start (optional).
+* **Action**: Specifies the general action to be performed (e.g., view, send, or edit).
+* **Category**: Provides additional information about the action, helping Android determine the appropriate component to handle it.
+* **Type**: Defines the MIME type of the data being handled (e.g., "image/png", "text/plain").
+* **Data**: Refers to the actual data the Intent operates on, often represented as a URI.
+* **Extras**: Key-value pairs that carry additional information required to accomplish the requested action.
+* **Flags**: Provide additional instructions on how the component should be launched (e.g., start in a new task or clear existing activities).
 
 Intents can be explicit or implicit.
 
@@ -67,6 +67,9 @@ When you use implicit intents you’re asking Android to perform an action, not 
 ## Send intent with adb
 
 ```sh
+# Help
+adb shell am -h
+
 # Syntax
 adb shell am start -a <ACTION> -d <DATA> -n <PACKAGE>/<CLASS-COMPONENT>
 
@@ -126,7 +129,6 @@ Let's say that the app `io.hextree.attacksurface` has the following activity:
 
 ```java
 public class Flag2Activity extends AppCompactActivity {
-    public Flag2Activity() {...}
 
     protected void onCreate(Bundle bundle) {
         ...
@@ -134,7 +136,6 @@ public class Flag2Activity extends AppCompactActivity {
         if (action == null || !action.equals("io.hextree.action.GIVE_FLAG")) {
             return;
         }
-        ...
         success(this);
     }
 }
@@ -171,8 +172,6 @@ Let's say that the app `io.hextree.attacksurface` has the following activitiy:
 
 ```java
 public class Flag3Activity extends AppCompactActivity {
-    public Flag3Activity() {...}
-
     protected void onCreate(Bundle bundle) {
         ...
         Intent intent = getIntent();
@@ -184,7 +183,6 @@ public class Flag3Activity extends AppCompactActivity {
         if (data == null || !data.toString().equals("https://app.hextree.io/map/android")) {
             return;
         }
-        ...
         success(this);
     }
 }
@@ -237,7 +235,6 @@ public class Flag4Activity extends AppCompactActivity {
             if (iOrdinal != 1) {
                 if (iOrdinal != 2) {
                     if (iOrdinal == 3) {
-                        this.f182f.addTag(State.GET_FLAG);
                         setCurrentState(State.INIT);
                         success(this);
                         Log.i("Flag4StateMachine", "solved");
@@ -342,19 +339,16 @@ public class Flag5Activity extends AppCompactActivity {
 
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
-        this.f182f = new LogHelper(this);
         Intent intent = getIntent();
         Intent intent2 = (Intent) intent.getParcelableExtra("android.intent.extra.INTENT");
         if (intent2 == null || intent2.getIntExtra("return", -1) != 42) {
             return;
         }
-        this.f182f.addTag(42);
         Intent intent3 = (Intent) intent2.getParcelableExtra("nextIntent");
         this.nextIntent = intent3;
         if (intent3 == null || intent3.getStringExtra("reason") == null) {
             return;
         }
-        this.f182f.addTag("nextIntent");
         if (this.nextIntent.getStringExtra("reason").equals("back")) {
             this.f182f.addTag(this.nextIntent.getStringExtra("reason"));
             success(this);
@@ -406,14 +400,10 @@ public class Flag7Activity extends AppCompactActivity {
     @Override
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
-        if (this.f182f == null) {
-            this.f182f = new LogHelper(this);
-        }
         String action = getIntent().getAction();
         if (action == null || !action.equals("OPEN")) {
             return;
         }
-        this.f182f.addTag("OPEN");
     }
 
     @Override
@@ -423,7 +413,6 @@ public class Flag7Activity extends AppCompactActivity {
         if (action == null || !action.equals("REOPEN")) {
             return;
         }
-        this.f182f.addTag("REOPEN");
         success(this);
     }
 }
@@ -484,9 +473,7 @@ public class Flag6Activity extends AppCompactActivity {
     @Override
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
-        this.f182f = new LogHelper(this);
         if ((getIntent().getFlags() & 1) != 0) {
-            this.f182f.addTag("FLAG_GRANT_READ_URI_PERMISSION");
             success(this);
         }
     }
