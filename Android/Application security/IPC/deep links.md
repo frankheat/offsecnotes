@@ -15,7 +15,7 @@ Deep links are important from a security perspective because they expand the att
 
 Let's say that the app `io.hextree.attacksurface` has the following activity:
 
-```java
+```xml
 <activity
     android:name="io.hextree.attacksurface.activities.Flag13Activity"
     android:exported="true">
