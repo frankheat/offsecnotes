@@ -13,6 +13,9 @@ title: "Android"
         * [Broadcast receivers](Application security/IPC/broadcast receivers.html)
         * [Content providers](Application security/IPC/content providers.html)
         * [FileProvider](Application security/IPC/file provider.html)
+    * User-visible attack surfaces
+        * [Home screen app widgets](Application security/User-visible attack surfaces/home screen app widgets.html)
+        * [Notification](Application security/User-visible attack surfaces/notification.html)
     * UI and logic attacks
         * [Tapjacking](Application security/UI and logic attacks/tapjacking.html)
         * [Task hijacking](Application security/UI and logic attacks/task hijacking.html)

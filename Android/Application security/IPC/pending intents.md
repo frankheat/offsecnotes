@@ -17,19 +17,17 @@ Let's say we have two apps:
 
 **The Problem**
 
-If App B tried to launch the diary entry screen directly, it would fail.
-
-In App B's code:
+If App B tried to launch the diary entry screen directly, it would fail. In App B's code:
 
 ```java
-// THIS WILL FAIL
+// This will fail
 Intent intent = new Intent();
 // Tries to explicitly name the private component in App A
 intent.setComponent(new ComponentName("com.example.secure_diary", "com.example.secure_diary.SecondActivity"));
 try {
     context.startActivity(intent);
 } catch (SecurityException e) {
-    // CRASH! Android system blocks this, saying App B does not
+    // Crash! Android system blocks this, saying App B does not
     // have permission to launch a non-exported activity in App A.
 }
 ```
@@ -43,8 +41,8 @@ This is the Android security model working perfectly. App B shouldn't be able to
 App A must provide a way for App B to request a key. Let's imagine App A has a BroadcastReceiver that listens for a "key request" from App B. When App B sends this broadcast, App A runs the following code:
 
 ```java
-// 1. Create the INTENT - The specific instruction.
-//    This points to our OWN private activity.
+// 1. Create the Intent - The specific instruction.
+//    This points to our own private activity.
 Intent intent = new Intent();
 intent.setComponent(new ComponentName(
                 getPackageName(),
@@ -52,8 +50,8 @@ intent.setComponent(new ComponentName(
         ));
 intent.putExtra("entry_template", "Meeting Notes"); // We can even add extras!
 
-// 2. Create the PENDINGINTENT
-//    We wrap our private intent inside this special token.
+// 2. Create the PendingIntent
+// We wrap our private intent inside this special token.
 PendingIntent pendingIntent = PendingIntent.getActivity(
     this,
     101, // A unique request code to identify this key
@@ -62,6 +60,9 @@ PendingIntent pendingIntent = PendingIntent.getActivity(
 );
 
 // 3. Give the key to App B.
+// A PendingIntent is Parcelable, so it can be passed like any other object:
+// As an extra in an Intent, via a bound service,
+// via a system API (this is what notifications/widgets do), etc.
 ```
 
 App A has now created a secure token. This `pendingIntent` object is a reference managed by the Android system itself. It contains the instruction to launch `SecondActivity`, but it can only be used to do that one thing.
@@ -160,7 +161,7 @@ targetIntent.setComponent(new ComponentName(
         getPackageName(),
         SecondActivity.class.getCanonicalName()
 ));
-PendingIntent pendingIntent = PendingIntent.getActivity(this,0,targetIntent, PendingIntent.FLAG_MUTABLE);
+PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, targetIntent, PendingIntent.FLAG_MUTABLE);
 
 Intent intent = new Intent();
 intent.setComponent(new ComponentName(
