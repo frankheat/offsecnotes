@@ -62,7 +62,7 @@ From Android 8 (API level 26) the delivery of implicit broadcasts to apps is [re
 
 ### System event broadcasts
 
-Android defines many system broadcast actions, such as `BOOT_COMPLETED` and `POWER_CONNECTED`. Attempting to send a protected system broadcast fails with a `SecurityException`, for example: `permission denial: not allowed to send broadcast action POWER_CONNECTED`. This restriction applies to both implicit and explicit intents. Even when the target app and receiver class are specified explicitly, the system blocks the broadcast because only the system is allowed to send these actions. As a result, protected broadcast actions cannot be spoofed.
+Android defines many [system broadcast actions](https://cs.android.com/android-studio/platform/tools/adt/idea/+/android12-release:android/testData/sdk1.5/platforms/android-1.5/data/broadcast_actions.txt), such as `BOOT_COMPLETED` and `POWER_CONNECTED`. Attempting to send a protected system broadcast fails with a `SecurityException`, for example: `permission denial: not allowed to send broadcast action POWER_CONNECTED`. This restriction applies to both implicit and explicit intents. Even when the target app and receiver class are specified explicitly, the system blocks the broadcast because only the system is allowed to send these actions. As a result, protected broadcast actions cannot be spoofed.
 
 However, this does not automatically make the receiver safe. Since an attacker cannot set the protected action value, the receiver’s code cannot enter branches that explicitly check for it. If the receiver contains alternative code paths that do not validate the action, those paths may still be reachable through an explicit broadcast with a custom action.
 
