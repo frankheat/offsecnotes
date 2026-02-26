@@ -177,7 +177,9 @@ This method use a **temporary RAM-based filesystem** (tmpfs) to override the sys
     mv /data/local/tmp/tmp-ca-copy/* /system/etc/security/cacerts/
 
     # Copy our new cert in, so we trust that too
-    cp /data/misc/user/0/cacerts-added/* /system/etc/security/cacerts/
+    # $CERTIFICATE_PATH is the path on the device for the cert you want to inject
+    # for example data/local/tmp/cacerts-added/9a5ba575.0
+    cp $CERTIFICATE_PATH /system/etc/security/cacerts/
 
     # Update the perms & selinux context labels
     chown root:root /system/etc/security/cacerts/*

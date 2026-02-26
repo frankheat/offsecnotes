@@ -101,16 +101,16 @@ apktool d target.apk # Default output is in dist directory
 # Assemble (inside the folder of the disassembled apk)
 apktool b .
 # Sign
-java -jar uber-apk-signer.jar -apk target.apk
+java -jar uber-apk-signer.jar -a target.apk
 ```
 
 **Assemble (Splitted apk)**
 
 ```sh
-# Assemble (inside the folder of the disassembled apk)
+# Assemble
 java -jar APKEditor.jar m -i <path_splitted_apk> -o merged.apk
 # Sign
-java -jar uber-apk-signer.jar -a merged.apk --allowResign -o <merged_signed>
+java -jar uber-apk-signer.jar -a merged.apk
 ```
 
 ---

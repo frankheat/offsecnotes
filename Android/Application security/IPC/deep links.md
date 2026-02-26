@@ -218,6 +218,8 @@ Unlike standard URI schemes (like `myapp://`) which may have inconsistent fallba
 4. If a matching app is found, the app is launched.
 5. If no matching app is found, the system can fall back to an alternative action, such as redirecting the user to the app's page on the Google Play Store or to a specified fallback URL.
 
+> **Note**: Only activities with the category filter, `android.intent.category.BROWSABLE` can be [invoked using this method](https://developer.chrome.com/docs/android/intents), as it indicates that the application is safe to open from the Browser
+
 **Intent URI Syntax**
 
 Here's a breakdown of the key components (Refer to the [Android source code](https://cs.android.com/android/platform/superproject/main/+/main:frameworks/base/core/java/android/content/Intent.java?q=symbol:Intent.parseUri) for parsing details):
