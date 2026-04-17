@@ -44,7 +44,7 @@ Some systems check passwords only if the username is valid. Sending an excessive
 
 ## Password Attacks
 
-[Cracking passwords](/misc/password-cracking) is a key part of authentication testing.
+[Cracking passwords](/Misc/password%20cracking.html) is a key part of authentication testing.
 
 
 ---

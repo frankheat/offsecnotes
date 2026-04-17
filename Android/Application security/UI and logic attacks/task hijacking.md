@@ -10,7 +10,7 @@ Task hijacking is a vulnerability that affects Android applications due to the c
 
 **Scenario**
 
-{{< figure path=task-hijacking.png caption="Based on 'Android Task hijacking' by Evgeny Blashko & Yury Shabalin in 'Positive Hack Days - PHDays VII Hacking conference'" >}}
+> Based on "Android Task hijacking" by Evgeny Blashko & Yury Shabalin — Positive Hack Days PHDays VII
 
 **Security implication (this scenario)**
 

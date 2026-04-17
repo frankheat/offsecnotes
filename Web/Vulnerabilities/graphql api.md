@@ -178,7 +178,7 @@ If introspection is enabled but the query fails, try removing the onOperation, o
 
 1. Browse the target application for requests to a GraphQL endpoint
 2. Right-click the GraphQL request, select "Send to Repeater"
-3. In Repeater, right-click in the Request panel, choose "GraphQL > Set introspection query"&#x20;
+3. In Repeater, right-click in the Request panel, choose "GraphQL > Set introspection query"
 4. Click Send. If introspection is enabled, the server will return the full API schema. If you are working with an older GraphQL server, it may fail. So right-click within the Request and select GraphQL > Set legacy introspection query and try again.
 5. In the Response panel, right-click and select "GraphQL > Save GraphQL queries to site map." Burp saves discovered queries as nodes on the site map. You can review these queries, and send them to Intruder or Repeater for further investigation or attacks.
 

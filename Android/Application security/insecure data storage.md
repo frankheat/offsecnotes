@@ -118,7 +118,7 @@ Although Android 11 and higher introduced scoped storage to restrict this access
 /data/data/<package_name>
 ```
 
-To monitor the storage you can use [fsmon](/Android/fsmon.html) or frida by using the following script.
+To monitor the storage you can use [fsmon](/Android/Analysis%20and%20reversing/fsmon.html) or frida by using the following script.
 
 <details>
 <summary>

@@ -84,7 +84,7 @@ If you are unable to successfully submit an external domain as the `redirect_uri
     https://server.net/post/next?path=https://attacker.com
     ```
 
-2. Use this url as `redirect_uri`&#x20;
+2. Use this url as `redirect_uri`
 
     ```md
     https://oauth-xxx-server.com/?client_id=123&redirect_uri=https://server.net/post/next?path=https://attacker.com[...]

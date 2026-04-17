@@ -99,7 +99,7 @@ adb shell am start -W -a android.intent.action.VIEW -d "geo://"
 * **Testing (custom) Scheme URI:** Check if there are any scheme URL. These types of deep links are not secure.
 * **Testing Web Links:** Check if there are any Web Links. If the app can be installed on `Android < 12` they are not secure.
 * **Testing App Links:** Check if there are any App Links. If the app can be installed on `Android < 12` proceed with testing.
-  * Check for missing&#x20;
+  * Check for missing
     * Digital Asset Links file: `https://myownpersonaldomain.com/.well-known/assetlinks.json` , `https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=myownpersonaldomain.com`
   * Misconfigured
     * If the OS prompts you to choose between Browser and one or more apps, then the app link Verification process is not correctly implemented.

@@ -28,7 +28,7 @@ This can reveal sensitive information, like internal authentication headers adde
 </details>
 
 * `$_SERVER['REMOTE_ADDR']` contains actual physical IP address that the web server received the connection from and that the response will be sent to.
-* `$_SERVER['HTTP_X_FORWARDED_FOR']` this value is easily spoofed.&#x20;
+* `$_SERVER['HTTP_X_FORWARDED_FOR']` this value is easily spoofed.
 
 **Security implication**
 
@@ -54,7 +54,7 @@ Some applications support non-standard headers such these in order to allow over
 **Security implication**
 
 * This behavior can be used when access control is based on the request URL.
-* More info: [Platform misconfiguration](/Web/Vulnerabilities/bac.md#platform-misconfigurations)
+* More info: [Platform misconfiguration](/Web/Vulnerabilities/bac.html#platform-misconfigurations)
 
 ---
 
@@ -66,4 +66,4 @@ Some applications support non-standard headers such these in order to allow over
 **Security implication**
 
 * Bypass validation CSRF attack when an application use referer header to defende against CSRF attacks
-* [Referer based validation](/web/vulnerabilities/csrf/#bypassing-referer-validation)
+* [Referer based validation](/Web/Vulnerabilities/csrf.html#bypassing-referer-validation)

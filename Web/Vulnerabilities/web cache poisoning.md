@@ -3,7 +3,7 @@ title: "Web cache poisoning"
 weight: 26
 ---
 
-More info about web cache: [Web cache](/web/web-security/web-cache/)
+More info about web cache: [Web cache](/Web/Web%20security/web%20cache.html)
 
 Two phases:
 
@@ -77,7 +77,7 @@ The methodology involves the following steps:
 
 In this way you can:
 
-* Enable a denial-of-service attack by adding an arbitrary port, redirecting users to a non-functional port.&#x20;
+* Enable a denial-of-service attack by adding an arbitrary port, redirecting users to a non-functional port.
 * Enable XSS payload injection.
 
 ### Unkeyed query string

@@ -9,7 +9,7 @@ Web cache deception is a vulnerability where an attacker tricks a web cache into
 
 </details>
 
-More info about web cache: [Web cache](/web/web-security/web-cache/)
+More info about web cache: [Web cache](/Web/Web%20security/web%20cache.html)
 
 ---
 
@@ -109,8 +109,8 @@ Web servers often store static resources in specific directories. Cache rules ty
 
 Premise
 
-* If you type in your browser `https://website/test/../account`, it'll make the following request `GET /account HTTP/2`. &#x20;
-* If you type in your browser`https://website/test/..%2faccount`, it'll make the following request `GET /test/..%2faccount HTTP/2`. &#x20;
+* If you type in your browser `https://website/test/../account`, it'll make the following request `GET /account HTTP/2`. 
+* If you type in your browser`https://website/test/..%2faccount`, it'll make the following request `GET /test/..%2faccount HTTP/2`. 
 
 ```python
 # 1. Find good endpoint

@@ -57,7 +57,7 @@ Welcome to offsecnotes, a website dedicated to Offensive Security notes. This pr
 
 **MISCELLANEOUS**
 
-* Password racking
+* Password cracking
 * Burp Suite
 * AV evasion
 * Metasploit

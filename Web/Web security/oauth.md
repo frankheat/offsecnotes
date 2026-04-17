@@ -57,9 +57,9 @@ Host: oauth-authorization-server.com
 
 ### 2. User login and consent
 
-When a user sends an initial request to an authorization server, they are redirected to a login page to access their account via an OAuth provider, such as a social media account.&#x20;
+When a user sends an initial request to an authorization server, they are redirected to a login page to access their account via an OAuth provider, such as a social media account.
 
-After logging in, the user is presented with a list of data that the client application wants to access, based on the scopes defined in the authorization request. The user can choose whether or not to grant this access.&#x20;
+After logging in, the user is presented with a list of data that the client application wants to access, based on the scopes defined in the authorization request. The user can choose whether or not to grant this access.
 
 Once the user approves the access, future sessions with the same OAuth service will be automatic, allowing the user to quickly access the client application without needing to log in or give consent again.
 

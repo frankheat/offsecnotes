@@ -23,7 +23,7 @@ Race conditions occurs when websites process requests concurrently without prope
 
 ## Detecting and exploiting
 
-Even with simultaneous requests, external factors can unpredictably affect server processing. Burp adjusts techniques automatically.&#x20;
+Even with simultaneous requests, external factors can unpredictably affect server processing. Burp adjusts techniques automatically.
 
 Sending many requests helps reduce server-side jitter, even though only two are needed for exploits.
 
@@ -65,9 +65,9 @@ def handleResponse(req, interesting):
 
 **Connection warming**
 
-In Burp Repeater, try adding a `GET` request for the homepage at the start of your tab group, then use the "Send group in sequence" option.&#x20;
+In Burp Repeater, try adding a `GET` request for the homepage at the start of your tab group, then use the "Send group in sequence" option.
 
-* If only the first request has a longer processing time but the rest are fast, ignore the delay and continue testing.&#x20;
+* If only the first request has a longer processing time but the rest are fast, ignore the delay and continue testing.
 * If inconsistent response times persist, it indicates back-end delay interference. To work around this, use Turbo Intruder to send connection warming requests before your main attack requests.
 
 **Abusing rate or resource limits**

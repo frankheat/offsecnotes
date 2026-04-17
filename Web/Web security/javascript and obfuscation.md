@@ -170,7 +170,7 @@ eval('\\u\x300\661=123')
 eval(atob("YWxlcnQoKQ=="))    // alert()
 ```
 
-`atob()` decode a base-64 encoded string.&#x20;
+`atob()` decode a base-64 encoded string.
 
 This can be useful to bypass char/string blocked.
 

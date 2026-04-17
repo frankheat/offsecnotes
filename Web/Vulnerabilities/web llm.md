@@ -10,7 +10,7 @@ LLMs are AI algorithms that generate plausible responses by predicting word sequ
 
 ## Methodology
 
-1. Identify the LLM's inputs, including direct (e.g., a prompt) and indirect (e.g., training data).&#x20;
+1. Identify the LLM's inputs, including direct (e.g., a prompt) and indirect (e.g., training data).
 2. Determine the data and APIs accessible to the LLM
 3. Examine this attack surface for vulnerabilities.
 
@@ -28,8 +28,8 @@ LLMs are AI algorithms that generate plausible responses by predicting word sequ
 
 The idea is to map the APIs and then send classic web exploits to all identified APIs.
 
-* Suppose you normally have access to a "Newsletter Subscription" feature but you can't control any parameters.&#x20;
-* Imagine that also LLM has access to "Newsletter Subscription" API. You can try to control how this API is called...&#x20;
+* Suppose you normally have access to a "Newsletter Subscription" feature but you can't control any parameters.
+* Imagine that also LLM has access to "Newsletter Subscription" API. You can try to control how this API is called...
 * E.g., if a system command is used you might get an RCE if you ask the LLM to call the Newsletter Subscription API with the argument `$(whoami)@your-email.com`
 
 ---

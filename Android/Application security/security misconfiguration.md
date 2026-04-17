@@ -32,7 +32,7 @@ startActivity(intent);
 
 ## Backup
 
-`adb backup` allows you to create a backup of an Android device's data. It can back up app data, system setting, etc.&#x20;
+`adb backup` allows you to create a backup of an Android device's data. It can back up app data, system setting, etc.
 
 **Testing**
 
@@ -67,7 +67,7 @@ The `android:debuggable` attribute indicates if the application is debuggable an
 
 **Impact**
 
-1. Debug an application. See [Debug application code](/android/debug-application-code/)
+1. Debug an application. See [Debug application code](/Android/Analysis%20and%20reversing/debug%20application%20code.html)
 2. You can use `run-as` command to read and extract, **without root privileges**, all files inside the app internal storage. \[[↗](https://android.googlesource.com/platform/system/core.git/+/android-4.2.2_r1/run-as/run-as.c)].
 
     ```sh
@@ -91,7 +91,7 @@ The `android:debuggable` attribute indicates if the application is debuggable an
 
 **Testing**
 
-1. Open the application on your phone&#x20;
+1. Open the application on your phone
 2. Open chrome on your machine `chrome://inspect/#devices`
 3. In the “Remote Target” section, you will find the device and the app. Click on `inspect`.
 4. Now you can look for Application Storage, Network traffic, etc.

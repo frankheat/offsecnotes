@@ -174,7 +174,7 @@ More info: [https://portswigger.net/web-security/prototype-pollution/client-side
 Object.defineProperty(config, 'transport_url', {configurable: false, writable: false});
 ```
 
-Same thing. `defineProperty` accept other "descriptor" a.g. `value`.&#x20;
+Same thing. `defineProperty` accept other "descriptor" a.g. `value`.
 
 ```javascript
 /?__proto__[value]=foo

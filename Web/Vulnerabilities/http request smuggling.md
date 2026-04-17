@@ -67,7 +67,7 @@ X
 
 `Content-Length=4` -> `1` `\r` `\n` `A`
 
-* The **front-end** server processes the initial chunk based on the Transfer-Encoding header, forwarding only part of the request while omitting the `X`.&#x20;
+* The **front-end** server processes the initial chunk based on the Transfer-Encoding header, forwarding only part of the request while omitting the `X`.
 * After processing the first chunk, the **backend** server waits for the next one, causing a noticeable time delay.
 
 ### TE.CL
@@ -187,7 +187,7 @@ Host: vulnerable-website.com
 Foo: x
 ```
 
-When you go to `/home`, the following request will be made&#x20;
+When you go to `/home`, the following request will be made
 
 ```http
 GET /admin HTTP/1.1
@@ -196,7 +196,7 @@ Foo: xGET /home HTTP/1.1
 Host: vulnerable-website.com
 ```
 
-* The front-end server sees two requests here, both for `/home`, and so the requests are forwarded to the back-end server.&#x20;
+* The front-end server sees two requests here, both for `/home`, and so the requests are forwarded to the back-end server.
 * The back-end server sees requests for `/home` and `/admin`, assumes they've passed front-end controls, and grants access to the restricted URL.
 
 ### Revealing front-end request rewriting
@@ -272,7 +272,7 @@ csrf=ihmEx8D&postId=1&name=test&email=test@test.test&comment=
 
 > **Note**: One limitation with this technique is that it will generally only capture data up until the parameter delimiter that is applicable for the smuggled request. For URL-encoded form submissions, this will be the `&` character, meaning that the content that is stored from the victim user's request will end at the first `&`, which might even appear in the query string.
 
-> **Tip**: Another way to steal other users' responses is with the [Response queue poisoning](/web/vulnerabilities/http-request-smuggling/#response-queue-poisoning) technique.
+> **Tip**: Another way to steal other users' responses is with the [Response queue poisoning](/Web/Vulnerabilities/http%20request%20smuggling.html#response-queue-poisoning) technique.
 
 ### Exploit reflected XSS
 

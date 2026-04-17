@@ -55,7 +55,7 @@ URL decode
 {"token":"Tzo0OiJVc2VyIjoyOntzOjg6InVzZXJuYW1lIjtzOjY6InRlc3QiO3M6MTI6ImFjY2Vzc190b2tlbiI7czozMjoiZmx6bnQ3ZTRwYTNobGpnN3dpejJkeGxuMHVyN3VkNjYiO30=","sig_hmac_sha1":"6d68c7db6f6b4d5abc5e84acea971fd72d217202"}
 ```
 
-Base64 token decoding&#x20;
+Base64 token decoding
 
 ```php
 O:4:"User":2:{s:8:"username";s:6:"wiener";s:12:"access_token";s:32:"flznt7e4pa3hljg7wiz2dxln0ur7ud66";}
@@ -84,7 +84,7 @@ if ($user->isAdmin === true) {
     O:4:"User":2:{s:8:"username";s:6:"carlos";s:7:"isAdmin";b:0;}
     ```
 
-3. Modify attributes&#x20;
+3. Modify attributes
 
     ```php
     O:4:"User":2:{s:8:"username";s:6:"carlos";s:7:"isAdmin";b:1;}

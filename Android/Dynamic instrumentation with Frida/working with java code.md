@@ -67,7 +67,7 @@ console.log(JSON.stringify(activity, null, 2));
 
 ## Java.perform(fn)
 
-If we run the following code we get an error that say it couldn't find the class.&#x20;
+If we run the following code we get an error that say it couldn't find the class.
 
 ```javascript
 var exampleClass = Java.use("com.package.ExampleClass"); // Return an error

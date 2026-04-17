@@ -42,5 +42,5 @@ weight: 3
 
 ## Tips
 
-* See the process of antivirus with `ps auxww`.  Sometimes you can see that the antivirus exclude some directory ...&#x20;
+* See the process of antivirus with `ps auxww`.  Sometimes you can see that the antivirus exclude some directory ...
   * `clamscan -r --exclude-dir=/test /` . Upload the file in `/test`.

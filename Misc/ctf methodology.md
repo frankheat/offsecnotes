@@ -18,7 +18,7 @@ description: "Comprehensive notes and methodologies for penetration testing and 
       * Password is required?
         * `ssh2john id_rsa > id_rsa.hash` & crack it
   * Samba (SMB)
-    * `smbclient -L //<IP>`&#x20;
+    * `smbclient -L //<IP>`
     * `enum4linux <IP>`
     * Check HackTricks
   * FTP
@@ -57,7 +57,7 @@ description: "Comprehensive notes and methodologies for penetration testing and 
   * Dictionary attack
   * Creating wordlist from webpage with CeWL
   * Do you need usernames?
-    * [Username Enumeration](/web/vulnerabilities/authentication/#username-enumeration)
+    * [Username Enumeration](/Web/Vulnerabilities/authentication.html#username-enumeration)
 * If you have identified the domain of the web application, check for subdomains.
 * File/directory enum
   * Always try more extentions
@@ -125,5 +125,5 @@ description: "Comprehensive notes and methodologies for penetration testing and 
 
 ## PrivEsc
 
-* [Windows privilege escalation](/windows/windows-privesc/)
-* [Linux privilege escalation](/linux/linux-privesc/)
+* [Windows privilege escalation](/Windows/windows%20privesc.html)
+* [Linux privilege escalation](/Linux/linux%20privesc.html)

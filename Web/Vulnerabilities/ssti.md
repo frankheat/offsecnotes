@@ -43,7 +43,7 @@ This context is easily missed during assessment because it doesn't result in obv
     http://vulnerable-website.com/?greeting=data.username<tag>
     ```
 
-    Without XSS, this usually results in a blank output, encoded tags, or an error message.&#x20;
+    Without XSS, this usually results in a blank output, encoded tags, or an error message.
 
 2. Next, break out of the statement with common templating syntax and inject arbitrary HTML
 
@@ -69,7 +69,7 @@ This context is easily missed during assessment because it doesn't result in obv
 
 * Smarty (PHP)
   * `${7*7}`
-  * &#x20;`a{*comment*}b`
+  * `a{*comment*}b`
 * Mako (Python)
   * `${7*7}`
   * `${"z".join("ab")}`
@@ -85,7 +85,7 @@ This context is easily missed during assessment because it doesn't result in obv
   * `${7*7}`
   * `{{7*'7'}}`
 * Check if not vulnerable
-  * `${7*7}` -> `{{7*'7'}}`&#x20;
+  * `${7*7}` -> `{{7*'7'}}`
   * In this case these payloads don't have to work
 
 > **Note**: There are many other template languages.

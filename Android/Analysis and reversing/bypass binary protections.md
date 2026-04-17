@@ -59,7 +59,7 @@ apkid --scan-depth 0 -r target.apk
 
 This allow you to intercept the traffic in the webview.
 
-See [Webview debug](/android/vulnerabilities/security-misconfiguration/#webview---debug)
+See [Webview debug](/Android/Application%20security/security%20misconfiguration.html#webview---debug)
 
 > **Tip**: If you can't use remote debugging, recompile the app and enable it.
 

@@ -56,7 +56,7 @@ Awesome [resource](https://timeout.userpage.fu-berlin.de/apk-building-on-mobile/
 
 
 2. `📁 java`,  `📁 libs`**,** `🗎 R.java`, `🗎 android.jar` are compiled (java compiler \[e.g. javac] and/or kotlin compiler \[e.g. kotlinc])
-   *   &#x20;-> Java bytecode (`.class`) files. These are then compiled/converted (d8 tool)
+   *   -> Java bytecode (`.class`) files. These are then compiled/converted (d8 tool)
 
        * -> Dalvik bytecode (`.dex`) file/s
 

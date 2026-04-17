@@ -15,8 +15,8 @@ When the cache gets an HTTP request, it decides whether to serve a cached respon
 
 Cache rules dictate what can be cached and for how long. They usually store static resources, which change infrequently and are used across multiple pages. Dynamic content isn't cached, as it often contains sensitive information, ensuring users receive the most up-to-date data from the server.
 
-* **Static file extension** rules match the file extensions of requested resources, like `.css` or `.js`&#x20;
-* **Static directory** rules match URL paths starting with a specific prefix, typically used for directories containing static resources, such as `/static` or `/assets`.&#x20;
+* **Static file extension** rules match the file extensions of requested resources, like `.css` or `.js`
+* **Static directory** rules match URL paths starting with a specific prefix, typically used for directories containing static resources, such as `/static` or `/assets`.
 * **File name** rules target specific files that are essential and rarely change, like `robots.txt` and `favicon.ico`.
 * **Custom** rules.
 

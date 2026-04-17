@@ -35,7 +35,7 @@ weight: 16
 * This causes the application to send a JSON query to retrieve relevant products from the `product` collection in the MongoDB database:
   * `this.category == 'fizzy'`
 * Inject: `'` -> `this.category == '''`
-  * If this causes a change from the original response, this may indicate that the `'` character has broken the query syntax and caused a syntax error.&#x20;
+  * If this causes a change from the original response, this may indicate that the `'` character has broken the query syntax and caused a syntax error.
 * Confirm this by submitting a valid query string in the input, e.g.: `\'` -> `this.category == '\''`
   * If this doesn't cause a syntax error, this may mean that the application is vulnerable to an injection attack.
 
@@ -184,7 +184,7 @@ MongoDB Query and Projection Operators: [https://www.mongodb.com/docs/manual/ref
 
 **FIRST WAY**
 
-* Send the payload for an existing field and for a field that doesn't exist.&#x20;
+* Send the payload for an existing field and for a field that doesn't exist.
 * Example
   * `admin' && this.username!='` (you know `username` field exists)
   * `admin' && this.foo!='` (you know `foo` field doesn't exist)
@@ -213,7 +213,7 @@ With intruder set: 1 payload: numbers, 2 payload: bruteforce chars.
 
 
 
-You have :&#x20;
+You have :
 
 ```json
 [
