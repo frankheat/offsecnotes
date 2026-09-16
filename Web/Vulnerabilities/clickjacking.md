@@ -80,6 +80,7 @@ When this is set with the `allow-forms` or `allow-scripts` values and the `allow
 An attacker can combine **Clickjacking with Cross-Site Scripting (XSS)** for more impact.
 
 **Steps**:
+
 1. Identify an **XSS vulnerability** on the target site.
 2. Embed the vulnerable page inside an iframe.
 3. Use clickjacking to make the victim **click a malicious link** that triggers the XSS.

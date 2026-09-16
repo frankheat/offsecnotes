@@ -42,6 +42,7 @@ https://insecure-website.com/login/home.jsp?role=1
 ```
 
 **How to Test**
+
 - Try changing the parameter values and observe the response.
 - Use an intercepting proxy (like Burp Suite) to modify requests dynamically.
 
@@ -62,6 +63,7 @@ Referer: https://vulnerable-website.com/admin
 ```
 
 **How to Test**
+
 - Identify subpages and attempt to **brute-force** URLs.
 - Modify the `Referer` header to bypass restrictions.
 
@@ -125,6 +127,7 @@ https://insecure-website.com/myaccount?id=123
 ```
 
 **How to Test**
+
 - Enumerate sequential or predictable IDs.
 - Look for exposed GUIDs in messages or reviews.
 
@@ -136,6 +139,7 @@ https://insecure-website.com/myaccount?id=123
 Some applications enforce access controls at the beginning of a workflow but fail to check authorization in later steps.
 
 **Example**
+
 1. Load user details
 2. Submit changes
 3. **Review and confirm (no access check)**

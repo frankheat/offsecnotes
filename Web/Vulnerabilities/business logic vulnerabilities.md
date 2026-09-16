@@ -22,6 +22,7 @@ An attacker can use tools like **Burp Suite** to intercept and modify requests b
 Attackers often experiment with **unexpected input values** to see how an application responds.
 
 **Questions to Consider:**
+
 - Are there any **limits** imposed on the input data?
 - What happens if those limits are **exceeded**?
 - Is input being **normalized or transformed** before processing?
@@ -35,6 +36,7 @@ Attackers often experiment with **unexpected input values** to see how an applic
 Attackers might deliberately remove or alter parameters to test how the system responds.
 
 **Common Testing Approaches:**
+
 - **Remove** one parameter at a time and check how the application behaves.
 - **Omit both** the parameter name and its value to see if the system treats it differently.
 - Manipulate **multi-step processes** by modifying parameters at different stages.
@@ -57,6 +59,7 @@ For example, a website that implements **two-factor authentication (2FA)** may r
 Business logic vulnerabilities can be highly dependent on the application’s specific functionality.
 
 **Example: Discount Manipulation**
+
 - A store offers a **10% discount** on orders over `$1000`.
 - An attacker adds items to reach `$1000`, gets the discount, then removes items but **keeps the discounted price**.
 - **Price manipulation**: Altering item prices before checkout.

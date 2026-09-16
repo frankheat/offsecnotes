@@ -28,6 +28,7 @@ Even with simultaneous requests, external factors can unpredictably affect serve
 Sending many requests helps reduce server-side jitter, even though only two are needed for exploits.
 
 **With Custom Action - Bambdas**
+
 1. Send to repeater.
 2. Use custom action: 
 https://gist.github.com/albinowax/101e3b2e605496db1ddf84d14f5d0485

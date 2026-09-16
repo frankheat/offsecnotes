@@ -48,9 +48,11 @@ An attacker can request the following URL to retrieve the `/etc/passwd` file fro
 ## Common files
 
 **Linux**: 
+
 - https://github.com/MrW0l05zyn/pentesting/blob/master/web/payloads/lfi-rfi/lfi-linux-list.txt
 
 **Windows**: 
+
 - Short list: https://github.com/MrW0l05zyn/pentesting/blob/master/web/payloads/lfi-rfi/lfi-windows-list.txt
 - Long list: https://github.com/soffensive/windowsblindread/tree/master
 
