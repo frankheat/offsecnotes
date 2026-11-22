@@ -157,60 +157,46 @@ public Cursor query(Uri uri, String[] projection, String selection, String[] sel
 
 ### Package visibility
 
-Android 11 introduced package visibility restrictions for privacy reasons \[[↗](https://developer.android.com/training/package-visibility)]. Apps can no longer see all installed apps or all exported components (like Content Providers) unless explicitly declared.
-
-**There are many more details regarding package visibility, but here we will focus specifically on Content Providers in a typical scenario**. For Content Providers, this means:
-
-* Even if a provider is `exported="true"`, your app cannot interact with it unless it is declared in `<queries>`.
-* Without this declaration, trying to access the provider will fail.
+Since Android 11 (API 30), apps can't see every installed app by default \[[↗](https://developer.android.com/training/package-visibility)]. If your app targets API 30+ and the target app isn't visible to it, its providers can't be resolved, **even when they are `exported="true"`**:
 
 ```
 Failed to find provider info for io.hextree.flag30
 ```
 
-The `<queries>` element goes in your app’s `AndroidManifest.xml`, outside the `<application>` tag. You can declare visibility in two main ways:
+There are three ways to make the target app visible.
 
-1. **By package name**
+#### 1. Declare it in `<queries>`
 
-If you know the exact app that provides the provider:
+Add a `<queries>` element to your app's `AndroidManifest.xml`, outside `<application>`. You can declare the target app by package name, or the provider by its authority:
 
 ```xml
 <queries>
+    <!-- the whole app -->
     <package android:name="com.example.otherapp" />
-</queries>
-```
-
-2. **By provider authorities**
-
-If you want to access a specific provider:
-
-```xml
-<queries>
+    <!-- a single provider -->
     <provider android:authorities="com.example.otherapp.provider" />
 </queries>
 ```
 
-`<queries>` is not the only option. Other ways to make the target app visible:
+#### 2. Request `QUERY_ALL_PACKAGES`
 
-1. **`QUERY_ALL_PACKAGES` permission**
-
-Grants visibility to all installed apps. Google Play restricts its use, but for a PoC it's perfectly fine:
+Makes every installed app visible. Google Play restricts this permission, but for a PoC it's the quickest option:
 
 ```xml
 <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 ```
 
-2. **Automatic visibility**
+#### 3. Automatic visibility
 
-Some apps are visible automatically, without any declaration. This happens when the other app interacts with yours first, for example when it:
+An app becomes visible without any declaration when it interacts with yours first, for example when it:
 
-* starts an activity in your app or binds to one of your services;
-* accesses a content provider in your app;
-* has a content provider to which your app has been granted URI permissions (e.g. it sends you an intent with `FLAG_GRANT_READ_URI_PERMISSION`).
+* starts one of your activities or binds to one of your services;
+* accesses one of your content providers;
+* grants your app a URI permission on one of its providers (e.g. an intent with `FLAG_GRANT_READ_URI_PERMISSION`).
 
-The last case is very common in Content Provider exploitation: if the target app hands you a URI with a grant, you can access it even without `<queries>`.
+The last case is common in Content Provider exploitation: if the target app hands you a URI with a grant, you can access it without `<queries>` (see [Sharing Provider access](#sharing-provider-access-granturipermissions)).
 
-> **Note**: you can check which apps are visible to which with `adb shell dumpsys package queries`.
+> **Tip**: `adb shell dumpsys package queries` shows which apps are visible to which.
 
 ### android:permission, android:readPermission, android:writePermission
 

@@ -224,11 +224,11 @@ Unlike standard URI schemes (like `myapp://`) which may have inconsistent fallba
 
 Here's a breakdown of the key components (Refer to the [Android source code](https://cs.android.com/android/platform/superproject/main/+/main:frameworks/base/core/java/android/content/Intent.java?q=symbol:Intent.parseUri) for parsing details):
 
-* `intent::` The required scheme prefix for Chrome to recognize the URI as an Android Intent.
-* `HOST/URI-path`: The main data URI path that will be passed to the Intent (e.g., `scan/` in a barcode scanner example).
+* `intent:`: The required prefix for Chrome to recognize the URI as an Android Intent. Use `intent://` when the Intent carries a data URI, and just `intent:` when it doesn't.
+* `HOST/URI-path`: Optional. The data URI host and path passed to the Intent (e.g., `scan/` in a barcode scanner example).
 * `#Intent;`: A fixed separator.
-* `scheme=[string]`: Required. The custom URI scheme (e.g., `zxing` or `https`) that the target app's Activity is registered to handle in its `AndroidManifest.xml`. This determines which apps can respond to the Intent.
-* `package=[string]`: Required. The package name of the target Android application (e.g., `com.google.zxing.client.android`).
+* `scheme=[string]`: Optional. The scheme of the data URI (e.g., `zxing` or `https`), which must match the `<data>` of the target activity's intent filter. Combined with `HOST/URI-path`, it builds the data URI (e.g., `zxing://scan/`).
+* `package=[string]`: Optional. Restricts the Intent to a specific app (e.g., `com.google.zxing.client.android`). If the app isn't installed, Chrome can redirect to its Play Store page.
 * `action=[string]`: The desired Intent action (e.g., `android.intent.action.VIEW`).
 * `category=[string]`: Specifies an Intent category (e.g., `android.intent.category.BROWSABLE`). The target Activity must include the `android.intent.category.BROWSABLE` category in its manifest filter to be launchable from a web browser.
 * `S.browser_fallback_url=[encoded_full_url]`: Optional. A String Extra (S.) used by Chrome to specify a URL to redirect the user to if the Intent cannot be resolved (i.e., the app isn't installed). This URL must be URL-encoded.

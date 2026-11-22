@@ -37,7 +37,7 @@ startActivity(intent);
 
 ### Implicit intent
 
-An intent is called **explicit** you don't specify component name.
+An intent is called **implicit** when you don't specify the component name.
 
 Use case: Open a web page, send an email, share content, take a photo, etc.
 
@@ -98,16 +98,15 @@ To start this activity you can send an intent as follows:
 Intent intent = new Intent();
 intent.setComponent(new ComponentName(
         "io.hextree.attacksurface",
-        "io.hextree.attacksurface.activities.Flag2Activity"
+        "io.hextree.attacksurface.activities.Flag1Activity"
 ));
-intent.setAction("io.hextree.action.GIVE_FLAG");
 startActivity(intent);
 ```
 
 ```java
 // 2 way
 Intent intent = new Intent();
-intent.setClassName("io.hextree.attacksurface", "io.hextree.attacksurface.activities.Flag2Activity");
+intent.setClassName("io.hextree.attacksurface", "io.hextree.attacksurface.activities.Flag1Activity");
 startActivity(intent);
 ```
 
@@ -518,7 +517,7 @@ startActivity(firstIntent);
 
 ### Intercept activity results
 
-It's important to remember that starting activities is not just a one-way communication. When you start an activity with `startActivityForResult()`, you can also get a result back from the caller.
+It's important to remember that starting activities is not just a one-way communication. When you start an activity with `startActivityForResult()`, you can also get a result back from the activity you started.
 
 Let's say that the app `io.hextree.attacksurface` has the following activity:
 
@@ -701,6 +700,7 @@ To obtain this flag, register an intent filter with the action `io.hextree.attac
 Intent intent = new Intent();
 intent.putExtra("token", 1094795585);
 setResult(5, intent);
+finish(); // the result is delivered only when this activity finishes
 ```
 
 </details>
@@ -789,6 +789,7 @@ if (intent != null) {
     Intent intentResult = new Intent();
     intentResult.putExtra("token", 1094795585);
     setResult(RESULT_OK, intentResult);
+    finish(); // the result is delivered only when this activity finishes
 }
 ```
 </details>
