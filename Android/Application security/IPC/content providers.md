@@ -190,6 +190,28 @@ If you want to access a specific provider:
 </queries>
 ```
 
+`<queries>` is not the only option. Other ways to make the target app visible:
+
+1. **`QUERY_ALL_PACKAGES` permission**
+
+Grants visibility to all installed apps. Google Play restricts its use, but for a PoC it's perfectly fine:
+
+```xml
+<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+```
+
+2. **Automatic visibility**
+
+Some apps are visible automatically, without any declaration. This happens when the other app interacts with yours first, for example when it:
+
+* starts an activity in your app or binds to one of your services;
+* accesses a content provider in your app;
+* has a content provider to which your app has been granted URI permissions (e.g. it sends you an intent with `FLAG_GRANT_READ_URI_PERMISSION`).
+
+The last case is very common in Content Provider exploitation: if the target app hands you a URI with a grant, you can access it even without `<queries>`.
+
+> **Note**: you can check which apps are visible to which with `adb shell dumpsys package queries`.
+
 ### android:permission, android:readPermission, android:writePermission
 
 The `<provider>` tag offers three attributes that act as the main security gatekeepers for your data.
