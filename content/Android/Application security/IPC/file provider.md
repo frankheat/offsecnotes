@@ -68,7 +68,7 @@ To share a file with another app using a content URI, the app must:
 
     ```java
     File newFile = new File(imagePath, "default_image.jpg"); 
-    Uri contentUri = getUriForFile(getContext(), "example.myapp.fileprovider", newFile); 
+    Uri contentUri = getUriForFile(getContext(), "com.example.myapp.fileprovider", newFile); 
     ```
 
     As a result of the previous snippet `getUriForFile()` returns the content URI `content://com.example.myapp.fileprovider/myimages/default_image.jpg`.
