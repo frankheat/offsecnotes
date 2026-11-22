@@ -1,0 +1,39 @@
+# On every push to main: build the site and force-push it to the `public` branch.
+# The server pulls `public` on its own (see site/server/); GitHub holds no server credentials.
+name: build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0 # full history for sitemap <lastmod>
+          persist-credentials: false
+
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq pandoc
+
+      - run: python3 site/build.py
+
+      - name: Push to public branch
+        working-directory: _site
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git init -q -b public
+          git add -A
+          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com \
+            commit -q -m "build ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" public

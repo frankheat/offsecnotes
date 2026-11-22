@@ -1,0 +1,50 @@
+:root {
+  --link: rgb(21, 101, 192);
+  --block-bg: rgb(224, 226, 236);
+  --block-border: #74777f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --link: rgb(144, 202, 249);
+    --block-bg: #44474e;
+  }
+}
+
+body {
+  font-family: "Liberation Sans", "Liberation Serif", "Liberation Mono", sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  border-bottom: unset !important;
+}
+
+a, a:hover {
+  color: var(--link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+pre, code, blockquote {
+  background-color: var(--block-bg);
+}
+
+pre, blockquote {
+  border: 1px solid var(--block-border);
+  border-radius: 12px;
+}
+
+pre {
+  padding: 0;
+}
+
+code {
+  border-radius: 8px;
+}
+
+.hljs {
+  background: unset !important;
+}

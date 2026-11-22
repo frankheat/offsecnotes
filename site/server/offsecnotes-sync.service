@@ -1,0 +1,30 @@
+[Unit]
+Description=Sync offsecnotes website from GitHub
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=offsecnotes
+Group=offsecnotes
+ExecStart=/usr/local/bin/offsecnotes-sync
+StateDirectory=offsecnotes
+
+# Sandbox: can only write to its state dir and the web root, nothing else.
+ProtectSystem=strict
+ReadWritePaths=/var/www/offsecnotes
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+SystemCallFilter=@system-service
+UMask=0022
