@@ -91,12 +91,14 @@ theKeyFromAppA.send();
 
 ## Mutability
 
-PendingIntents refers to whether the contents of a `PendingIntent` can be modified after it has been created.
+Mutability refers to whether the contents of a `PendingIntent` can be modified after it has been created.
 
-Starting from Android 12 (API level 31), Android requires developers to explicitly declare whether a `PendingIntent` is mutable or immutable \[[↗](https://developer.android.com/guide/components/intents-filters#DeclareMutabilityPendingIntent)] by setting one of these flags:
+Apps targeting Android 12 (API level 31) or higher must explicitly declare whether a `PendingIntent` is mutable or immutable \[[↗](https://developer.android.com/guide/components/intents-filters#DeclareMutabilityPendingIntent)] by setting one of these flags:
 
 * `PendingIntent.FLAG_IMMUTABLE`
 * `PendingIntent.FLAG_MUTABLE`
+
+> **Note**: apps targeting older versions don't have to set either flag, and a `PendingIntent` without `FLAG_IMMUTABLE` is mutable by default.
 
 ---
 
