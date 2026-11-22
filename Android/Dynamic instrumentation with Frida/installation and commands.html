@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Installation &amp; commands</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Installation &amp; commands</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#installation" id="toc-installation">Installation</a>
+<ul>
+<li><a href="#install-frida-objection-on-your-host" id="toc-install-frida-objection-on-your-host">Install frida &amp; objection on your host</a></li>
+<li><a href="#install-frida-on-the-device" id="toc-install-frida-on-the-device">Install frida on the device</a></li>
+</ul></li>
+<li><a href="#installing-using-frida-in-termux" id="toc-installing-using-frida-in-termux">Installing &amp; using frida in termux</a></li>
+<li><a href="#command-examples" id="toc-command-examples">Command examples</a></li>
+<li><a href="#frida-troubleshooting" id="toc-frida-troubleshooting">Frida troubleshooting</a></li>
+</ul></div>
+  <hr>
+<h2 id="installation">Installation</h2>
+<h3 id="install-frida-objection-on-your-host">Install frida &amp; objection on your host</h3>
+<p><strong>Install the latest version</strong></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install frida</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pip3</span> install frida-tools</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Install objection</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">pip3</span> install objection</span></code></pre></div>
+<p><strong>Install an older version</strong></p>
+<ol type="1">
+<li>Choose a frida version. E.g. <strong>frida 15.2.2</strong>.</li>
+<li>Go on <a href="https://github.com/frida/frida-tools/blob/13.6.1/setup.py">https://github.com/frida/frida-tools/blob/13.6.1/setup.py</a></li>
+<li>Switch branches/tags and select a version. (You can also modify the URL)</li>
+<li>In the <code>setup.py</code> look at <code>install_requires</code>. It tells you what frida version it’s supported. In this case <strong>frida-tools 13.6.1</strong> supports <code>frida &gt;= 16.2.2, &lt; 17.0.0</code>. If we choose <strong>frida-tools 11.0.0</strong>, it supports <code>frida &gt;= 15.2.0, &lt; 16.0.0</code> so it will not work.</li>
+<li>Install: <code>pip install frida==15.2.0 frida-tools==11.0.0</code></li>
+<li>Verify installation: <code>pip list</code></li>
+</ol>
+<h3 id="install-frida-on-the-device">Install frida on the device</h3>
+<details>
+<summary>
+(1 way) Patching APKs with Objection
+</summary>
+<p>Pro: you don’t need to have a rooted device.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Inject Frida into an APK</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">objection</span> patchapk <span class="at">-s</span> target.apk</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Inject specific version of frida into an APK</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">objection</span> patchapk <span class="at">-V</span> 14.2.8 <span class="at">-s</span> target.apk</span></code></pre></div>
+<p>This quickly extracts, patches, re-packs, aligns, and signs the APK [<a href="https://github.com/sensepost/objection/wiki/Patching-Android-Applications#patching---patching-an-apk">↗</a>]. The patch is applied with the <code>frida-gadget.so</code></p>
+<p><strong>Note:</strong> The app will pause at launch, waiting for Frida. Start it with:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">frida</span> <span class="at">-U</span> <span class="op">&lt;</span>package_name<span class="op">&gt;</span></span></code></pre></div>
+</details>
+<details>
+<summary>
+(2 way) Running the Frida Server
+</summary>
+<p><strong>Requirement</strong>: a rooted device</p>
+<ol type="1">
+<li><p>Download the right frida-server version from <a href="https://github.com/frida/frida/releases">Github</a></p></li>
+<li><p>Extract it</p></li>
+<li><p>Push it on the device</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> push frida-server /data/local/tmp/</span></code></pre></div>
+<p><strong>Note</strong>: We choose this path because other parts, such as <code>/sdcard</code>, are commonly mounted no-exec.</p></li>
+<li><p>Run frida-server</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> shell</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> /data/local/tmp</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> +x frida-server</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Launch the server</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="ex">./frida-server</span></span></code></pre></div></li>
+<li><p>Now we can connect to the application by running:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">frida</span> <span class="at">-U</span> <span class="op">&lt;</span>package_name<span class="op">&gt;</span></span></code></pre></div></li>
+</ol>
+</details>
+<hr />
+<h2 id="installing-using-frida-in-termux">Installing &amp; using frida in termux</h2>
+<p>Guide: https://github.com/frida/frida/discussions/2411</p>
+<hr />
+<h2 id="command-examples">Command examples</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List the available devices for frida</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">frida-ls-devices</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect Frida to a device over USB and list running processes</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">frida-ps</span> <span class="at">-U</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># List running applications</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="ex">frida-ps</span> <span class="at">-Ua</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co"># List installed applications</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="ex">frida-ps</span> <span class="at">-Uai</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect Frida to the specific device</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="ex">frida-ps</span> <span class="at">-D</span> 0216027d1d6d3a03</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Spawn application with frida</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="ex">frida</span> <span class="at">-U</span> <span class="at">-f</span> <span class="op">&lt;</span>package_name<span class="op">&gt;</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Spawn application with frida</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="ex">frida</span> <span class="at">-U</span> <span class="at">-f</span> <span class="op">&lt;</span>package_name<span class="op">&gt;</span> --pause</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Spawn application with a script</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="ex">frida</span> <span class="at">-U</span> <span class="at">-f</span> <span class="op">&lt;</span>package_name<span class="op">&gt;</span> -l <span class="op">&lt;</span>script.js<span class="op">&gt;</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Attach to application</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a><span class="ex">frida</span> <span class="at">-U</span> <span class="op">&lt;</span>package_name<span class="op">&gt;</span></span></code></pre></div>
+<hr />
+<h2 id="frida-troubleshooting">Frida troubleshooting</h2>
+<p>When frida doesn’t work correctly, try to downgrade. A lot of time it’s a regression.</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

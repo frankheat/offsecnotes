@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn about common Android security misconfigurations like adb backup, debuggable flags, and WebView debugging.">
+  <title>offsecnotes | Security misconfiguration</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Security misconfiguration</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#exploiting-exported-activities" id="toc-exploiting-exported-activities">Exploiting exported activities</a></li>
+<li><a href="#backup" id="toc-backup">Backup</a></li>
+<li><a href="#debuggable" id="toc-debuggable">Debuggable</a></li>
+<li><a href="#webview---debug" id="toc-webview---debug">WebView - Debug</a></li>
+</ul></div>
+  <hr>
+<h2 id="exploiting-exported-activities">Exploiting exported activities</h2>
+<p>If an activity involving sensitive information is exported, it could potentially bypass authentication mechanisms, allowing unauthorized access.</p>
+<p>Example:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span><span class="ot"> android:name=</span><span class="st">&quot;com.example.demo.HiddenActivity&quot;</span><span class="ot"> android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">activity</span>&gt;</span></code></pre></div>
+<p>Test with adb:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> shell am start <span class="at">-n</span> com.example.demo/com.example.demo.MainActivity</span></code></pre></div>
+<p>Test with a custom android application:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;com.example.myapplication&quot;</span><span class="op">,</span> <span class="st">&quot;com.example.myapplication.SecondActivity&quot;</span><span class="op">);</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">startActivity</span><span class="op">(</span>intent<span class="op">);</span></span></code></pre></div>
+<hr />
+<h2 id="backup">Backup</h2>
+<p><code>adb backup</code> allows you to create a backup of an Android device’s data. It can back up app data, system setting, etc.</p>
+<p><strong>Testing</strong></p>
+<p><strong>Requirement</strong>: <code>android:allowBackup="true"</code> in the <code>AndroidManifest.xml</code></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Backup one application with its apk</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> backup <span class="at">-apk</span> <span class="op">&lt;</span>package_name<span class="op">&gt;</span> -f <span class="op">&lt;</span>backup_name<span class="op">&gt;</span>.ab</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Restore backup</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> restore <span class="op">&lt;</span>backup_name<span class="op">&gt;</span>.ab</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Alternative way</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> shell</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ex">bu</span> backup <span class="op">&lt;</span>package_name<span class="op">&gt;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Restore</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> shell</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="ex">bu</span> restore backup.ab</span></code></pre></div>
+<hr />
+<h2 id="debuggable">Debuggable</h2>
+<p>The <code>android:debuggable</code> attribute indicates if the application is debuggable and it is set to <code>false</code> by default [<a href="https://developer.android.com/privacy-and-security/risks/android-debuggable">↗</a>]. Check <code>android:debuggable="true"</code> in the <code>AndroidManifest.xml</code>.</p>
+<blockquote>
+<p><strong>Note</strong>: You cannot release a debuggable app on Google Play Store [<a href="https://developer.android.com/studio/publish/preparing.html#turn-off-debugging">↗</a>] [<a href="https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play">↗</a>].</p>
+</blockquote>
+<p><strong>Impact</strong></p>
+<ol type="1">
+<li><p>Debug an application. See <a href="/Android/Analysis%20and%20reversing/debug%20application%20code.html">Debug application code</a></p></li>
+<li><p>You can use <code>run-as</code> command to read and extract, <strong>without root privileges</strong>, all files inside the app internal storage. [<a href="https://android.googlesource.com/platform/system/core.git/+/android-4.2.2_r1/run-as/run-as.c">↗</a>].</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> shell</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">run-as</span> com.package id</span></code></pre></div>
+<p><strong>Extract data from internal storage</strong> <code>sh  adb exec-out run-as &lt;package_name&gt; tar c . &gt; output.tar</code></p></li>
+</ol>
+<hr />
+<h2 id="webview---debug">WebView - Debug</h2>
+<p><strong>Requirements:</strong></p>
+<ul>
+<li><code>setWebContentsDebuggingEnabled</code> is set to true</li>
+<li>OR <code>android:debuggable="true"</code> (<code>setWebContentsDebuggingEnabled</code> is enabled automatically if the app is declared). More info: <a href="https://developer.android.com/reference/android/webkit/WebView#setWebContentsDebuggingEnabled(boolean)">setWebContentsDebuggingEnabled</a>.</li>
+</ul>
+<p><strong>Testing</strong></p>
+<ol type="1">
+<li>Open the application on your phone</li>
+<li>Open chrome on your machine <code>chrome://inspect/#devices</code></li>
+<li>In the “Remote Target” section, you will find the device and the app. Click on <code>inspect</code>.</li>
+<li>Now you can look for Application Storage, Network traffic, etc.</li>
+</ol>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

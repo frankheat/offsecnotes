@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Comprehensive notes and methodologies for penetration testing and Capture the Flag (CTF) challenges. Covering web server analysis, service exploitation, steganography, cracking, and privilege escalation techniques.">
+  <title>offsecnotes | CTF methodology</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>CTF methodology</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#general" id="toc-general">General</a></li>
+<li><a href="#webserver" id="toc-webserver">WebServer</a></li>
+<li><a href="#strange-strings" id="toc-strange-strings">Strange strings?</a></li>
+<li><a href="#steganography" id="toc-steganography">Steganography</a></li>
+<li><a href="#cracking" id="toc-cracking">Cracking</a></li>
+<li><a href="#privesc" id="toc-privesc">PrivEsc</a></li>
+</ul></div>
+  <hr>
+<h2 id="general">General</h2>
+<ul>
+<li>Take note of CTF keywords
+<ul>
+<li>CTF name -&gt; Reference to any technology?</li>
+</ul></li>
+<li>Themed CTF?
+<ul>
+<li>Take note of possible username / password</li>
+</ul></li>
+<li>Scan all ports with Nmap</li>
+<li>Services
+<ul>
+<li>SSH
+<ul>
+<li>Do you have id_rsa?
+<ul>
+<li>Use it to login</li>
+<li>Password is required?
+<ul>
+<li><code>ssh2john id_rsa &gt; id_rsa.hash</code> &amp; crack it</li>
+</ul></li>
+</ul></li>
+</ul></li>
+<li>Samba (SMB)
+<ul>
+<li><code>smbclient -L //&lt;IP&gt;</code></li>
+<li><code>enum4linux &lt;IP&gt;</code></li>
+<li>Check HackTricks</li>
+</ul></li>
+<li>FTP
+<ul>
+<li>Anonymous login</li>
+<li>Can I write? (maybe only some folders) -&gt; nmap check
+<ul>
+<li>Any script runs with a cronjob?</li>
+</ul></li>
+<li>Can you navigate? Interested files? passwd?</li>
+<li>Check HackTricks</li>
+</ul></li>
+<li>Database
+<ul>
+<li>Awesome materials https://github.com/Jean-Francois-C/Database-Security-Audit</li>
+<li>Check HackTricks</li>
+</ul></li>
+<li>Unknown service
+<ul>
+<li>Check HackTricks</li>
+<li>Check Google
+<ul>
+<li>pentest &lt;service name / port number&gt;</li>
+<li>hack &lt;service name / port number&gt;</li>
+<li>ctf &lt;service name / port number&gt; [beware of possible spoilers]</li>
+</ul></li>
+</ul></li>
+<li>Re-use credentials</li>
+<li>Hydra bruteforce
+<ul>
+<li>Fasttrack.txt</li>
+<li>Rockyou.txt</li>
+</ul></li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="webserver">WebServer</h2>
+<ul>
+<li>Browse the app to see what functionalities are available. Activate Burp to see what the app is doing under the hood.</li>
+<li>Inspect the source code to look for comments, suspicious scripts, endpoints, URLs, etc.</li>
+<li>View <code>robots.txt</code>, <code>sitemap.xml</code>, <code>.git</code></li>
+<li>Take note of any possible username, password, email, user info, subdomains.</li>
+<li>Analyze response. Any useful information?
+<ul>
+<li>Burp / Network monitor / <code>curl -v &lt;domain&gt;</code></li>
+</ul></li>
+<li>Check which technologies the app uses with <strong>Wappalyzer</strong></li>
+<li>Any login page?
+<ul>
+<li>Default user:password</li>
+<li>Dictionary attack</li>
+<li>Creating wordlist from webpage with CeWL</li>
+<li>Do you need usernames?
+<ul>
+<li><a href="/Web/Vulnerabilities/authentication.html#username-enumeration">Username Enumeration</a></li>
+</ul></li>
+</ul></li>
+<li>If you have identified the domain of the web application, check for subdomains.</li>
+<li>File/directory enum
+<ul>
+<li>Always try more extentions</li>
+<li>Try more wordlist</li>
+<li>Bruteforce more deeply</li>
+</ul></li>
+<li>Check if server is running an extension/app. Example if you find a dir called “webdav”, search what webdav is.</li>
+<li>Any strange or suspicious images?
+<ul>
+<li>Steganography</li>
+</ul></li>
+<li>Parameters?
+<ul>
+<li>Command injection</li>
+<li>SQLi</li>
+<li>File inclusion (LFI/RFI) https://sushant747.gitbooks.io/total-oscp-guide/content/local_file_inclusion.html
+<ul>
+<li>Bypassing php-execution <code>http://example.com/index.php?page=php://filter/convert.base64-encode/resource=index</code></li>
+</ul></li>
+<li>SSRF</li>
+<li>XXE</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="strange-strings">Strange strings?</h2>
+<ul>
+<li>Hash? -&gt; https://hashes.com/en/tools/hash_identifier
+<ul>
+<li>https://crackstation.net/</li>
+<li>john, hashcat</li>
+</ul></li>
+<li>Base64? -&gt; https://gchq.github.io/CyberChef/#recipe=From_Base64(‘A-Za-z0-9%2B/%3D’,true,false)</li>
+<li>Rotate</li>
+<li>Magic formula? -&gt; https://gchq.github.io/CyberChef/#recipe=Magic(3,false,false,’’)</li>
+<li>Try all cyberchef decodings</li>
+<li>Can I use this string/key somewhere? E.g. key to decrypt?</li>
+<li>Search on Google</li>
+</ul>
+<hr />
+<h2 id="steganography">Steganography</h2>
+<ul>
+<li>General
+<ul>
+<li><code>file &lt;file&gt;</code></li>
+<li><code>binwalk &lt;file&gt;</code>
+<ul>
+<li><code>binwalk -e &lt;file&gt;</code></li>
+</ul></li>
+<li><code>strings &lt;file&gt;</code>
+<ul>
+<li><code>strings -n 6 &lt;file&gt;</code></li>
+</ul></li>
+<li><code>exiftool &lt;file&gt;</code></li>
+</ul></li>
+<li>Image
+<ul>
+<li><code>stegseek &lt;stegofile.jpg&gt; &lt;wordlist.txt&gt;</code></li>
+</ul></li>
+<li>Audio
+<ul>
+<li>Spectogram https://convert.ing-now.com/audio-spectrogram-creator/</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="cracking">Cracking</h2>
+<ul>
+<li>PGP
+<ul>
+<li>Do you have .pgp and .asc files?
+<ul>
+<li><code>gpg2john file.asc &gt; hash</code></li>
+<li><code>john --wordlist=&lt;PATH&gt; hash</code></li>
+<li><code>gpg --import file.asc</code></li>
+<li><code>gpg --decrypt file.pgp #!/bin/bash</code></li>
+</ul></li>
+</ul></li>
+<li>ZIP
+<ul>
+<li>zip2john -&gt; crack password</li>
+<li>View file name</li>
+<li>fcrackzip -&gt; brute force (password &lt;7)</li>
+<li>bkcrack (known plaintext attack) https://github.com/kimci86/bkcrack/tree/master
+<ul>
+<li>The newer scheme for password-protecting zip files (with AES-256, rather than “ZipCrypto”) does not have this weakness.</li>
+</ul></li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="privesc">PrivEsc</h2>
+<ul>
+<li><a href="/Windows/windows%20privesc.html">Windows privilege escalation</a></li>
+<li><a href="/Linux/linux%20privesc.html">Linux privilege escalation</a></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

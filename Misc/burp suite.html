@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Burp Suite</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Burp Suite</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#burp-scanner" id="toc-burp-scanner">Burp Scanner</a></li>
+<li><a href="#broken-access-control" id="toc-broken-access-control">Broken Access Control</a></li>
+<li><a href="#pwnfox" id="toc-pwnfox">PwnFox</a></li>
+<li><a href="#out-of-band-vulnerabilities" id="toc-out-of-band-vulnerabilities">Out of band vulnerabilities</a></li>
+<li><a href="#logger-filters-top-25-parameters" id="toc-logger-filters-top-25-parameters">Logger ++ filters: Top 25 Parameters</a></li>
+<li><a href="#custom-actions" id="toc-custom-actions">Custom actions</a></li>
+</ul></div>
+  <hr>
+<h2 id="burp-scanner">Burp Scanner</h2>
+<p><strong>Active scan</strong></p>
+<p>Right-click on a request and select “<strong>Do active scan</strong>”, Burp Scanner will use its default configuration to audit only this request.</p>
+<hr />
+<p><strong>Scan selected insertion point</strong></p>
+<p>Highlight the insertion point, right-click, and select “<strong>Scan selected insertion point</strong>” to focus on the input of interest and avoid unnecessary content.</p>
+<hr />
+<p><strong>Scan manual insertion point extension</strong></p>
+<p>Highlight a character sequence, usually a parameter value, and select Extensions &gt; “<strong>Scan manual insertion point</strong>”.</p>
+<hr />
+<h2 id="broken-access-control">Broken Access Control</h2>
+<ul>
+<li><strong>Multi-Account Containers</strong> (firefox extension) <em>It create a separate browser environment for each account you are testing</em></li>
+<li><strong>Autorize</strong> (burp extension)
+<ul>
+<li>Automatically repeats every request with the session of the low privileged user</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="pwnfox">PwnFox</h2>
+<p>PwnFox <em>provide useful tools for your security audit</em></p>
+<ul>
+<li>Single click BurpProxy</li>
+<li>Containers Profiles (it will automatically add a X-PwnFox-Color header to highlight the query in Burp)</li>
+<li>Other: https://github.com/yeswehack/PwnFox</li>
+</ul>
+<hr />
+<h2 id="out-of-band-vulnerabilities">Out of band vulnerabilities</h2>
+<p>Many companies filtering and block outbound traffic to the default collaborator domain.</p>
+<ul>
+<li><strong>webhook.site</strong> <em>Webhook.site generates a free, unique URL and e-mail address and lets you see everything that’s sent there instantly.</em></li>
+</ul>
+<hr />
+<h2 id="logger-filters-top-25-parameters">Logger ++ filters: Top 25 Parameters</h2>
+<ul>
+<li>Vulnerabilities (Cross-Site Scripting, Server-Side Request Forgery, Local File Inclusion, SQL Injection, Remote Code Execution, Open Redirect)</li>
+<li>https://owasp.org/www-project-top-25-parameters/</li>
+<li>https://github.com/lutfumertceylan/top25-parameter/tree/master</li>
+</ul>
+<hr />
+<h2 id="custom-actions">Custom actions</h2>
+<ul>
+<li>Race Condition
+<ul>
+<li>https://gist.github.com/albinowax/101e3b2e605496db1ddf84d14f5d0485</li>
+</ul></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

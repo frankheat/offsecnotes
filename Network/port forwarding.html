@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Port forwarding</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Port forwarding</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#socat" id="toc-socat">Socat</a></li>
+<li><a href="#ssh" id="toc-ssh">SSH</a></li>
+<li><a href="#metasploit-meterpreter" id="toc-metasploit-meterpreter">Metasploit (meterpreter)</a></li>
+</ul></div>
+  <hr>
+<h2 id="socat">Socat</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Run socat on the TARGET_1 machine</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">socat</span> <span class="at">-ddd</span> TCP-LISTEN:<span class="op">&lt;</span>LPORT<span class="op">&gt;</span>,fork TCP:<span class="op">&lt;</span>TARGET_2<span class="op">&gt;</span>:<span class="op">&lt;</span>RPORT<span class="op">&gt;</span>   # Verbose</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">socat</span> TCP4-LISTEN:<span class="op">&lt;</span>LPORT<span class="op">&gt;</span>,fork TCP4:<span class="op">&lt;</span>TARGET_2<span class="op">&gt;</span>:<span class="op">&lt;</span>RPORT<span class="op">&gt;</span> <span class="kw">&amp;</span>    <span class="co"># Run socat in the background</span></span></code></pre></div>
+<p>As an attacker, we can connect to <code>&lt;TARGET_1&gt;:&lt;LPORT&gt;</code> to forward traffic to <code>&lt;TARGET_2&gt;:&lt;RPORT&gt;</code>.</p>
+<p>Socat is configured on TARGET_1 to listen on TCP port LPORT via its WAN interface. Incoming connections to that port were forwarded to TCP port RPORT on TARGET_2. This allowed our attacker machine to access a service on TARGET_2 by routing traffic through TARGET_1.</p>
+<p>The key detail here is that both listening and forwarding were handled locally on TARGET_1.</p>
+<h2 id="ssh">SSH</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Local port forwarding</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> <span class="at">-N</span> <span class="at">-L</span> <span class="va">$LOCAL_ADDRESS</span>:<span class="va">$LOCAL_PORT</span>:<span class="va">$REMOTE_ADDRESS</span>:<span class="va">$REMOTE_PORT</span> user@target</span></code></pre></div>
+<p>This requires to have an SSH server running on the target machine and a valid user credentials.</p>
+<hr />
+<h2 id="metasploit-meterpreter">Metasploit (meterpreter)</h2>
+<p><strong>Metasploit (meterpreter) - Autoroute</strong>: Anytime we want to contact a machine within one of the networks specified, we will go through meterpreter session and use that to connect to the targets.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find subnet (the 2nd target host may be in other network)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">ipconfig</span>                     <span class="co"># IP: 19.9.29.148. Netmask: 255.255.240.0</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Add routes</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">run</span> autoroute <span class="at">-s</span> <span class="op">&lt;</span>subnet<span class="op">&gt;</span>    # E.g. run autoroute <span class="at">-s</span> 10.10.0.29.0/20</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Displays active routing table</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="ex">run</span> autoroute <span class="at">-p</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Now you can perform a scan. auxiliary/scanner/portscan/tcp </span></span></code></pre></div>
+<blockquote>
+<p><strong>Notes</strong>:</p>
+<ul>
+<li>Scanning with metasploit is limited (we can’t discover software version etc…) so it’s better to use nmap. To do that we need to perform port forwarding.</li>
+<li>Since <strong>target_sys_2 does not have a route back to attacker_sys,</strong> when you user an exploit<strong>, use bind_shell payload.</strong> E.g. <code>windows/meterpreter/bind_tcp</code>.</li>
+</ul>
+</blockquote>
+<p><strong>Port forwarding (meterpreter/metasploit)</strong></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Forward remote port to local port. Here, we want to scan the port 80 of the target 2</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">portfwd</span> add <span class="at">-l</span> 1234 <span class="at">-p</span> 80 <span class="at">-r</span> <span class="op">&lt;</span>target_sys_2_ip<span class="op">&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">portfwd</span> list</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="fu">nmap</span> <span class="at">-sV</span> <span class="at">-sC</span> <span class="at">-p</span> 1234 localhost</span></code></pre></div>
+<hr />
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

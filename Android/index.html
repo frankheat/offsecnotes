@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Android</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Android</h1>
+<ul>
+<li>Foundations
+<ul>
+<li><a href="Foundations/apk%20building.html">Apk building</a></li>
+<li><a href="Foundations/adb.html">Android debug bridge (ADB)</a></li>
+</ul></li>
+<li>Application security
+<ul>
+<li>IPC
+<ul>
+<li><a href="Application%20security/IPC/intent%20attack%20surface.html">Intent attack surface</a></li>
+<li><a href="Application%20security/IPC/pending%20intents.html">Pending intents</a></li>
+<li><a href="Application%20security/IPC/deep%20links.html">Deep links</a></li>
+<li><a href="Application%20security/IPC/broadcast%20receivers.html">Broadcast receivers</a></li>
+<li><a href="Application%20security/IPC/content%20providers.html">Content providers</a></li>
+<li><a href="Application%20security/IPC/file%20provider.html">FileProvider</a></li>
+<li><a href="Application%20security/IPC/services.html">Services</a></li>
+</ul></li>
+<li>User-visible attack surfaces
+<ul>
+<li><a href="Application%20security/User-visible%20attack%20surfaces/home%20screen%20app%20widgets.html">Home screen app widgets</a></li>
+<li><a href="Application%20security/User-visible%20attack%20surfaces/notification.html">Notification</a></li>
+</ul></li>
+<li>UI and logic attacks
+<ul>
+<li><a href="Application%20security/UI%20and%20logic%20attacks/tapjacking.html">Tapjacking</a></li>
+<li><a href="Application%20security/UI%20and%20logic%20attacks/task%20hijacking.html">Task hijacking</a></li>
+</ul></li>
+<li><a href="Application%20security/permissions.html">Android permissions</a></li>
+<li><a href="Application%20security/security%20misconfiguration.html">Security misconfiguration</a></li>
+<li><a href="Application%20security/deep%20link%20misconfiguration.html">Deep link misconfiguration</a></li>
+<li><a href="Application%20security/insecure%20data%20storage.html">Insecure data storage</a></li>
+</ul></li>
+<li>Dynamic instrumentation with Frida
+<ul>
+<li><a href="Dynamic%20instrumentation%20with%20Frida/installation%20and%20commands.html">Installation and commands</a></li>
+<li><a href="Dynamic%20instrumentation%20with%20Frida/frida%20trace.html">Frida trace</a></li>
+<li><a href="Dynamic%20instrumentation%20with%20Frida/working%20with%20java%20code.html">Working with java code</a></li>
+<li><a href="Dynamic%20instrumentation%20with%20Frida/working%20with%20native%20code.html">Working with native code</a></li>
+</ul></li>
+<li>Analysis and reversing
+<ul>
+<li><a href="Analysis%20and%20reversing/apk%20analysis.html">Apk analysis</a></li>
+<li><a href="Analysis%20and%20reversing/network%20interception.html">Network interception</a></li>
+<li><a href="Analysis%20and%20reversing/fsmon.html">Filesystem monitor with fsmon</a></li>
+<li><a href="Analysis%20and%20reversing/debug%20application%20code.html">Debug application code</a></li>
+<li><a href="Analysis%20and%20reversing/analyze%20native%20libraries.html">Analyze native libraries</a></li>
+<li><a href="Analysis%20and%20reversing/bypass%20binary%20protections.html">Bypass binary protections</a></li>
+<li><a href="Analysis%20and%20reversing/framework.html">Framework</a></li>
+</ul></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

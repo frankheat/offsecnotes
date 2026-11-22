@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn how to identify and exploit business logic vulnerabilities, including discount abuse, sequence bypass, and client-side trust failures in web apps.">
+  <title>offsecnotes | Business logic vulnerabilities</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Business logic vulnerabilities</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#excessive-trust-in-client-side-controls" id="toc-excessive-trust-in-client-side-controls">Excessive Trust in Client-Side Controls</a></li>
+<li><a href="#failing-to-handle-unconventional-input" id="toc-failing-to-handle-unconventional-input">Failing to Handle Unconventional Input</a></li>
+<li><a href="#users-wont-always-supply-mandatory-input" id="toc-users-wont-always-supply-mandatory-input">Users Won’t Always Supply Mandatory Input</a></li>
+<li><a href="#users-wont-always-follow-the-intended-sequence" id="toc-users-wont-always-follow-the-intended-sequence">Users Won’t Always Follow the Intended Sequence</a></li>
+<li><a href="#domain-specific-flaws" id="toc-domain-specific-flaws">Domain-Specific Flaws</a></li>
+</ul></div>
+  <hr>
+<p>Business logic vulnerabilities arise when an application’s workflow can be manipulated in unintended ways, allowing attackers to exploit flaws that developers didn’t anticipate. These vulnerabilities are particularly dangerous because they often bypass traditional security mechanisms.</p>
+<hr />
+<h2 id="excessive-trust-in-client-side-controls">Excessive Trust in Client-Side Controls</h2>
+<p>A common mistake is assuming that users will interact with the application only through its intended interface.</p>
+<p>An attacker can use tools like <strong>Burp Suite</strong> to intercept and modify requests before they reach the server. This allows them to bypass client-side validations, change form fields, or manipulate API requests.</p>
+<hr />
+<h2 id="failing-to-handle-unconventional-input">Failing to Handle Unconventional Input</h2>
+<p>Attackers often experiment with <strong>unexpected input values</strong> to see how an application responds.</p>
+<p><strong>Questions to Consider:</strong></p>
+<ul>
+<li>Are there any <strong>limits</strong> imposed on the input data?</li>
+<li>What happens if those limits are <strong>exceeded</strong>?</li>
+<li>Is input being <strong>normalized or transformed</strong> before processing?</li>
+</ul>
+<hr />
+<h2 id="users-wont-always-supply-mandatory-input">Users Won’t Always Supply Mandatory Input</h2>
+<p>Attackers might deliberately remove or alter parameters to test how the system responds.</p>
+<p><strong>Common Testing Approaches:</strong></p>
+<ul>
+<li><strong>Remove</strong> one parameter at a time and check how the application behaves.</li>
+<li><strong>Omit both</strong> the parameter name and its value to see if the system treats it differently.</li>
+<li>Manipulate <strong>multi-step processes</strong> by modifying parameters at different stages.</li>
+<li>Test both <code>GET</code> and <code>POST</code> parameters, and don’t forget <strong>cookies</strong>.</li>
+</ul>
+<hr />
+<h2 id="users-wont-always-follow-the-intended-sequence">Users Won’t Always Follow the Intended Sequence</h2>
+<p>Many applications assume users will follow a specific flow, but attackers can disrupt this sequence.</p>
+<p>For example, a website that implements <strong>two-factor authentication (2FA)</strong> may require users to log in first and then enter a verification code. However, an attacker might try to <strong>skip</strong> the login step and directly access the verification page.</p>
+<hr />
+<h2 id="domain-specific-flaws">Domain-Specific Flaws</h2>
+<p>Business logic vulnerabilities can be highly dependent on the application’s specific functionality.</p>
+<p><strong>Example: Discount Manipulation</strong></p>
+<ul>
+<li>A store offers a <strong>10% discount</strong> on orders over <code>$1000</code>.</li>
+<li>An attacker adds items to reach <code>$1000</code>, gets the discount, then removes items but <strong>keeps the discounted price</strong>.</li>
+<li><strong>Price manipulation</strong>: Altering item prices before checkout.</li>
+<li><strong>Bypassing quantity limits</strong>: Ordering more items than allowed.</li>
+<li><strong>Skipping fees</strong>: Removing handling or shipping costs.</li>
+</ul>
+<blockquote>
+<p><strong>Tip</strong>: Always think from an attacker’s perspective: <strong>What objectives might they have, and how could they achieve them using unintended methods?</strong></p>
+</blockquote>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

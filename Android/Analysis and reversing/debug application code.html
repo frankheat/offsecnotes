@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn advanced techniques to debug Android applications using tools like JDB, JADX and smalidea. Explore methods for analyzing Java, Smali, and native code even in non-debuggable apps.">
+  <title>offsecnotes | Debug application code</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Debug application code</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#why-would-you-want-to-debug-an-application" id="toc-why-would-you-want-to-debug-an-application">Why would you want to debug an application?</a></li>
+<li><a href="#prerequisites" id="toc-prerequisites">Prerequisites</a></li>
+<li><a href="#debugging-levels" id="toc-debugging-levels">Debugging levels</a></li>
+<li><a href="#debug-smali-code" id="toc-debug-smali-code">Debug smali code</a></li>
+<li><a href="#debug-java-code" id="toc-debug-java-code">Debug java code</a>
+<ul>
+<li><a href="#android-studio" id="toc-android-studio">Android studio</a></li>
+<li><a href="#java-debugger-jdb" id="toc-java-debugger-jdb">Java Debugger (JDB)</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<h2 id="why-would-you-want-to-debug-an-application">Why would you want to debug an application?</h2>
+<p>Let’s have a look at three different scenario:</p>
+<ol type="1">
+<li><p>As an attacker, you want to analyze and modify the app’s behavior. In this case, I prefer Frida because it is much simpler and works most of the time. However, sometimes an app can detect Frida. Of course, you can hook the method(s) that trigger the Frida detection to bypass it, but that’s often not simple. Moreover, debugging allows you to access local variables inside a method, which Frida does not allow.</p></li>
+<li><p>A user has a debuggable application installed on own device. If the application is debuggable you can:</p>
+<ul>
+<li>Analyze and modify the legitimate behavior.</li>
+<li>Extract, without root privileges, all files inside the app internal storage.</li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: This scenario is often impossible because no release application on the Play Store can have <code>android:debuggable="true"</code> [<a href="https://developer.android.com/studio/publish/preparing.html#turn-off-debugging">↗</a>] [<a href="https://stackoverflow.com/questions/53030583/uploaded-a-debuggable-apk-to-google-play">↗</a>]. It means that the user has installed the app from a third-party store.</p>
+</blockquote></li>
+<li><p>You might have the app Java source code. Again, this scenario is highly unlikely, but not impossible.</p></li>
+</ol>
+<hr />
+<h2 id="prerequisites">Prerequisites</h2>
+<p>You need to have an application debuggable. If the app is not debuggable you can [<a href="https://www.pnfsoftware.com/jeb/manual/android-debugging/#debugging-non-debuggable-apps">↗</a>]:</p>
+<ul>
+<li>Repackage the app and set <code>android:debuggable="true"</code> in <code>AndroidManifest.xml</code>. <strong>You don’t need to be root</strong>.</li>
+<li>Run the app in an emulator without Google services. Emulators have the <code>ro.debuggable</code> property set to <code>1</code>. In some cases, this may not suffice as OS or app components may check the Manifest’s debuggable flag before or during execution.</li>
+<li>Use a rooted phone so you can modify <code>ro.debuggable</code>. Normally this value is read only. However with <strong>magisk</strong> we can use <code>resetprop</code>.
+<ul>
+<li><div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set ro.debuggable</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">resetprop</span> ro.debuggable 1</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Restart Android zygote process</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">stop</span><span class="kw">;</span> <span class="ex">start</span></span></code></pre></div></li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="debugging-levels">Debugging levels</h2>
+<p>You can debug an application to a different levels:</p>
+<ul>
+<li>Java</li>
+<li>Smali</li>
+<li>Native</li>
+</ul>
+<hr />
+<h2 id="debug-smali-code">Debug smali code</h2>
+<p>If you don’t have the original Java code, you can debug the smali code. To do this, you can use IntelliJ/Android Studio + <a href="https://github.com/JesusFreke/smalidea">smalidea plugin</a> or <a href="https://github.com/skylot/jadx">jadx</a>.</p>
+<p><strong>jadx-gui guide</strong></p>
+<ol type="1">
+<li>Open the apk inside jadx-gui</li>
+<li>Click on debug button</li>
+<li>If you have the app opened, select the process. Otherwise you can launch app.</li>
+<li>Now you can set breakpoint, read and modify register value etc.</li>
+</ol>
+<p>For more info: <a href="https://github.com/skylot/jadx/wiki/Smali-debugger">https://github.com/skylot/jadx/wiki/Smali-debugger</a>.</p>
+<hr />
+<h2 id="debug-java-code">Debug java code</h2>
+<p>You need to have the original java code. You can use tools like <strong>Android studio</strong> and <strong>jdb</strong>.</p>
+<h3 id="android-studio">Android studio</h3>
+<p>This is the simpler approach. You can follow the official guide: <a href="https://developer.android.com/studio/debug/apk-debugger">Debug pre-built APKs</a>.</p>
+<h3 id="java-debugger-jdb">Java Debugger (JDB)</h3>
+<ol type="1">
+<li><p>Set app to wait (optional).</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> shell am set-debug-app <span class="at">-w</span> app_package_name</span></code></pre></div>
+<p>If we open the app, we’re going to get waiting for debugger.</p></li>
+<li><p>Find app process id.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> shell ps <span class="kw">|</span> <span class="fu">grep</span> <span class="at">-i</span> app_package_name</span></code></pre></div></li>
+<li><p>Set Up Port Forwarding.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> forward tcp:8000 jdwp:<span class="op">&lt;</span>PROCESS_ID<span class="op">&gt;</span></span></code></pre></div></li>
+<li><p>Start JDB.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">jdb</span> <span class="at">-attach</span> localhost:8000 <span class="at">-sourcepath</span> <span class="op">&lt;</span>source_file<span class="op">&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># If you set app to wait you also need to suspend all threads</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">{</span> <span class="bu">echo</span> <span class="st">&quot;suspend&quot;</span> <span class="kw">;</span> <span class="fu">cat</span> <span class="kw">;</span> <span class="kw">}</span> <span class="kw">|</span> <span class="ex">jdb</span> <span class="at">-attach</span> localhost:8000 <span class="at">-sourcepath</span> <span class="op">&lt;</span>source_file<span class="op">&gt;</span></span></code></pre></div>
+<blockquote>
+<p><strong>Tip</strong>: Other useful commands:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List all forward socket connections</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> forward <span class="at">--list</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove specific/all forward socket connection</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ex">forward</span> <span class="at">--remove</span> LOCAL</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="ex">forward</span> <span class="at">--remove-all</span></span></code></pre></div>
+</blockquote></li>
+</ol>
+<p><strong>jdb command examples</strong></p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List loaded class</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">classes</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Show methods of a class</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">methods</span> ClassName</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Set a breakpoint</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Even if the class NameClass has not yet been loaded,</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co"># JDB will register the breakpoint and activate it </span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co"># as soon as the class is loaded by the JVM.</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="ex">stop</span> in ClassName.NameMethod</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co"># print source code</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="ex">list</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Dumps the stack of the current thread</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="ex">where</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="co"># list all commands</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="bu">help</span></span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn about insecure data storage vulnerabilities in Android applications. Explore internal and external storage, shared preferences, databases, logs, and application memory to identify sensitive data exposure.">
+  <title>offsecnotes | Insecure data storage</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Insecure data storage</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#overview-data-storage" id="toc-overview-data-storage">Overview data storage</a>
+<ul>
+<li><a href="#internal-storage-app-private-internal-storage" id="toc-internal-storage-app-private-internal-storage">Internal storage (app-private internal storage)</a></li>
+<li><a href="#external-storage" id="toc-external-storage">External storage</a>
+<ul>
+<li><a href="#app-specific-external-storage" id="toc-app-specific-external-storage">App-Specific External Storage</a></li>
+<li><a href="#shared-storage" id="toc-shared-storage">Shared Storage</a></li>
+</ul></li>
+<li><a href="#keychain" id="toc-keychain">Keychain</a></li>
+</ul></li>
+<li><a href="#test" id="toc-test">Test</a>
+<ul>
+<li><a href="#local-storage" id="toc-local-storage">Local storage</a></li>
+<li><a href="#logs" id="toc-logs">Logs</a></li>
+<li><a href="#application-memory" id="toc-application-memory">Application memory</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<h2 id="overview-data-storage">Overview data storage</h2>
+<h3 id="internal-storage-app-private-internal-storage">Internal storage (app-private internal storage)</h3>
+<p>This is private device storage where apps save data that only they can access. It’s used to store private app data such as sensitive information, configurations, databases, temporary cache files, or anything that should not be accessed by the user or other apps.</p>
+<p><strong>Location</strong>: <code>/data/data/package-name/</code> or <code>/data/user/0/package-name/</code></p>
+<p><strong>Permissions needed</strong>: None</p>
+<p><strong>Access</strong>:</p>
+<ul>
+<li>App has exclusive read/write access to its own internal storage directory</li>
+<li>Access is possible with a rooted device</li>
+</ul>
+<p><strong>Lifecycle</strong>: when the user uninstalls your app, the system automatically deletes all files in this directory</p>
+<h3 id="external-storage">External storage</h3>
+<p>In Android terminology, “external storage” does not necessarily mean a physical SD card. It means: “storage that’s accessible to both apps and the user (shared, public area)”.</p>
+<p><strong>Location</strong>:</p>
+<ul>
+<li><strong>Internal shared storage</strong> (<code>/storage/emulated/0</code>): this is the storage that most users think of as their phone’s “internal storage” for files, photos, and downloads</li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: the “/0” represents the user ID. Android has a multi-user system. The primary user of the phone is user 0</p>
+</blockquote>
+<blockquote>
+<p><strong>Note</strong>: the <code>/sdcard</code> path is an alias (shortcut) that points to your device’s primary external storage.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> <span class="at">-l</span> /</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">[...]</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">lrw-r--r--</span>   1 root   root         21 2023-05-04 18:16 sdcard <span class="at">-</span><span class="op">&gt;</span> /storage/self/primary</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">[...]</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> <span class="at">-l</span> /storage/self/primary</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">lrwxrwxrwx</span> 1 root root 19 2025-10-10 10:00 /storage/self/primary <span class="at">-</span><span class="op">&gt;</span> /storage/emulated/0</span></code></pre></div>
+</blockquote>
+<ul>
+<li><strong>External/removable storage</strong> (<code>/storage/XXXX-XXXX</code>): this refers to any physical, removable storage volume that the user has inserted into the device</li>
+</ul>
+<h4 id="app-specific-external-storage">App-Specific External Storage</h4>
+<p><strong>Location</strong>:</p>
+<ul>
+<li>Location data: <code>&lt;EXTERNAL_STORAGE&gt;/Android/data/com.package.name/</code></li>
+<li>Location obb: <code>&lt;EXTERNAL_STORAGE&gt;/Android/obb/com.package.name/</code></li>
+</ul>
+<p><strong>Permissions needed</strong>: None</p>
+<p><strong>Access from Android 11</strong>:</p>
+<ul>
+<li>App has exclusive read/write access here</li>
+<li>No app can access the <code>/Android/obb</code> or <code>Android/data</code> directories. [<a href="https://developer.android.com/training/data-storage/shared/documents-files#document-access-restrictions">↗</a>]</li>
+<li>You can connect your device to a computer via USB to manage files, giving you full access to the <code>Android/data</code> folder</li>
+<li>You can also access by using ADB (Android Debug Bridge).</li>
+</ul>
+<p><strong>Lifecycle</strong>: when the user uninstalls your app, these directories and all their contents are also deleted</p>
+<blockquote>
+<p><strong>Tip</strong>: if you want to manage files in these folder you can use the system file picker app. To open it you can:</p>
+<ul>
+<li><p>download <a href="https://play.google.com/store/apps/details?id=com.marc.files">Marc Files</a> which is just a shortcut to the hidden android system file picker/manager</p></li>
+<li><p>or send one on the following intent:</p></li>
+</ul>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># First try</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">am</span> start <span class="at">-a</span> android.intent.action.VIEW <span class="at">-n</span> com.google.android.documentsui/com.android.documentsui.files.FilesActivity</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Second try</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">am</span> start <span class="at">-a</span> android.intent.action.VIEW <span class="at">-n</span> com.android.documentsui/com.android.documentsui.files.FilesActivity</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Third try</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="ex">am</span> start <span class="at">-a</span> android.intent.action.VIEW <span class="at">-n</span> com.android.documentsui/com.android.documentsui.FilesActivity</span></code></pre></div>
+</blockquote>
+<h4 id="shared-storage">Shared Storage</h4>
+<p>This is the rest of external storage. It’s the public space intended for files that the user expects to be able to access directly and share between apps.</p>
+<p><strong>Location</strong> (from Android 11):</p>
+<ul>
+<li>External storage, excluding app-specific external storage. For example:
+<ul>
+<li>Well-defined public directories like <code>DCIM/</code>, <code>Pictures/</code>, <code>Music/</code>, <code>Downloads/</code>, etc.</li>
+<li>Location media: <code>&lt;EXTERNAL_STORAGE&gt;/Android/media/com.package.name/</code></li>
+</ul></li>
+</ul>
+<h3 id="keychain">Keychain</h3>
+<p>Here we can store cryptographic keys like private keys. On most devices, the keychain is protected in hardware by special security chips. It does not store password, but only cryptographic keys.</p>
+<hr />
+<h2 id="test">Test</h2>
+<h3 id="local-storage">Local storage</h3>
+<p>You need to analyze both internal and external storage.</p>
+<ul>
+<li>Check for sensitive information/data store</li>
+<li>Check if sensitive information/data is stored in the local storage database using strong encryption on or not</li>
+</ul>
+<p>Storing sensitive data in external storage can expose it to users or malicious actors. On Android versions <strong>below 11</strong>, any app with the appropriate storage permission could freely read data stored in external storage, including other apps’ files. Although Android 11 and higher introduced scoped storage to restrict this access, sensitive data stored externally can still be exposed if an attacker gains physical access to the device (for example, by connecting it to a computer).</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># External storage</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>EXTERNAL_STORAGE<span class="op">&gt;</span>/Android/data/com.package.name/</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>EXTERNAL_STORAGE<span class="op">&gt;</span>/Android/obb/com.package.name/</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Data app location folder</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="ex">/data/data/</span><span class="op">&lt;</span>package_name<span class="op">&gt;</span></span></code></pre></div>
+<p>To monitor the storage you can use <a href="/Android/Analysis%20and%20reversing/fsmon.html">fsmon</a> or frida by using the following script.</p>
+<details>
+<summary>
+Storage APIs Tracing
+</summary>
+<p>Credits: <a href="https://mas.owasp.org/MASTG/demos/android/MASVS-STORAGE/MASTG-DEMO-0002/MASTG-DEMO-0002/">OWASP</a></p>
+<p>If you need to monitor changes in internal storage, update the corresponding value in <code>external_paths</code>.</p>
+<blockquote>
+<p><strong>Note</strong>: the script monitor even <code>ContentResolver.insert()</code> because files created via this method are managed by MediaStore as <code>content://</code> URIs (not file paths), so they can’t be opened with libc <code>open()</code>. [<a href="https://mas.owasp.org/MASTG/demos/android/MASVS-STORAGE/MASTG-DEMO-0002/MASTG-DEMO-0002/#sample:~:text=The%20run.sh,reveal%20these%20files.">↗</a>]</p>
+</blockquote>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span><span class="fu"> printBacktrace</span><span class="kw">(</span><span class="ex">maxLines</span> = 8<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="ex">Java.perform</span><span class="er">((</span><span class="kw">)</span> <span class="ex">=</span><span class="op">&gt;</span> {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">let</span> <span class="va">Exception</span> <span class="op">=</span> <span class="va">Java</span>.use<span class="er">(</span><span class="st">&quot;java.lang.Exception&quot;</span><span class="kw">);</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="bu">let</span> <span class="va">stackTrace</span> <span class="op">=</span> <span class="va">Exception</span>.<span class="va">$new</span><span class="er">(</span><span class="kw">)</span><span class="fu">.getStackTrace().toString()</span><span class="ex">.split</span><span class="er">(</span><span class="st">&quot;,&quot;</span><span class="kw">);</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="ex">console.log</span><span class="er">(</span><span class="st">&quot;\nBacktrace:&quot;</span><span class="kw">);</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="kw">(</span><span class="bu">let</span> <span class="va">i</span> <span class="op">=</span> <span class="dv">0</span><span class="kw">;</span> <span class="ex">i</span> <span class="op">&lt;</span> Math.min<span class="er">(</span><span class="ex">maxLines,</span> stackTrace.length<span class="kw">);</span> <span class="ex">i++</span><span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>            <span class="ex">console.log</span><span class="er">(</span><span class="va">stackTrace</span><span class="op">[</span>i<span class="op">]</span><span class="kw">);</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">}</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="er">}</span><span class="kw">);</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="kw">};</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="ex">//</span> Intercept libc<span class="st">&#39;s open to make sure we cover all Java I/O APIs</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="st">Interceptor.attach(</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="st">    Process.getModuleByName(&#39;</span>libc.so<span class="st">&#39;).getExportByName(&#39;</span>open<span class="st">&#39;),</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="st">    {</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="st">        onEnter: function(args) {</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="st">            const external_paths = [&#39;</span>/sdcard<span class="st">&#39;, &#39;</span>/storage/emulated<span class="st">&#39;];</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="st">            const path = args[0].readCString();</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="st">            external_paths.forEach(external_path =&gt; {</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="st">                if (path.indexOf(external_path) === 0) {</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="st">                    console.log(`\n[*] open called to open a file from external storage at: ${path}`);</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="st">                    printBacktrace(15);</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="st">                }</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="st">            });</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="st">        }</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="st">    }</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="st">);</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="st">// Hook ContentResolver.insert to log ContentValues (including keys like _display_name, mime_type, and relative_path) and returned URI</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="st">Java.perform(() =&gt; {</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="st">    let ContentResolver = Java.use(&quot;android.content.ContentResolver&quot;);</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="st">    ContentResolver.insert.overload(&#39;</span>android.net.Uri<span class="st">&#39;, &#39;</span>android.content.ContentValues<span class="st">&#39;).implementation = function(uri, values) {</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="st">        console.log(`\n[*] ContentResolver.insert called with ContentValues:`);</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="st">        console.log(`\t_display_name: ${values.get(&quot;_display_name&quot;).toString()}`);</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="st">        console.log(`\tmime_type: ${values.get(&quot;mime_type&quot;).toString()}`);</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="st">        console.log(`\trelative_path: ${values.get(&quot;relative_path&quot;).toString()}`);</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="st">        let result = this.insert(uri, values);</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a><span class="st">        console.log(`\n[*] ContentResolver.insert returned URI: ${result.toString()}`);</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="st">        printBacktrace();</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="st">        return result;</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="st">    };</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="st">});</span></span></code></pre></div>
+</details>
+<hr />
+<h3 id="logs">Logs</h3>
+<p>On Android, logging APIs like can accidentally expose sensitive data. Logs go to logcat, which since Android 4.1 is accessible only to <strong>system apps</strong> with <code>READ_LOGS</code>. However, many pre-installed apps hold this privilege, creating a risk of data leaks. For this reason, directly logging sensitive information to logcat is discouraged. [<a href="https://developer.android.com/privacy-and-security/risks/log-info-disclosure">↗</a>]</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Open the app and then run this command</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> logcat <span class="at">--pid</span> <span class="op">&lt;</span>PID<span class="op">&gt;</span></span></code></pre></div>
+<p>It is often better to run <code>adb --clear</code> beforehand to ensure a cleaner environment.</p>
+<hr />
+<h3 id="application-memory">Application memory</h3>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Start objection</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">objection</span> <span class="at">-g</span> <span class="st">&#39;exampleapp&#39;</span> explore</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Search a specific string</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ex">memory</span> search <span class="op">&lt;</span>input_string<span class="op">&gt;</span> --string</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Dump all and then extract strings</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="ex">memory</span> dump all appMemoryDump</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="fu">strings</span> appMemoryDump <span class="op">&gt;</span> appMemoryDump.txt</span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

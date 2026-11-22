@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn Android network interception techniques for pentesting. Covers cleartext traffic, SSL interception, certificate handling, and bypassing restrictions with VPNs and transparent proxies.">
+  <title>offsecnotes | Network interception</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Network interception</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#cleartext-traffic" id="toc-cleartext-traffic">Cleartext Traffic</a></li>
+<li><a href="#ssl-interception" id="toc-ssl-interception">SSL interception</a>
+<ul>
+<li><a href="#user-certificate" id="toc-user-certificate">User Certificate</a></li>
+<li><a href="#system-certificate" id="toc-system-certificate">System Certificate</a></li>
+<li><a href="#patching-network-security-config" id="toc-patching-network-security-config">Patching Network Security Config</a></li>
+</ul></li>
+<li><a href="#intercepting-without-proxy-support" id="toc-intercepting-without-proxy-support">Intercepting Without Proxy Support</a>
+<ul>
+<li><a href="#android-studio-emulator" id="toc-android-studio-emulator">Android Studio emulator</a></li>
+<li><a href="#http-interception-with-vpn-rethink-app" id="toc-http-interception-with-vpn-rethink-app">HTTP interception with VPN (Rethink app)</a></li>
+<li><a href="#dns-spoofing-transparent-proxy-rethink-app" id="toc-dns-spoofing-transparent-proxy-rethink-app">DNS spoofing &amp; transparent proxy (Rethink app)</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<p>In android there are several ways to make HTTP requests. For example using <code>HttpURLConnection</code> (low-level API built into Java), <code>OkHttp</code> (A popular third-party library) etc.</p>
+<hr />
+<h2 id="cleartext-traffic">Cleartext Traffic</h2>
+<p>Starting from Android 9 (API level 28), HTTP clients like <code>URLConnection</code>, <code>Cronet</code>, and <code>OkHttp</code> enforce the use of HTTPS, thus disabling cleartext traffic by default. However, it’s important to note that other HTTP client libraries, such as <code>Ktor</code>, may not enforce these restrictions [<a href="https://developer.android.com/privacy-and-security/risks/cleartext-communications#risk-http">↗</a>].</p>
+<p>However, if developers explicitly set <code>usesCleartextTraffic=true</code> [<a href="https://developer.android.com/reference/android/security/NetworkSecurityPolicy#isCleartextTrafficPermitted()">↗</a>] in the manifest or network security configuration [<a href="https://developer.android.com/privacy-and-security/security-config#CleartextTrafficPermitted">↗</a>], cleartext traffic is permitted.</p>
+<hr />
+<h2 id="ssl-interception">SSL interception</h2>
+<p>To intercept TLS/SSL traffic, the proxy certificate must be trusted by the device. Android recognizes two types of certificates: <strong>user</strong> certificates and <strong>system</strong> certificates. Applications can explicitly configure which certificate types they trust using <strong>network security config</strong>.</p>
+<p>Example <code>network_security_config.xml</code>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">base-config</span><span class="ot"> cleartextTrafficPermitted=</span><span class="st">&quot;false&quot;</span>&gt;</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">trust-anchors</span>&gt;</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">certificates</span><span class="ot"> src=</span><span class="st">&quot;system&quot;</span> /&gt;</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">certificates</span><span class="ot"> src=</span><span class="st">&quot;user&quot;</span> /&gt;</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">trust-anchors</span>&gt;</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">base-config</span>&gt;</span></code></pre></div>
+<details>
+<summary>
+Default configuration
+</summary>
+<p>Source [<a href="https://developer.android.com/privacy-and-security/security-config#CustomTrust">↗</a>].</p>
+<p>Android 7.0 (API level 24) and higher.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">base-config</span>&gt;</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">trust-anchors</span>&gt;</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">certificates</span><span class="ot"> src=</span><span class="st">&quot;system&quot;</span> /&gt;</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">trust-anchors</span>&gt;</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">base-config</span>&gt;</span></code></pre></div>
+<p>Android 6.0 (API level 23) and lower.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">base-config</span>&gt;</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">trust-anchors</span>&gt;</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">certificates</span><span class="ot"> src=</span><span class="st">&quot;system&quot;</span> /&gt;</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">certificates</span><span class="ot"> src=</span><span class="st">&quot;user&quot;</span> /&gt;</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">trust-anchors</span>&gt;</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">base-config</span>&gt;</span></code></pre></div>
+</details>
+<p>If the application doesn’t accept user certificates you need to install system certificate or patching network security config.</p>
+<h3 id="user-certificate">User Certificate</h3>
+<p>Install it in the user CA store via Android settings. In general apps trust user certificates if it targets Android 6 (API 23) or lower, or network security config allows it.</p>
+<details>
+<summary>
+Install user certificate guide
+</summary>
+<ol type="1">
+<li>Download the certificate from <code>http://&lt;burp_proxy_listener&gt;</code>.</li>
+<li>Go on setting, search certificate and install by selected it.</li>
+</ol>
+<p><strong>Install on older Android ≤ 11</strong></p>
+<p>If you try to install this certificate, it’ll be grayed out and you’ll not be able to install it. To install it you need to change its extension.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mv</span> cacert.der cacert.crt</span></code></pre></div>
+</details>
+<blockquote>
+<p><strong>Note</strong>: Keep in mind that Android accepts both <strong>DER</strong> and <strong>PEM</strong> formats. When you install a certificate as a <strong>user</strong> (regardless of the format), Android automatically converts it to <strong>DER</strong> format.</p>
+</blockquote>
+<h3 id="system-certificate">System Certificate</h3>
+<p><strong>Requirement</strong>: rooted device.</p>
+<ul>
+<li>Rooted physical device.</li>
+<li>Rooted emulator.</li>
+<li>Android Virtual Device (AVD) using non Google Play Store emulator image (If you need it you could <a href="https://8ksec.io/rooting-an-android-emulator-for-mobile-security-testing/">root it</a>).</li>
+</ul>
+<details>
+<summary>
+Install system certificate guide (temporary)
+</summary>
+<p>This method use a <strong>temporary RAM-based filesystem</strong> (tmpfs) to override the system certificate directory in memory without actually modifying the read-only system image.</p>
+<ol type="1">
+<li><p>Export certificate in DER format from Burp Suite.</p></li>
+<li><p>By default, all Android system certificates are in PEM format. While Android can handle certificates in DER format, I recommend converting them to PEM to ensure broader compatibility. Some libraries may behave inconsistently with DER certificates. For example, I’ve observed that Flutter applications fail to work properly with DER-formatted certificates. In this step, you’ll convert the certificate from <strong>DER to PEM</strong> format and rename it using its subject hash.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> x509 <span class="at">-inform</span> DER <span class="at">-in</span> cacert.der <span class="at">-out</span> cacert.pem</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">mv</span> cacert.pem <span class="va">$(</span><span class="ex">openssl</span> x509 <span class="at">-inform</span> PEM <span class="at">-subject_hash_old</span> <span class="at">-in</span> cacert.pem <span class="kw">|</span> <span class="fu">head</span> <span class="at">-1</span><span class="va">)</span>.0</span></code></pre></div></li>
+<li><p>Create a folder on the device.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> shell</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> /data/local/tmp/cacerts-added/</span></code></pre></div></li>
+<li><p>Push the certificate in the created folder.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> push <span class="op">&lt;</span>subject_hash.0<span class="op">&gt;</span> /data/local/tmp/cacerts-added/</span></code></pre></div></li>
+<li><p>Add your custom cert to the same folder.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> /system/etc/security/cacerts/<span class="pp">*</span> /data/local/tmp/cacerts-added/</span></code></pre></div></li>
+<li><p>Switch to root user.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">su</span></span></code></pre></div></li>
+<li><p>Mount tmpfs over system certs.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mount</span> <span class="at">-t</span> tmpfs tmpfs /system/etc/security/cacerts</span></code></pre></div></li>
+<li><p>Copy combined certs into the tmpfs mount.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> /data/local/tmp/cacerts-added/<span class="pp">*</span> /system/etc/security/cacerts/</span></code></pre></div></li>
+<li><p>Update the perms &amp; SELinux context labels.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">chown</span> root:root /system/etc/security/cacerts/<span class="pp">*</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> 644 /system/etc/security/cacerts/<span class="pp">*</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">chcon</span> u:object_r:system_file:s0 /system/etc/security/cacerts/<span class="pp">*</span></span></code></pre></div></li>
+</ol>
+<strong>If you reboot your phone, you can simply repeat steps 6–9.</strong>
+</details>
+<details>
+<summary>
+Install system certificate on Android ≥ 14 guide
+</summary>
+<ol type="1">
+<li><p>Install the proxy certificate as a regular user certificate.</p></li>
+<li><p><code>adb shell</code>.</p></li>
+<li><p>Run <a href="https://httptoolkit.com/blog/android-14-install-system-ca-certificate/">the following script</a> by Tim Perry.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a separate temp directory, to hold the current certificates</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Otherwise, when we add the mount we can&#39;t read the current certs anymore.</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> <span class="at">-m</span> 700 /data/local/tmp/tmp-ca-copy</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Copy out the existing certificates</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> /apex/com.android.conscrypt/cacerts/<span class="pp">*</span> /data/local/tmp/tmp-ca-copy/</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the in-memory mount on top of the system certs folder</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="fu">mount</span> <span class="at">-t</span> tmpfs tmpfs /system/etc/security/cacerts</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Copy the existing certs back into the tmpfs, so we keep trusting them</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="fu">mv</span> /data/local/tmp/tmp-ca-copy/<span class="pp">*</span> /system/etc/security/cacerts/</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Copy our new cert in, so we trust that too</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="co"># $CERTIFICATE_PATH is the path on the device for the cert you want to inject</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="co"># for example data/local/tmp/cacerts-added/9a5ba575.0</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> <span class="va">$CERTIFICATE_PATH</span> /system/etc/security/cacerts/</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Update the perms &amp; selinux context labels</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a><span class="fu">chown</span> root:root /system/etc/security/cacerts/<span class="pp">*</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="fu">chmod</span> 644 /system/etc/security/cacerts/<span class="pp">*</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a><span class="fu">chcon</span> u:object_r:system_file:s0 /system/etc/security/cacerts/<span class="pp">*</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Deal with the APEX overrides, which need injecting into each namespace:</span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a><span class="co"># First we get the Zygote process(es), which launch each app</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a><span class="va">ZYGOTE_PID</span><span class="op">=</span><span class="va">$(</span><span class="fu">pidof</span> zygote <span class="kw">||</span> <span class="fu">true</span><span class="va">)</span></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a><span class="va">ZYGOTE64_PID</span><span class="op">=</span><span class="va">$(</span><span class="fu">pidof</span> zygote64 <span class="kw">||</span> <span class="fu">true</span><span class="va">)</span></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a><span class="co"># N.b. some devices appear to have both!</span></span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Apps inherit the Zygote&#39;s mounts at startup, so we inject here to ensure</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a><span class="co"># all newly started apps will see these certs straight away:</span></span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> Z_PID <span class="kw">in</span> <span class="st">&quot;</span><span class="va">$ZYGOTE_PID</span><span class="st">&quot;</span> <span class="st">&quot;</span><span class="va">$ZYGOTE64_PID</span><span class="st">&quot;</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">[</span> <span class="ot">-n</span> <span class="st">&quot;</span><span class="va">$Z_PID</span><span class="st">&quot;</span> <span class="bu">]</span><span class="kw">;</span> <span class="cf">then</span></span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>        <span class="ex">nsenter</span> <span class="at">--mount</span><span class="op">=</span>/proc/<span class="va">$Z_PID</span>/ns/mnt <span class="at">--</span> <span class="dt">\</span></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>            /bin/mount <span class="at">--bind</span> /system/etc/security/cacerts /apex/com.android.conscrypt/cacerts</span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">fi</span></span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Then we inject the mount into all already running apps, so they</span></span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a><span class="co"># too see these CA certs immediately:</span></span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the PID of every process whose parent is one of the Zygotes:</span></span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a><span class="va">APP_PIDS</span><span class="op">=</span><span class="va">$(</span></span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>    <span class="bu">echo</span> <span class="st">&quot;</span><span class="va">$ZYGOTE_PID</span><span class="st"> </span><span class="va">$ZYGOTE64_PID</span><span class="st">&quot;</span> <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a>    <span class="fu">xargs</span> <span class="at">-n1</span> ps <span class="at">-o</span> <span class="st">&#39;PID&#39;</span> <span class="at">-P</span> <span class="kw">|</span> <span class="dt">\</span></span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a>    <span class="fu">grep</span> <span class="at">-v</span> PID</span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a><span class="va">)</span></span>
+<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a><span class="co"># Inject into the mount namespace of each of those apps:</span></span>
+<span id="cb13-51"><a href="#cb13-51" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> PID <span class="kw">in</span> <span class="va">$APP_PIDS</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb13-52"><a href="#cb13-52" aria-hidden="true" tabindex="-1"></a>    <span class="ex">nsenter</span> <span class="at">--mount</span><span class="op">=</span>/proc/<span class="va">$PID</span>/ns/mnt <span class="at">--</span> <span class="dt">\</span></span>
+<span id="cb13-53"><a href="#cb13-53" aria-hidden="true" tabindex="-1"></a>        /bin/mount <span class="at">--bind</span> /system/etc/security/cacerts /apex/com.android.conscrypt/cacerts <span class="kw">&amp;</span></span>
+<span id="cb13-54"><a href="#cb13-54" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span></span>
+<span id="cb13-55"><a href="#cb13-55" aria-hidden="true" tabindex="-1"></a><span class="bu">wait</span> <span class="co"># Launched in parallel - wait for completion here</span></span>
+<span id="cb13-56"><a href="#cb13-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-57"><a href="#cb13-57" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;System certificate injected&quot;</span></span></code></pre></div></li>
+</ol>
+</details>
+<h3 id="patching-network-security-config">Patching Network Security Config</h3>
+<ol type="1">
+<li><p>Unpack the apk.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">apktool</span> d target.apk</span></code></pre></div></li>
+<li><p>Modify the <code>AndroidManifest.xml</code> to add a <code>networkSecurityConfig</code> (<code>xml/network_security_config.xml</code>). If it’s already present edit the file.</p>
+<p><strong>AndroidManifest.xml</strong></p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;?xml</span><span class="ot"> version=</span><span class="st">&quot;1.0&quot;</span><span class="ot"> encoding=</span><span class="st">&quot;utf-8&quot;</span><span class="fu">?&gt;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">manifest</span> <span class="er">...</span> &gt;</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">application</span><span class="ot"> android:networkSecurityConfig=</span><span class="st">&quot;@xml/network_security_config&quot;</span> <span class="er">...</span> &gt;</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>        ...</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">application</span>&gt;</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">manifest</span>&gt;</span></code></pre></div>
+<p><strong>network_security_config.xml</strong></p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Example --&gt;</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">network-security-config</span>&gt;</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">base-config</span>&gt;</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">trust-anchors</span>&gt;</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>            &lt;<span class="kw">certificates</span><span class="ot"> src=</span><span class="st">&quot;system&quot;</span> /&gt;</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>            &lt;<span class="kw">certificates</span><span class="ot"> src=</span><span class="st">&quot;user&quot;</span> /&gt;</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>        &lt;/<span class="kw">trust-anchors</span>&gt;</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">base-config</span>&gt;</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">network-security-config</span>&gt;</span></code></pre></div></li>
+<li><p>Repack &amp; sign the apk.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Repack</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="ex">apktool</span> b</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Sign</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="ex">java</span> <span class="at">-jar</span> uber-apk-signer.jar <span class="at">-apk</span> <span class="op">&lt;</span>app_name<span class="op">&gt;</span>.apk</span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: Unpacking and repacking an app can break stuff.</p>
+</blockquote></li>
+</ol>
+<hr />
+<h2 id="intercepting-without-proxy-support">Intercepting Without Proxy Support</h2>
+<p>If you configure an HTTP proxy in Android settings, you can intercept network traffic. However;</p>
+<ul>
+<li><p>Connections made directly via TCP sockets bypass the proxy and cannot be intercepted.</p></li>
+<li><p>Applications may bypass the HTTP proxy settings if the developer configures them to disallow proxy usage. E.g. with <strong>OkHttp</strong>:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>OkHttpClient client <span class="op">=</span> <span class="kw">new</span> OkHttpClient<span class="op">.</span><span class="fu">Builder</span><span class="op">()</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">proxy</span><span class="op">(</span>java<span class="op">.</span><span class="fu">net</span><span class="op">.</span><span class="fu">Proxy</span><span class="op">.</span><span class="fu">NO_PROXY</span><span class="op">)</span> <span class="co">// Disables proxy usage</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">build</span><span class="op">();</span></span></code></pre></div></li>
+<li><p>Also framework like <strong>Flutter</strong> and <strong>Xamarin</strong> application does not respect system proxy.</p></li>
+</ul>
+<h3 id="android-studio-emulator">Android Studio emulator</h3>
+<p><strong>Requirement</strong>: the proxy certificate must be installed in the system certificate store.</p>
+<p>In Android Studio, you can configure a global proxy for an emulated device by going to the device’s <strong>Settings &gt; Proxy -&gt; Manual proxy configuration</strong>. In the host name field set burp suite proxy with <code>http</code> protocol: e.g. <code>http://192.168.1.90</code> and port number.</p>
+<blockquote>
+<p><strong>Warning</strong>: If <strong>your proxy is unreachable</strong>, try changing the emulator version. You can find other versions here: https://developer.android.com/studio/emulator_archive.</p>
+</blockquote>
+<h3 id="http-interception-with-vpn-rethink-app">HTTP interception with VPN (Rethink app)</h3>
+<blockquote>
+<p><strong>Warning</strong>: This method is not recommended when using the Android Studio emulator. Strange things could happen…</p>
+</blockquote>
+<p><strong>Requirement</strong>: the proxy certificate must be installed in the system certificate store.</p>
+<p>If the proxy settings are ignored, use an Android VPN service app to intercept app traffic. You can use the open-source RethinkDNS app [<a href="https://play.google.com/store/apps/details?id=com.celzero.bravedns">↗</a>].</p>
+<p>Steps:</p>
+<ol type="1">
+<li>Set DNS settings to “System DNS”.</li>
+<li>Add an HTTP(S) CONNECT proxy (your <code>http://burpsuiteip:port</code>).</li>
+<li>Start the VPN service.</li>
+</ol>
+<h3 id="dns-spoofing-transparent-proxy-rethink-app">DNS spoofing &amp; transparent proxy (Rethink app)</h3>
+<blockquote>
+<p><strong>Warning</strong>: This method is not recommended when using the Android Studio emulator. Strange things could happen.</p>
+</blockquote>
+<p><strong>Requirement</strong>: The proxy certificate must be installed in the system certificate store.</p>
+<p>Before starting, you need to bind Burp to a privileged port.</p>
+<details>
+<summary>
+Binding Burp to a privileged port (with authbind)
+</summary>
+<p>Source: [<a href="https://www.mwells.org/coding/2016/authbind-port-80-443/">↗</a>].</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> touch /etc/authbind/byport/443</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> chown <span class="va">$USER</span>:<span class="va">$USER</span> /etc/authbind/byport/443</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> chmod 755 /etc/authbind/byport/443</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="ex">authbind</span> <span class="at">--deep</span> java <span class="at">-Djava.net.preferIPv4Stack</span><span class="op">=</span>true <span class="at">-jar</span> burpsuite.jar</span></code></pre></div>
+</details>
+<ol type="1">
+<li><p>We need some kind of DNS server where we can control the IP. Example <code>dnsmasq.conf</code>:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="va">address</span><span class="op">=</span>/target.com/192.168.1.50</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="ex">log-queries</span></span></code></pre></div></li>
+<li><p>Run <code>dnsmasq</code> with docker:</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> pull andyshinn/dnsmasq</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">--name</span> my-dnsmasq <span class="at">--rm</span> <span class="at">-it</span> <span class="at">-p</span> 0.0.0.0:53:53/udp <span class="at">-v</span> /tmp/dnsmasq.conf:/etc/dnsmasq.conf andyshinn/dnsmasq</span></code></pre></div></li>
+<li><p>Enforce DNS usage using Android’s VPN feature with tools like RethinkDNS.</p>
+<ul>
+<li>From “configure” -&gt; “DNS” -&gt; Change DNS settings to “Other DNS”.</li>
+<li>Select “DNS Proxy”.</li>
+<li>Create a new entry pointing at your local DNS server host.</li>
+</ul></li>
+<li><p>Finally, configure your proxy tool for invisible proxying. Burp will act as an HTTP(S) server, parse the <code>HOST</code> header, and forward requests. Ensure an invisible proxy listener is set on ports 443 and 80.</p></li>
+</ol>
+<details>
+<summary>
+Invisible proxying
+</summary>
+<p><strong>Normal Proxy</strong><br />
+In a normal proxy, the client (e.g., a browser or app) is explicitly configured to use the proxy. This means the client intentionally routes traffic through the proxy. Thus:</p>
+<ul>
+<li>The client is aware of the existence of the proxy.</li>
+<li>HTTPS requires the client to accept the certificate generated by the proxy (MITM).</li>
+<li>The request contains both the relative path (/path) and the full address (e.g. <code>GET http://www.example.com/path HTTP/1.1</code>)</li>
+</ul>
+<p><strong>Invisible Proxy</strong><br />
+An <a href="https://portswigger.net/burp/documentation/desktop/tools/proxy/invisible">invisible proxy</a> operates without the client being explicitly configured to use it. This is useful when the client does not support proxy configurations. Therefore, the client remains unaware of the proxy. However:</p>
+<p>With plain HTTP, a proxy-style request looks like this:</p>
+<pre class="http"><code>GET http://example.org/foo.php HTTP/1.1
+Host: example.org</code></pre>
+<p>A non-proxy-style request looks like this:</p>
+<pre class="http"><code>GET /foo.php HTTP/1.1
+Host: example.org</code></pre>
+<p>Proxies usually use the full URL in the first line to determine the destination, ignoring the <code>Host</code> header. In invisible proxying, Burp parses the <code>Host</code> header from non-proxy-style requests to determine the destination.</p>
+</details>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

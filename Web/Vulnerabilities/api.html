@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn effective techniques for API security testing, including endpoint discovery, content-type manipulation, and mass assignment vulnerability detection.">
+  <title>offsecnotes | API security testing</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>API security testing</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#discovering-api-endpoints" id="toc-discovering-api-endpoints">Discovering API Endpoints</a>
+<ul>
+<li><a href="#documentation" id="toc-documentation">Documentation</a></li>
+<li><a href="#endpoint-enumeration" id="toc-endpoint-enumeration">Endpoint Enumeration</a></li>
+<li><a href="#testing-http-methods" id="toc-testing-http-methods">Testing HTTP Methods</a></li>
+<li><a href="#hidden-parameters" id="toc-hidden-parameters">Hidden Parameters</a></li>
+</ul></li>
+<li><a href="#manipulating-content-types" id="toc-manipulating-content-types">Manipulating Content Types</a></li>
+<li><a href="#mass-assignment-vulnerabilities" id="toc-mass-assignment-vulnerabilities">Mass Assignment Vulnerabilities</a></li>
+<li><a href="#server-side-parameter-pollution-sspp" id="toc-server-side-parameter-pollution-sspp">Server-Side Parameter Pollution (SSPP)</a>
+<ul>
+<li><a href="#truncating-query-strings" id="toc-truncating-query-strings">Truncating Query Strings</a></li>
+<li><a href="#injecting-invalid-parameters" id="toc-injecting-invalid-parameters">Injecting Invalid Parameters</a></li>
+<li><a href="#injecting-invalid-parameters-1" id="toc-injecting-invalid-parameters-1">Injecting Invalid Parameters</a></li>
+<li><a href="#overriding-existing-parameters" id="toc-overriding-existing-parameters">Overriding existing Parameters</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<p>APIs are a common target for attackers because they expose underlying business logic and data.</p>
+<hr />
+<h2 id="discovering-api-endpoints">Discovering API Endpoints</h2>
+<h3 id="documentation">Documentation</h3>
+<p>Some endpoints may refer to API documentation, which can reveal available endpoints and request structures.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">/api</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">/swagger/index.html</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">/openapi.json</span></span></code></pre></div>
+<p>If you identify an endpoint for a resource, make sure to investigate the base path. E.g., <code>/api/swagger/v1/users/123</code></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">/api/swagger/v1</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">/api/swagger</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">/api</span></span></code></pre></div>
+<h3 id="endpoint-enumeration">Endpoint Enumeration</h3>
+<p>Even if documentation is available, manually exploring the application can uncover undocumented endpoints.</p>
+<ul>
+<li>Consider paths like <code>/api/user/update</code> and test variations such as <code>/delete</code>, <code>/add</code>, etc.</li>
+<li>Use wordlists with common API naming conventions.</li>
+<li>Analyze JavaScript files for hidden API calls.</li>
+</ul>
+<blockquote>
+<p><strong>Tip</strong>: Use the <strong>JS Link Finder</strong> (Burp extension) to extract API endpoints from JavaScript files.</p>
+</blockquote>
+<h3 id="testing-http-methods">Testing HTTP Methods</h3>
+<p>Test all possible HTTP methods (<code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>DELETE</code>, etc.) to check for unintended access control weaknesses.</p>
+<blockquote>
+<p><strong>Tip</strong>: Use Burp Intruder with a list of HTTP verbs to automate testing.</p>
+</blockquote>
+<h3 id="hidden-parameters">Hidden Parameters</h3>
+<p>APIs often include hidden parameters that could be exploited.</p>
+<ul>
+<li>Bruteforce parameter names with wordlists.</li>
+<li>Use the <strong>Param Miner</strong> Burp extension to identify hidden parameters.</li>
+</ul>
+<hr />
+<h2 id="manipulating-content-types">Manipulating Content Types</h2>
+<p>Changing the <code>Content-Type</code> header can lead to:</p>
+<ul>
+<li>Unexpected errors that reveal useful debugging information.</li>
+<li>Bypassing security filters that only validate specific content types.</li>
+<li>Exploiting differences in API logic when processing different formats (e.g., JSON vs. XML).</li>
+</ul>
+<p>Modify the <code>Content-Type</code> header and reformat request data to test for such issues.</p>
+<blockquote>
+<p><strong>Tip</strong>: The <strong>Content-Type Converter</strong> BApp in Burp Suite can automatically switch data formats between JSON and XML.</p>
+</blockquote>
+<hr />
+<h2 id="mass-assignment-vulnerabilities">Mass Assignment Vulnerabilities</h2>
+<details>
+<summary>
+Understanding Mass Assignment
+</summary>
+<p>Many modern APIs use frameworks that allow automatic assignment of incoming request data to an object. If the application does not properly filter which fields can be updated, an attacker can send unexpected data to modify sensitive fields that they shouldn’t be able to change.</p>
+<p><strong>Example</strong></p>
+<p>Consider an API that allows users to update their profile with a <code>PUT /users/{id}</code> request. A User model might look like this:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> User {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">constructor</span>(id<span class="op">,</span> name<span class="op">,</span> email<span class="op">,</span> role<span class="op">,</span> isAdmin) {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">.</span><span class="at">id</span> <span class="op">=</span> id<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">.</span><span class="at">name</span> <span class="op">=</span> name<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">.</span><span class="at">email</span> <span class="op">=</span> email<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">.</span><span class="at">role</span> <span class="op">=</span> role<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">.</span><span class="at">isAdmin</span> <span class="op">=</span> isAdmin<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>If the API assigns the request body to the user object like this:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">put</span>(<span class="st">&#39;/users/:id&#39;</span><span class="op">,</span> (req<span class="op">,</span> res) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> user <span class="op">=</span> <span class="fu">getUserFromDatabase</span>(req<span class="op">.</span><span class="at">params</span><span class="op">.</span><span class="at">id</span>)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="bu">Object</span><span class="op">.</span><span class="fu">assign</span>(user<span class="op">,</span> req<span class="op">.</span><span class="at">body</span>)<span class="op">;</span>  <span class="co">// Vulnerability: blindly assigns all fields!</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveUserToDatabase</span>(user)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  res<span class="op">.</span><span class="fu">json</span>(user)<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>An attacker could send a request like this:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;attacker&quot;</span><span class="fu">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;isAdmin&quot;</span><span class="fu">:</span> <span class="kw">true</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+</details>
+<p><strong>Testing for Mass Assignment</strong></p>
+<p>Send two request with:</p>
+<ul>
+<li><p>Valid expected parameter:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  <span class="fu">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;attacker&quot;</span><span class="fu">,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;isAdmin&quot;</span><span class="fu">:</span> <span class="st">&quot;foo&quot;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span></code></pre></div></li>
+<li><p>Invalid expected parameter:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;attacker&quot;</span><span class="fu">,</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;isAdmin&quot;</span><span class="fu">:</span> <span class="kw">true</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div></li>
+</ul>
+<p>If the app behaves differently, the invalid value may affect the query, while the valid one doesn’t suggesting the user can update the parameter.</p>
+<hr />
+<h2 id="server-side-parameter-pollution-sspp">Server-Side Parameter Pollution (SSPP)</h2>
+<p>APIs that pass query parameters between internal services may be vulnerable to manipulation.</p>
+<h3 id="truncating-query-strings">Truncating Query Strings</h3>
+<p>A browser request:</p>
+<pre class="http"><code>GET /userSearch?name=test&amp;back=/home</code></pre>
+<p>Might result in an internal query:</p>
+<pre class="http"><code>GET /users/search?name=test&amp;publicProfile=true</code></pre>
+<p>By injecting a URL-encoded <code>#</code>, you may truncate parameters:</p>
+<pre class="http"><code>GET /userSearch?name=test%23foo&amp;back=/home</code></pre>
+<p>Which could modify the internal query:</p>
+<pre class="http"><code>GET /users/search?name=test#foo&amp;publicProfile=true</code></pre>
+<h3 id="injecting-invalid-parameters">Injecting Invalid Parameters</h3>
+<p>Use a URL-encoded <code>&amp;</code> to attempt parameter injection and observe responses:</p>
+<pre class="http"><code>GET /userSearch?name=test%26foo=xyz&amp;back=/home</code></pre>
+<p>Resulting in:</p>
+<pre class="http"><code>GET /users/search?name=test&amp;foo=xyz&amp;publicProfile=true</code></pre>
+<p>if the response is unchanged it may indicate that the parameter was successfully injected but ignored by the application.</p>
+<h3 id="injecting-invalid-parameters-1">Injecting Invalid Parameters</h3>
+<p>If you’ve identified a parameter, add it and see if the server processes it.</p>
+<pre class="http"><code>GET /userSearch?name=test%26email=foo&amp;back=/home</code></pre>
+<p>Resulting in:</p>
+<pre class="http"><code>GET /userSearch?name=test%26email=foo&amp;publicProfile=true</code></pre>
+<h3 id="overriding-existing-parameters">Overriding existing Parameters</h3>
+<p>The impact of this depends on how the application processes the second parameter.</p>
+<pre class="http"><code>GET /userSearch?name=test%26name=test2&amp;back=/home</code></pre>
+<p>Resulting in:</p>
+<pre class="http"><code>GET /users/search?name=test&amp;26name=test2&amp;publicProfile=true</code></pre>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

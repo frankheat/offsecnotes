@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore insecure deserialization in web applications, including attack vectors, object manipulation, gadget chains, and tools like ysoserial and PHPGGC for exploitation.">
+  <title>offsecnotes | Insecure deserialization</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Insecure deserialization</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#manipulating-serialized-objects" id="toc-manipulating-serialized-objects">Manipulating serialized objects</a>
+<ul>
+<li><a href="#modifying-object-attributes" id="toc-modifying-object-attributes">Modifying object attributes</a></li>
+<li><a href="#modifying-data-types" id="toc-modifying-data-types">Modifying data types</a></li>
+</ul></li>
+<li><a href="#using-application-functionality" id="toc-using-application-functionality">Using application functionality</a></li>
+<li><a href="#magic-methods" id="toc-magic-methods">Magic methods</a></li>
+<li><a href="#injecting-arbitrary-objects" id="toc-injecting-arbitrary-objects">Injecting arbitrary objects</a></li>
+<li><a href="#gadget-chains" id="toc-gadget-chains">Gadget chains</a>
+<ul>
+<li><a href="#tools-ysoserial-phpggc" id="toc-tools-ysoserial-phpggc">Tools (ysoserial , PHPGGC)</a></li>
+<li><a href="#working-with-documented-gadget-chains" id="toc-working-with-documented-gadget-chains">Working with documented gadget chains</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<details>
+<summary>
+General info
+</summary>
+<ul>
+<li><p>Serialization is the process of converting complex data structures, such as objects and their fields, into a “flatter” format that can be sent and received as a sequential stream of bytes.</p></li>
+<li><p>Deserialization is the process of restoring this byte stream to a fully functional replica of the original object.</p></li>
+<li><p>Some languages serialize objects into binary formats, whereas others use different string formats, with varying degrees of human readability.</p></li>
+<li><p>To prevent a field from being serialized, it must be explicitly marked as “transient” in the class declaration.</p></li>
+<li><p>Insecure deserialization arises because there is a general lack of understanding of how dangerous deserializing user-controllable data can be.</p></li>
+</ul>
+</details>
+<details>
+<summary>
+PHP serialization format
+</summary>
+<div class="sourceCode" id="cb1"><pre class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">$user</span>-&gt;name <span class="op">=</span> <span class="st">&quot;carlos&quot;</span><span class="ot">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">$user</span>-&gt;isLoggedIn <span class="op">=</span> <span class="kw">true</span><span class="ot">;</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cn">O</span><span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;User&quot;</span><span class="ot">:</span><span class="dv">2</span><span class="ot">:</span>{s<span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;name&quot;</span><span class="ot">:</span>s<span class="ot">:</span><span class="dv">6</span><span class="ot">:</span><span class="st">&quot;carlos&quot;</span><span class="ot">;</span> s<span class="ot">:</span><span class="dv">10</span><span class="ot">:</span><span class="st">&quot;isLoggedIn&quot;</span><span class="ot">:</span>b<span class="ot">:</span><span class="dv">1</span><span class="ot">;</span>}</span></code></pre></div>
+<p>The native methods for PHP serialization are <code>serialize()</code> and <code>unserialize()</code>. If you have source code access, you should start by looking for <code>unserialize()</code> anywhere in the code and investigating further.</p>
+</details>
+<details>
+<summary>
+Java serialization format
+</summary>
+<ul>
+<li><p>Some languages, such as Java, use binary serialization formats</p></li>
+<li><p>Serialized Java objects always begin with the same bytes, which are encoded as <code>ac ed</code> in hexadecimal and <code>rO0</code> in Base64.</p></li>
+<li><p>Any class that implements the interface <code>java.io.Serializable</code> can be serialized and deserialized. If you have source code access, take note of any code that uses the <code>readObject()</code> method, which is used to read and deserialize data from an <code>InputStream</code>.</p></li>
+</ul>
+</details>
+<p><strong>Important</strong>: a serialized object may not be obvious at first view. Example:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">%7b%22token%22%3a%22Tzo0OiJVc2VyIjoyOntzOjg6InVzZXJuYW1lIjtzOjY6InRlc3QiO3M6MTI6ImFjY2Vzc190b2tlbiI7czozMjoiZmx6bnQ3ZTRwYTNobGpnN3dpejJkeGxuMHVyN3VkNjYiO30%3d%22%2c%22sig_hmac_sha1%22%3a%226d68c7db6f6b4d5abc5e84acea971fd72d217202%22%7d</span></span></code></pre></div>
+<p>URL decode</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;token&quot;</span><span class="fu">:</span><span class="st">&quot;Tzo0OiJVc2VyIjoyOntzOjg6InVzZXJuYW1lIjtzOjY6InRlc3QiO3M6MTI6ImFjY2Vzc190b2tlbiI7czozMjoiZmx6bnQ3ZTRwYTNobGpnN3dpejJkeGxuMHVyN3VkNjYiO30=&quot;</span><span class="fu">,</span><span class="dt">&quot;sig_hmac_sha1&quot;</span><span class="fu">:</span><span class="st">&quot;6d68c7db6f6b4d5abc5e84acea971fd72d217202&quot;</span><span class="fu">}</span></span></code></pre></div>
+<p>Base64 token decoding</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="cn">O</span><span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;User&quot;</span><span class="ot">:</span><span class="dv">2</span><span class="ot">:</span>{s<span class="ot">:</span><span class="dv">8</span><span class="ot">:</span><span class="st">&quot;username&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">6</span><span class="ot">:</span><span class="st">&quot;wiener&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">12</span><span class="ot">:</span><span class="st">&quot;access_token&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">32</span><span class="ot">:</span><span class="st">&quot;flznt7e4pa3hljg7wiz2dxln0ur7ud66&quot;</span><span class="ot">;</span>}</span></code></pre></div>
+<hr />
+<h2 id="manipulating-serialized-objects">Manipulating serialized objects</h2>
+<ul>
+<li>You can either edit the object directly in its byte stream form</li>
+<li>You can write a short script in the corresponding language to create and serialize the new object yourself</li>
+</ul>
+<h3 id="modifying-object-attributes">Modifying object attributes</h3>
+<div class="sourceCode" id="cb6"><pre class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="va">$user</span> <span class="op">=</span> <span class="fu">unserialize</span>(<span class="va">$_COOKIE</span>)<span class="ot">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="va">$user</span>-&gt;isAdmin <span class="op">===</span> <span class="kw">true</span>) {</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">// allow access to admin interface</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<ol type="1">
+<li><p>Identify serialized object (here in the cookie)</p></li>
+<li><p>Decode it</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="cn">O</span><span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;User&quot;</span><span class="ot">:</span><span class="dv">2</span><span class="ot">:</span>{s<span class="ot">:</span><span class="dv">8</span><span class="ot">:</span><span class="st">&quot;username&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">6</span><span class="ot">:</span><span class="st">&quot;carlos&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">7</span><span class="ot">:</span><span class="st">&quot;isAdmin&quot;</span><span class="ot">;</span>b<span class="ot">:</span><span class="dv">0</span><span class="ot">;</span>}</span></code></pre></div></li>
+<li><p>Modify attributes</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cn">O</span><span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;User&quot;</span><span class="ot">:</span><span class="dv">2</span><span class="ot">:</span>{s<span class="ot">:</span><span class="dv">8</span><span class="ot">:</span><span class="st">&quot;username&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">6</span><span class="ot">:</span><span class="st">&quot;carlos&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">7</span><span class="ot">:</span><span class="st">&quot;isAdmin&quot;</span><span class="ot">;</span>b<span class="ot">:</span><span class="dv">1</span><span class="ot">;</span>}</span></code></pre></div></li>
+<li><p>Re-encode the object and overwrite (the cookie)</p></li>
+</ol>
+<blockquote>
+<p><strong>Note</strong>: This simple scenario is not common in the wild.</p>
+</blockquote>
+<h3 id="modifying-data-types">Modifying data types</h3>
+<p>PHP -&gt; if you perform a loose comparison <code>==</code> between an integer and a string, PHP will attempt to convert the string to an integer, meaning that <code>5 == "5"</code> evaluates to <code>true</code>.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="dv">0</span> <span class="op">==</span> <span class="st">&quot;Example string&quot;</span> <span class="co">// true</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="va">$login</span> <span class="op">=</span> <span class="fu">unserialize</span>(<span class="va">$_COOKIE</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="va">$login</span>[<span class="st">&#39;password&#39;</span>] <span class="op">==</span> <span class="va">$password</span>) {</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// log in successfully</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Attacker can modify the password attribute so that it contained the integer <code>0</code> -&gt; authentication bypass.</p>
+<blockquote>
+<p><strong>Note</strong>:</p>
+<ul>
+<li>This is only possible because deserialization preserves the data type.</li>
+<li>When modifying data types in any serialized object format, update any type labels and length indicators in the serialized data too (Otherwise, the serialized object will be corrupted and will not be deserialized).</li>
+</ul>
+</blockquote>
+<hr />
+<h2 id="using-application-functionality">Using application functionality</h2>
+<ul>
+<li>Consider “Delete user” functionality, the user’s profile picture is deleted by accessing the file path in the $user-&gt;image_location attribute</li>
+<li>If this $user was created from a serialized object, an attacker could exploit this by passing in a modified object with the image_location set to an arbitrary file path</li>
+</ul>
+<hr />
+<h2 id="magic-methods">Magic methods</h2>
+<ul>
+<li><p>Magic methods are a special type of method that are automatically triggered by specific events or scenarios, without explicit invocation. Developers use them to define code execution for these events (e.g., <code>__construct()</code>). Some languages have magic methods that are invoked automatically during deserialization.</p></li>
+<li><p>In Java deserialization, the <code>ObjectInputStream.readObject()</code> method is used to read data from the initial byte stream and essentially acts like a constructor for “re-initializing” a serialized object.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span> <span class="dt">void</span> <span class="fu">readObject</span><span class="op">(</span><span class="bu">ObjectInputStream</span> in<span class="op">)</span> <span class="kw">throws</span> <span class="bu">IOException</span><span class="op">,</span> <span class="bu">ClassNotFoundException</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// implementation</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></li>
+<li><p>They allow you to pass data from a serialized object into the website’s code before the object is fully deserialized.</p></li>
+</ul>
+<hr />
+<h2 id="injecting-arbitrary-objects">Injecting arbitrary objects</h2>
+<p>Deserialization methods often don’t validate the objects they process. Attackers can pass any serializable class, allowing them to instantiate arbitrary classes. With source code access, you can:</p>
+<ul>
+<li>Identify classes with deserialization magic methods</li>
+<li>Check if they perform unsafe operations on controllable data</li>
+<li>Then pass in a serialized object of this class to use its magic method for an exploit.</li>
+</ul>
+<hr />
+<h2 id="gadget-chains">Gadget chains</h2>
+<ul>
+<li>A “gadget” is a code snippet in an application that helps an attacker achieve a goal, such as invoking a method to pass input into another gadget. Many insecure deserialization vulnerabilities are exploitable through gadget chains.</li>
+<li>Identifying gadget chains manually is arduous and nearly impossible without source code access. But if a gadget chain in Java’s Apache Commons Collections library is exploitable on one website, other websites using this library may also be vulnerable.</li>
+</ul>
+<h3 id="tools-ysoserial-phpggc">Tools (ysoserial , PHPGGC)</h3>
+<p>They lets you select a provided gadget chain for a target library, input a command to execute, and generates a serialized object. This reduces the manual effort of crafting gadget chains, though some trial and error is still needed.</p>
+<p><strong>Java</strong></p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Tool: https://github.com/frohoff/ysoserial</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">java</span> <span class="at">-jar</span> ysoserial-all.jar CommonsCollections4 <span class="st">&quot;rm /tmp/file.txt&quot;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Probably you need to encode the payload into base64</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="ex">java</span> <span class="at">-jar</span> ysoserial-all.jar CommonsCollections4 <span class="st">&quot;rm /tmp/file.txt&quot;</span> <span class="kw">|</span> <span class="fu">base64</span> <span class="at">-w</span> 0</span></code></pre></div>
+<p><strong>PHP</strong></p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Tool: https://github.com/ambionics/phpggc</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./phpggc</span> <span class="at">-b</span> Symfony/RCE7 system <span class="st">&quot;rm /tmp/file.txt&quot;</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>:</p>
+<ul>
+<li>Pay attention if you need to encode (e.g. URL encode) your payload</li>
+<li>A payload might work even if the server returns an error…</li>
+</ul>
+</blockquote>
+<h3 id="working-with-documented-gadget-chains">Working with documented gadget chains</h3>
+<p>If no dedicated tool exists for exploiting known gadget chains in the target application’s framework, consider searching online for documented exploits to adapt manually.</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

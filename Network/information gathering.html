@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn essential information gathering techniques for pentesting, including Whois, DNS enumeration, port scanning with Nmap, Google Dorks, Shodan, and website reconnaissance.">
+  <title>offsecnotes | Information gathering</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Information gathering</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#whois" id="toc-whois">Whois</a></li>
+<li><a href="#netcraft" id="toc-netcraft">Netcraft</a></li>
+<li><a href="#open-source-code" id="toc-open-source-code">Open-Source Code</a></li>
+<li><a href="#google-dorks" id="toc-google-dorks">Google Dorks</a></li>
+<li><a href="#shodan" id="toc-shodan">Shodan</a></li>
+<li><a href="#dns-enumeration" id="toc-dns-enumeration">DNS Enumeration</a></li>
+<li><a href="#all-in-one" id="toc-all-in-one">All in one</a></li>
+<li><a href="#port-scanning" id="toc-port-scanning">Port Scanning</a></li>
+<li><a href="#host-discovery-nmap" id="toc-host-discovery-nmap">Host Discovery (nmap)</a></li>
+<li><a href="#port-scanning-nmap" id="toc-port-scanning-nmap">Port Scanning (nmap)</a></li>
+<li><a href="#website-recon" id="toc-website-recon">Website Recon</a></li>
+</ul></div>
+  <hr>
+<h2 id="whois">Whois</h2>
+<p><a href="https://datatracker.ietf.org/doc/html/rfc3912">Whois</a> is a protocol used for querying databases that store an Internet resource’s registered users or assignees. You can provide:</p>
+<ul>
+<li>Domain -&gt; info about it such as name server, registrar, etc.</li>
+<li>IP -&gt; info about who is hostring the IP address</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">whois</span> example.com</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># whois by specifying a whois server</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">whois</span> example.com <span class="at">-h</span> 192.168.5.5</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform a reverse lookup</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">whois</span> 38.100.193.70</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="ex">whois</span> 38.100.193.70 <span class="at">-h</span> 192.168.5.5</span></code></pre></div>
+<hr />
+<h2 id="netcraft">Netcraft</h2>
+<p>Netcraft is an ISP, that offers a free <a href="https://searchdns.netcraft.com/">web portal</a> for information gathering (technologies, subdomains, etc.).</p>
+<hr />
+<h2 id="open-source-code">Open-Source Code</h2>
+<p>Gather information through GitHub, GitLab, etc.</p>
+<ul>
+<li>Manual</li>
+<li>Automatic: <a href="https://github.com/gitleaks/gitleaks">Gitleaks</a></li>
+</ul>
+<hr />
+<h2 id="google-dorks">Google Dorks</h2>
+<p><strong>Example</strong></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Restrict the search to example.com and subdomains</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">site:example.com</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Restrict the search to example.com and subdomains and exclude HTML pages</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">site:example.com</span> <span class="at">-filetype:html</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Search for pages with &#39;index of&#39; in the title and &#39;parent directory&#39; in the content</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="ex">intitle:“index</span> of” “parent directory”</span></code></pre></div>
+<ul>
+<li><a href="https://www.exploit-db.com/google-hacking-database">https://www.exploit-db.com/google-hacking-database</a></li>
+<li><a href="https://dorksearch.com/">https://dorksearch.com/</a></li>
+</ul>
+<hr />
+<h2 id="shodan">Shodan</h2>
+<p><a href="https://www.shodan.io/">Shodan</a> is a search engine for internet-connected devices, including servers, routers, and IoT devices.</p>
+<hr />
+<h2 id="dns-enumeration">DNS Enumeration</h2>
+<p><strong>Manual</strong></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">host</span> example.com                  <span class="co"># List of ipv4 &amp; ipv6 address</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">host</span> <span class="at">-t</span> mx example.com            <span class="co"># List of email servers</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ex">host</span> <span class="at">-t</span> txt example.com           <span class="co"># List of TXT records</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">dig</span> +short a zonetransfer.me      <span class="co"># List of ipv4 address</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="ex">dig</span> +short mx zonetransfer.me     <span class="co"># List of email servers</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="ex">dig</span> +short <span class="at">-x</span> 192.246.126.3       <span class="co"># Reverse lookups</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="ex">dig</span> +short ns zonetransfer.me     <span class="co"># List of DNS servers for the domain</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="ex">dig</span> axfr zonetransfer.me @nsztm1.digi.ninja. <span class="co"># Get a copy of the zone from the primary server. (zone transfer attack)</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="ex">nslookup</span> example.com              <span class="co"># Works on Windows</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: AXFR offers no authentication, so any client can ask a DNS server for a copy of the entire zone.</p>
+</blockquote>
+<p><strong>Automatic</strong></p>
+<p>There are several tools…</p>
+<ul>
+<li><a href="https://github.com/darkoperator/dnsrecon">dnsrecon</a></li>
+</ul>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dnsrecon</span> <span class="at">-d</span> example.com <span class="at">-t</span> std                <span class="co"># Standard enumeration</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">dnsrecon</span> <span class="at">-d</span> example.com <span class="at">-t</span> brt <span class="at">-D</span> list.txt    <span class="co"># Brute force subdomain enum</span></span></code></pre></div>
+<ul>
+<li><a href="https://github.com/aboul3la/Sublist3r">sublist3r</a> enumerates subdomains using search engines such as Google and using DNSdumpster etc. It support also bruteforce.</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sublist3r</span> <span class="at">-d</span> example.com</span></code></pre></div>
+<hr />
+<h2 id="all-in-one">All in one</h2>
+<ul>
+<li><a href="https://github.com/owasp-amass/amass">amass</a>: network mapping and external asset discovery using open source information gathering and active reconnaissance techniques</li>
+<li><a href="https://github.com/laramies/theHarvester">theHarvester</a>: gathers names, emails, IPs, subdomains, and URLs by using multiple public resources</li>
+</ul>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">theHarvester</span> <span class="at">-d</span> example.com <span class="at">-b</span> google,linkedin,dnsdumpster,duckduckgo</span></code></pre></div>
+<hr />
+<h2 id="port-scanning">Port Scanning</h2>
+<p><a href="https://sourceforge.net/p/nc110/git/ci/master/tree/">Netcat</a></p>
+<p>Use Netcat when Nmap isn’t available.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Scan TCP</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">nc</span> <span class="at">-nvv</span> <span class="at">-w</span> 1 <span class="at">-z</span> 192.168.5.5 100-102</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Scan port 445 on 192.168.1.1–254</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="va">$(</span><span class="fu">seq</span> 1 254<span class="va">)</span><span class="kw">;</span> <span class="cf">do</span> <span class="ex">nc</span> <span class="at">-nvv</span> <span class="at">-w</span> 1 <span class="at">-z</span> 192.168.1.<span class="va">$i</span> 445<span class="kw">;</span> <span class="cf">done</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Scan UDP [Highly unreliable, as firewalls/routers may drop ICMP packets -&gt;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># leading to false positives]</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="ex">nc</span> <span class="at">-nv</span> <span class="at">-u</span> <span class="at">-z</span> <span class="at">-w</span> 1 192.168.5.5 120-123</span></code></pre></div>
+<p><a href="https://nmap.org/">Nmap</a></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># [TCP] Stealth scan (default if you&#39;re root)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co"># It will not appear in any app logs, but modern firewall log them</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> nmap <span class="at">-sS</span> 192.168.5.5</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># TCP Connect Scanning (default if you&#39;re not root)</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">nmap</span> <span class="at">-sT</span> 192.168.5.5</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co"># UDP Scan</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="fu">nmap</span> <span class="at">-sU</span> 192.168.5.5</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Scan all TCP ports</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="fu">nmap</span> <span class="at">-p-</span> 192.168.5.5</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Scan a single port</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="fu">nmap</span> <span class="at">-p</span> 5 192.168.5.5</span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: 1000-port scan generate around 72KB of traffic. Scanning all ports generate about 4 MB. 254 hosts * 4 MB = 1000 MB of traffic.</p>
+</blockquote>
+<hr />
+<h2 id="host-discovery-nmap">Host Discovery (nmap)</h2>
+<p><strong><code>-sn</code> option</strong></p>
+<p>The default host discovery done with <code>-sn</code> consists of an <strong>ICMP echo request</strong>. But when a privileged user tries to scan targets on a local ethernet network, <strong>ARP requests</strong> are used.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">nmap</span> <span class="at">-sn</span> 192.168.1.0/24</span></code></pre></div>
+<p><strong><code>-PS</code> option</strong></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">nmap</span> <span class="at">-sn</span> <span class="at">-PS</span> 192.168.1.5</span></code></pre></div>
+<p>This option sends an empty TCP packet with the SYN flag set. The default destination port is 80.</p>
+<blockquote>
+<p><strong>Note</strong>: You should also use other ports to better detect hosts.</p>
+<p><code>nmap -sn -PS22-25 192.168.1.5</code></p>
+</blockquote>
+<p><strong>Other options</strong></p>
+<ul>
+<li><code>-PA</code> (ACK flag is set instead of the SYN flag). Default port: 80</li>
+<li><code>-PU</code> (sends a UDP packet). Default port: 40125</li>
+<li><code>-PY</code> (sends an SCTP packet). Default port: 80</li>
+</ul>
+<hr />
+<h2 id="port-scanning-nmap">Port Scanning (nmap)</h2>
+<p>Use nmap documentation to understand the differences between port scans</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">nmap</span> <span class="at">-p-</span> 192.168.1.5          <span class="co"># Scan all TCP ports</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">nmap</span> <span class="at">-sU</span> <span class="at">--top-ports</span> 25 <span class="op">&lt;</span>ip<span class="op">&gt;</span>  # Suggestion for udp scan</span></code></pre></div>
+<p><strong>Script engine</strong>: For more info read nmap documentation</p>
+<ul>
+<li><code>--script &lt;filename&gt;|&lt;category&gt;|&lt;directory&gt;|&lt;expression&gt;</code></li>
+<li><code>-sC</code> Runs a script scan using the default script set. It is the equivalent of <code>--script=default</code></li>
+</ul>
+<div class="sourceCode" id="cb12"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">nmap</span> <span class="at">--script</span> <span class="st">&quot;default or safe&quot;</span> <span class="co"># Load all scripts that are in the default, safe, or both categories.</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: There are many categories. Some of the scripts in this category are considered intrusive and may not run on a network target without permissions.</p>
+</blockquote>
+<hr />
+<h2 id="website-recon">Website Recon</h2>
+<ul>
+<li>Web App <strong>Technology</strong> Fingerprinting
+<ul>
+<li>wappalyzer (extension)</li>
+<li>builtwith (extension)</li>
+<li><code>whatweb example.com</code></li>
+</ul></li>
+<li>Look for <strong>hidden directory/files</strong>:
+<ul>
+<li><code>http://example.com/robots.txt</code></li>
+<li><code>http://example.com/sitemap.xml</code></li>
+</ul></li>
+<li><strong>WAF</strong> Detection
+<ul>
+<li><code>wafw00f http://example.com -a</code></li>
+</ul></li>
+<li>Download <strong>website source</strong>
+<ul>
+<li>httrack</li>
+</ul></li>
+<li><strong>waybackmachine</strong>
+<ul>
+<li><a href="https://web.archive.org/"><em>https://web.archive.org</em></a></li>
+</ul></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

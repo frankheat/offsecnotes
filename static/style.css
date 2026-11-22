@@ -1,0 +1,99 @@
+/* Theme: light by default, dark from the system preference,
+   or forced by the toggle button (data-theme on <html>). */
+:root {
+  color-scheme: light;
+  --link: rgb(21, 101, 192);
+  --block-bg: rgb(224, 226, 236);
+  --block-border: #74777f;
+  --toggle-icon: "☾";
+}
+
+/* Forced light: also resets new.css colors, which follow the system preference. */
+:root[data-theme="light"] {
+  --nc-tx-1: #000000;
+  --nc-tx-2: #1a1a1a;
+  --nc-bg-1: #ffffff;
+  --nc-bg-2: #f6f8fa;
+  --nc-bg-3: #e5e7eb;
+}
+
+/* Dark: same values twice, for the system preference and for the toggle. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --link: rgb(144, 202, 249);
+    --block-bg: #44474e;
+    --toggle-icon: "☀";
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --link: rgb(144, 202, 249);
+  --block-bg: #44474e;
+  --toggle-icon: "☀";
+  --nc-tx-1: #ffffff;
+  --nc-tx-2: #eeeeee;
+  --nc-bg-1: #000000;
+  --nc-bg-2: #111111;
+  --nc-bg-3: #222222;
+}
+
+body {
+  font-family: "Liberation Sans", "Liberation Serif", "Liberation Mono", sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  border-bottom: unset !important;
+}
+
+a, a:hover {
+  color: var(--link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+pre, code, blockquote {
+  background-color: var(--block-bg);
+}
+
+pre, blockquote {
+  border: 1px solid var(--block-border);
+  border-radius: 12px;
+}
+
+pre {
+  padding: 0;
+}
+
+code {
+  border-radius: 8px;
+}
+
+.hljs {
+  background: unset !important;
+}
+
+/* Theme toggle button, on the same row as the site title */
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.theme-toggle,
+.theme-toggle:hover,
+.theme-toggle:focus {
+  background: none;
+  color: var(--nc-tx-1);
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 4px;
+}
+
+.theme-toggle::before {
+  content: var(--toggle-icon);
+}

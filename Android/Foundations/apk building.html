@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn about Android application structure, APK file format, and the APK building process for mobile security and pentesting.">
+  <title>offsecnotes | APK building</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>APK building</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#android-application-project" id="toc-android-application-project">Android application project</a></li>
+<li><a href="#android-package-apk" id="toc-android-package-apk">Android package (apk)</a></li>
+<li><a href="#building-process" id="toc-building-process">Building process</a></li>
+</ul></div>
+  <hr>
+<h2 id="android-application-project">Android application project</h2>
+<blockquote>
+<p><strong>Note</strong>: The directory names are conventional so they could be any name. Additionally, the contents of each directory could be spread across multiple folders.</p>
+</blockquote>
+<p>Mandatory:</p>
+<ul>
+<li>🗎 <strong>AndroidManifest.xml</strong> declares mainly the app’s package name, components, access permissions, as well as hardware and software features the app requires and the API libraries the app needs to be linked against.</li>
+<li>🗎 <strong>Signing key</strong> to sign the <code>.apk</code> file. This is required to install or update the app on an Android device.</li>
+<li>🗎 <strong>android.jar</strong> includes a set of Android platform API classes. Usually this file is already integrated into the toolchain and the programmer doesn’t need to take care himself.</li>
+</ul>
+<p>Optionals:</p>
+<ul>
+<li><strong>Resources</strong>
+<ul>
+<li>📁 <strong>res</strong>: primarily includes elements appearing in or describing the UI.</li>
+<li>📁 <strong>assets:</strong> stores further files and will be integrated as-is into an APK to access them with ordinary file I/O.</li>
+</ul></li>
+<li><strong>Sources</strong>
+<ul>
+<li>📁 <strong>java</strong>: contains code targeting the Java Virtual Machine (JVM), so written in Java and/or Kotlin.</li>
+<li>📁 <strong>cpp</strong>: holds native code written in C/C++.</li>
+</ul></li>
+<li><strong>Libraries</strong>
+<ul>
+<li>📁 <strong>libs</strong>: comprises Java <code>.jar</code> and/or Android <code>.aar</code> archive files mostly for the compilation phase.</li>
+<li>📁 <strong>lib</strong>: contains native shared <code>.so</code> and/or static <code>.a</code> library files.</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="android-package-apk">Android package (apk)</h2>
+<p>An APK is essentially a ZIP archive with an <code>.apk</code> extension.</p>
+<p>While only <code>AndroidManifest.xml</code> and <code>META-INF</code> are mandatory, an APK almost always includes the following files and directories:</p>
+<ul>
+<li>🗎 <strong>AndroidManifest.xml</strong>: the application’s manifest file, stored in Android’s binary XML format.</li>
+<li>🗎 <strong>classes.dex</strong> (or classesN.dex): the compiled application code in the Dalvik Executable format. Multi-dex applications may contain multiple files (e.g., classes2.dex).</li>
+<li>🗎 <strong>resources.arsc</strong>: the resource table file in binary format, optimizing the access to the UI resources.</li>
+<li>📁 <strong>META-INF</strong>: contains the <code>CERT.SF</code> and <code>CERT.RSA</code> signature files, as well as the <code>MANIFEST.MF</code> manifest file.</li>
+<li>📁 <strong>res</strong>: includes all UI resources except those from the <code>res/values</code></li>
+<li>📁 <strong>assets</strong>: contains further resources packed as-is into the <code>.apk</code> file.</li>
+<li>📁 <strong>lib</strong>: contains native shared libraries of the package.</li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: An APK may contain further files and folders.</p>
+</blockquote>
+<hr />
+<h2 id="building-process">Building process</h2>
+<p>Awesome <a href="https://timeout.userpage.fu-berlin.de/apk-building-on-mobile/en/index.php">resource</a> written by Michael Zent.</p>
+<ol type="1">
+<li><p><code>📁 res</code> (without <code>res/values</code>) and <code>🗎 AndroidManifest.xml</code> are compiled (aapt [compile] tool)</p>
+<ul>
+<li>-&gt; <code>🗎 R.java</code>, <code>🗎 resources.asrc</code>, <code>📁 res (compiled)</code>, <code>🗎 AndroidManifest.xml</code> (compiled)</li>
+</ul></li>
+<li><p><code>📁 java</code>, <code>📁 libs</code><strong>,</strong> <code>🗎 R.java</code>, <code>🗎 android.jar</code> are compiled (java compiler [e.g. javac] and/or kotlin compiler [e.g. kotlinc])</p>
+<ul>
+<li><p>-&gt; Java bytecode (<code>.class</code>) files. These are then compiled/converted (d8 tool)</p>
+<ul>
+<li>-&gt; Dalvik bytecode (<code>.dex</code>) file/s</li>
+</ul></li>
+</ul></li>
+<li><p>Native code is embedded as dynamic shared libraries called Shared Object (<code>.so</code>)</p></li>
+<li><p>All the output are packaged (aapt [link] tool)</p>
+<ul>
+<li>-&gt; .apk (unsigned)</li>
+</ul></li>
+<li><p>zipalign and apksigner to sign the APK and make it installable and updatable on an Android device.</p></li>
+</ol>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

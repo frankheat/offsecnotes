@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn how to bypass common binary protections such as SSL pinning, root detection, and emulator detection. This guide covers identification techniques and practical methods using tools like Frida and Objection.">
+  <title>offsecnotes | Bypass binary protections</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Bypass binary protections</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#identify-compilers-packers-obfuscators" id="toc-identify-compilers-packers-obfuscators">Identify compilers, packers, obfuscators</a></li>
+<li><a href="#ssl-pinning" id="toc-ssl-pinning">SSL pinning</a></li>
+<li><a href="#root-detection" id="toc-root-detection">Root detection</a></li>
+<li><a href="#emulator-detection" id="toc-emulator-detection">Emulator detection</a></li>
+</ul></div>
+  <hr>
+<h2 id="identify-compilers-packers-obfuscators">Identify compilers, packers, obfuscators</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># https://github.com/rednaga/APKiD</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">apkid</span> <span class="at">--scan-depth</span> 0 <span class="at">-r</span> target.apk</span></code></pre></div>
+<hr />
+<h2 id="ssl-pinning">SSL pinning</h2>
+<ul>
+<li><p><strong>Missing SSL pinning</strong></p></li>
+<li><p><strong>Bypass with objection</strong></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">objection</span> <span class="at">--gadget</span> <span class="op">&lt;</span>com.package.app<span class="op">&gt;</span> explore <span class="at">--startup-command</span> <span class="st">&quot;android sslpinning disable&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">─❯</span> frida-ps <span class="at">-Uai</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">5682</span>  TestApp     com.testapp.plus</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ex">[...]</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">─❯</span> objection <span class="at">-g</span> 5682 explore <span class="co"># Attach to the app</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="ex">com.testapp.plus</span> on <span class="er">(</span><span class="ex">Android:</span> 11<span class="kw">)</span> <span class="ex">[usb]</span> <span class="co"># android sslpinning disable</span></span></code></pre></div></li>
+<li><p><strong>Bypass with frida</strong></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">frida</span> <span class="at">-U</span> <span class="at">--codeshare</span> akabe1/frida-multiple-unpinning <span class="at">-f</span> <span class="op">&lt;</span>com.package.app<span class="op">&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">frida</span> <span class="at">-U</span> <span class="at">--codeshare</span> pcipolloni/universal-android-ssl-pinning-bypass-with-frida <span class="at">-f</span> <span class="op">&lt;</span>com.package.app<span class="op">&gt;</span></span></code></pre></div></li>
+<li><p><strong>Replacing hard-Coded Sha256 hash</strong></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Detection</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Decompile apk</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Open jadx-gui</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Search &quot;sha256/&quot;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Replace Burp Suite certificate hash</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Export Certificate in DER format from Burp</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Convert DER to PEM certificate</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> x509 <span class="at">-inform</span> DER <span class="at">-in</span> cacert.cer <span class="at">-out</span> cacert.crt</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 6. Get Hash</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="ex">openssl</span> x509 <span class="at">-in</span> cacert.crt <span class="at">-pubkey</span> <span class="at">-noout</span> <span class="kw">|</span> <span class="ex">openssl</span> pkey <span class="at">-pubin</span> <span class="at">-outform</span> der <span class="kw">|</span> <span class="ex">openssl</span> dgst <span class="at">-sha256</span> <span class="at">-binary</span> <span class="kw">|</span> <span class="ex">openssl</span> enc <span class="at">-base64</span></span></code></pre></div></li>
+<li><p><strong>Intercept network traffic using remote debugging</strong></p></li>
+</ul>
+<p>This allow you to intercept the traffic in the webview.</p>
+<p>See <a href="/Android/Application%20security/security%20misconfiguration.html#webview---debug">Webview debug</a></p>
+<blockquote>
+<p><strong>Tip</strong>: If you can’t use remote debugging, recompile the app and enable it.</p>
+</blockquote>
+<hr />
+<h2 id="root-detection">Root detection</h2>
+<ul>
+<li><p><strong>Missing root detection</strong></p></li>
+<li><p><strong>Bypass with generic frida script</strong></p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">frida</span> <span class="at">--codeshare</span> dzonerzy/fridantiroot <span class="at">-f</span> <span class="op">&lt;</span>com.package.app<span class="op">&gt;</span> -U</span></code></pre></div></li>
+<li><p><strong>Identify RASP</strong></p>
+<ul>
+<li>Analyze source code</li>
+<li><code>apkid --scan-depth 0 -r target.apk</code></li>
+</ul></li>
+<li><p><strong>Bypass protection analyzing the code and/or with frida</strong></p>
+<ul>
+<li>If the app return an error message (e.g. “Your device appears to be rooted”), search this string inside the code</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="emulator-detection">Emulator detection</h2>
+<ul>
+<li>Missing emulator detection</li>
+<li>Bypass protection analyzing the code and/or with frida</li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

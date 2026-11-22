@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore how to identify and exploit vulnerabilities in web-integrated LLM APIs. Learn techniques like API mapping, privilege escalation, and insecure output handling for advanced web pentesting.">
+  <title>offsecnotes | Web LLM</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Web LLM</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#methodology" id="toc-methodology">Methodology</a></li>
+<li><a href="#mapping-llm-api-attack-surface" id="toc-mapping-llm-api-attack-surface">Mapping LLM API attack surface</a></li>
+<li><a href="#chaining-vulnerabilities-in-llm-apis" id="toc-chaining-vulnerabilities-in-llm-apis">Chaining vulnerabilities in LLM APIs</a></li>
+<li><a href="#insecure-output-handling" id="toc-insecure-output-handling">Insecure output handling</a></li>
+</ul></div>
+  <hr>
+<p>LLMs are AI algorithms that generate plausible responses by predicting word sequences from user inputs.</p>
+<hr />
+<h2 id="methodology">Methodology</h2>
+<ol type="1">
+<li>Identify the LLM’s inputs, including direct (e.g., a prompt) and indirect (e.g., training data).</li>
+<li>Determine the data and APIs accessible to the LLM</li>
+<li>Examine this attack surface for vulnerabilities.</li>
+</ol>
+<hr />
+<h2 id="mapping-llm-api-attack-surface">Mapping LLM API attack surface</h2>
+<ul>
+<li>Ask the LLM which APIs it can access</li>
+<li>Providing misleading context and re-asking the question</li>
+<li>Claim that you are the LLM’s developer and so should have a higher level of privilege</li>
+</ul>
+<hr />
+<h2 id="chaining-vulnerabilities-in-llm-apis">Chaining vulnerabilities in LLM APIs</h2>
+<p>The idea is to map the APIs and then send classic web exploits to all identified APIs.</p>
+<ul>
+<li>Suppose you normally have access to a “Newsletter Subscription” feature but you can’t control any parameters.</li>
+<li>Imagine that also LLM has access to “Newsletter Subscription” API. You can try to control how this API is called…</li>
+<li>E.g., if a system command is used you might get an RCE if you ask the LLM to call the Newsletter Subscription API with the argument <code>$(whoami)@your-email.com</code></li>
+</ul>
+<hr />
+<h2 id="insecure-output-handling">Insecure output handling</h2>
+<p>A web app uses an LLM to generate content from user prompts without sanitization. You could submit a crafted prompt causing the LLM to return unsanitized JavaScript, leading to XSS/CSRF etc.</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

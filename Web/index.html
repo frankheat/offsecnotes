@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Web</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Web</h1>
+<ul>
+<li>Vulnerabilities
+<ul>
+<li><a href="Vulnerabilities/api.html">API</a></li>
+<li><a href="Vulnerabilities/authentication.html">Authentication</a></li>
+<li><a href="Vulnerabilities/bac.html">Broken access control</a></li>
+<li><a href="Vulnerabilities/business%20logic%20vulnerabilities.html">Business logic vulnerabilities</a></li>
+<li><a href="Vulnerabilities/clickjacking.html">Clickjacking</a></li>
+<li><a href="Vulnerabilities/cors.html">CORS</a></li>
+<li><a href="Vulnerabilities/csrf.html">CSRF</a></li>
+<li><a href="Vulnerabilities/file%20upload%20vulnerabilities.html">File upload vulnerabilities</a></li>
+<li><a href="Vulnerabilities/graphql%20api.html">GraphQL</a></li>
+<li><a href="Vulnerabilities/host%20header%20injection.html">Host header injection</a></li>
+<li><a href="Vulnerabilities/http%20request%20smuggling.html">HTTP request smuggling</a></li>
+<li><a href="Vulnerabilities/information%20disclosure%20vulnerabilities.html">Information disclosure vulnerabilities</a></li>
+<li><a href="Vulnerabilities/jwt.html">JWT</a></li>
+<li><a href="Vulnerabilities/nosql%20injection.html">NoSQL injection</a></li>
+<li><a href="Vulnerabilities/oauth%202.0.html">Oauth 2.0</a></li>
+<li><a href="Vulnerabilities/os%20command%20injection.html">OS command injection</a></li>
+<li><a href="Vulnerabilities/path%20traversal.html">Path traversal</a></li>
+<li><a href="Vulnerabilities/prototype%20pollution.html">Prototype pollution</a></li>
+<li><a href="Vulnerabilities/race%20conditions.html">Race conditions</a></li>
+<li><a href="Vulnerabilities/sqli.html">SQL injection</a></li>
+<li><a href="Vulnerabilities/ssrf.html">SSRF</a></li>
+<li><a href="Vulnerabilities/ssti.html">SSTI</a></li>
+<li><a href="Vulnerabilities/web%20cache%20deception.html">Web cache deception</a></li>
+<li><a href="Vulnerabilities/web%20cache%20poisoning.html">Web cache poisoning</a></li>
+<li><a href="Vulnerabilities/web%20llm.html">Web LLM</a></li>
+<li><a href="Vulnerabilities/websockets.html">Websockets</a></li>
+<li><a href="Vulnerabilities/xss.html">XSS</a></li>
+<li><a href="Vulnerabilities/xxe.html">XXE</a></li>
+</ul></li>
+<li>Web security
+<ul>
+<li><a href="Web%20security/general%20obfuscation.html">General obfuscation</a></li>
+<li><a href="Web%20security/javascript%20and%20obfuscation.html">Javascript and obfuscation</a></li>
+<li><a href="Web%20security/method%20and%20headers.html">Method and headers</a></li>
+<li><a href="Web%20security/oauth.html">OAuth</a></li>
+<li><a href="Web%20security/sop%20cors%20pre%20flight.html">SOP CORS pre flight</a></li>
+<li><a href="Web%20security/web%20cache.html">Web cache</a></li>
+</ul></li>
+<li><a href="extra.html">Extra</a></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

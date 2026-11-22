@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn how to identify and exploit information disclosure vulnerabilities in web applications through techniques like fuzzing, error analysis, backup file inspection, and insecure configurations.">
+  <title>offsecnotes | Information disclosure</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Information disclosure</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#fuzzing" id="toc-fuzzing">Fuzzing</a></li>
+<li><a href="#common-sources-of-information-disclosure" id="toc-common-sources-of-information-disclosure">Common sources of information disclosure</a></li>
+</ul></div>
+  <hr>
+<h2 id="fuzzing">Fuzzing</h2>
+<ul>
+<li>Add payload positions to parameters and use pre-built wordlists of fuzz strings to test a high volume of different inputs in quick succession.</li>
+<li>Use grep matching rules to quickly identify occurrences of keywords, such as error, invalid, SELECT, SQL, and so on.</li>
+</ul>
+<hr />
+<h2 id="common-sources-of-information-disclosure">Common sources of information disclosure</h2>
+<ul>
+<li>Files for web crawlers
+<ul>
+<li><code>/robots.txt</code></li>
+<li><code>/sitemap.xml</code></li>
+</ul></li>
+<li>Developer comments</li>
+<li>Error messages
+<ul>
+<li>These can provide information about different technologies -&gt; documented exploits</li>
+<li>Check whether there are any configuration errors or dangerous default settings that you may be able to exploit</li>
+</ul></li>
+<li>Debugging data
+<ul>
+<li>Debugging information may sometimes be logged in a separate file</li>
+</ul></li>
+<li>User account pages
+<ul>
+<li>Example: via IDOR</li>
+</ul></li>
+<li>Source code disclosure via backup files
+<ul>
+<li>Text editors often generate temporary backup files while the original file is being edited
+<ul>
+<li>appending a tilde (<code>~</code>) to the filename</li>
+<li><code>/upload/code.php~</code>, <code>/upload/~code.php</code></li>
+<li>adding a different file extension</li>
+</ul></li>
+</ul></li>
+<li>Information disclosure due to insecure configuration
+<ul>
+<li>Example <code>HTTP TRACE</code>. This can sometimes lead to disclosing information, like internal authentication headers added by reverse proxies.</li>
+</ul></li>
+<li>Version control history
+<ul>
+<li>Browsing to <code>/.git</code></li>
+</ul></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

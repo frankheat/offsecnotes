@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Javascript &amp; obfuscation</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Javascript &amp; obfuscation</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#strings" id="toc-strings">Strings</a></li>
+<li><a href="#obfuscation" id="toc-obfuscation">Obfuscation</a>
+<ul>
+<li><a href="#hexadecimal" id="toc-hexadecimal">Hexadecimal</a></li>
+<li><a href="#unicode" id="toc-unicode">Unicode</a></li>
+<li><a href="#octal" id="toc-octal">Octal</a></li>
+<li><a href="#eval-and-escapes" id="toc-eval-and-escapes">Eval and escapes</a></li>
+<li><a href="#javascript-eval-atob" id="toc-javascript-eval-atob">Javascript eval() + atob()</a></li>
+</ul></li>
+<li><a href="#eval---dom-xss" id="toc-eval---dom-xss">eval() - DOM XSS</a></li>
+<li><a href="#replace" id="toc-replace">replace()</a></li>
+<li><a href="#document.location" id="toc-document.location">document.location</a></li>
+<li><a href="#javascript-in-innerhtml" id="toc-javascript-in-innerhtml">Javascript in innerHTML</a></li>
+<li><a href="#javascript-in-href-attribute" id="toc-javascript-in-href-attribute">Javascript in href attribute</a></li>
+</ul></div>
+  <hr>
+<h2 id="strings">Strings</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\b</span><span class="st">&#39;</span>    <span class="co">// Backspace</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\f</span><span class="st">&#39;</span>    <span class="co">// Form feed</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\n</span><span class="st">&#39;</span>    <span class="co">// New line</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\r</span><span class="st">&#39;</span>    <span class="co">// Carriage return</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\t</span><span class="st">&#39;</span>    <span class="co">// Tab</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\v</span><span class="st">&#39;</span>    <span class="co">// Vertical tab</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\0</span><span class="st">&#39;</span>    <span class="co">// Null</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\&#39;</span><span class="st">&#39;</span>    <span class="co">// Single quote</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\&quot;</span><span class="st">&#39;</span>    <span class="co">// Double quote</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\\</span><span class="st">&#39;</span>    <span class="co">// Backslash</span></span></code></pre></div>
+<p>You can escape any character not in an escape sequence</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;</span><span class="sc">\H\E\L\L\O</span><span class="st">&quot;</span>    <span class="co">// HELLO</span></span></code></pre></div>
+<p>Use a backslash to continue a line</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;I continue </span><span class="sc">\</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="st">onto the next line&#39;</span></span></code></pre></div>
+<p>Template strings (Backtick) support multiple lines</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>x<span class="op">=</span><span class="vs">`a</span><span class="sc">\</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="vs">b</span><span class="sc">\</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="vs">c`</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// x=&#39;abc&#39;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Template strings support new lines</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>x<span class="op">=</span><span class="vs">`a</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="vs">b</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="vs">c`</span><span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">// x=&#39;a\nb\nc&#39;</span></span></code></pre></div>
+<p>Template strings allow executing JavaScript expressions in placeholders.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="vs">`</span><span class="sc">${</span><span class="dv">7</span><span class="op">*</span><span class="dv">7</span><span class="sc">}</span><span class="vs">`</span>    <span class="co">// 49</span></span></code></pre></div>
+<p>Tagged template strings</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">alert</span><span class="vs">`1337`</span> <span class="co">// Calls the alert function with the argument 1337</span></span></code></pre></div>
+<hr />
+<h2 id="obfuscation">Obfuscation</h2>
+<h3 id="hexadecimal">Hexadecimal</h3>
+<p>Hexadecimal encoding works only within strings. If you attempt to use it as an identifier, it will fail.</p>
+<p><strong>Prefix</strong>: <code>\x</code></p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\x61</span><span class="st">&#39;</span>                    <span class="co">// a</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;</span><span class="sc">\x61</span><span class="st">&quot;</span>                    <span class="co">// a</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="vs">`</span><span class="sc">\x61</span><span class="vs">`</span>                    <span class="co">// a</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>x<span class="op">=</span><span class="st">&#39;</span><span class="sc">\x74\x65\x73\x74</span><span class="st">&#39;</span>      <span class="co">// x=&#39;test&#39;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">a</span>(){}</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>\<span class="fu">x61</span>()                    <span class="co">// Fails</span></span></code></pre></div>
+<h3 id="unicode">Unicode</h3>
+<p>Unicode escapes also work in strings but are also allowed in identifiers, but you cannot encode parentheses or other characters.</p>
+<p><strong>First form</strong>: <code>\u</code> (you must specify four hexadecimal characters)</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\u0061</span><span class="st">&#39;</span>                            <span class="co">//a</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;</span><span class="sc">\u0061</span><span class="st">&quot;</span>                            <span class="co">//a</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="vs">`</span><span class="sc">\u0061</span><span class="vs">`</span>                            <span class="co">//a</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>\u0074\u0065\u0073\u0074<span class="op">=</span><span class="st">&#39;cool&#39;</span>     <span class="co">// Variable test=&#39;cool&#39;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">a</span>(){}</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>\<span class="fu">u0061</span>()                            <span class="co">// Correctly calls the function</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>\u0061\u006c\u0065\u0072\<span class="fu">u0074</span>()    <span class="co">// Call alert()</span></span></code></pre></div>
+<p><strong>Second form</strong>: <code>\u{}</code></p>
+<p>Unlike standard unicode escapes you are not restricted to four hexadecimal characters.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\u{61}</span><span class="st">&#39;</span>                              <span class="co">//a</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;</span><span class="sc">\u{000000000061}</span><span class="st">&quot;</span>                    <span class="co">//a</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="vs">`</span><span class="sc">\u{0061}</span><span class="vs">`</span>                            <span class="co">//a</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>\u{<span class="dv">74</span>}\u{<span class="dv">65</span>}\u{<span class="dv">73</span>}\u{<span class="dv">74</span>}<span class="op">=</span><span class="st">&#39;cool&#39;</span>       <span class="co">// Variable test=&#39;cool&#39;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">a</span>(){}</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>\u{<span class="dv">61</span>}()                              <span class="co">//correctly calls the function</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>\u{<span class="dv">61</span>}\u{<span class="dv">6</span><span class="er">c</span>}\u{<span class="dv">65</span>}\u{<span class="dv">72</span>}\u{<span class="dv">74</span>}()      <span class="co">// Call alert()</span></span></code></pre></div>
+<h3 id="octal">Octal</h3>
+<p>Can only be used strings. Using a number outside the octal range returns the number itself in JavaScript.</p>
+<p><strong>Prefix</strong>: only <code>\</code></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span><span class="sc">\141</span><span class="st">&#39;</span>    <span class="co">// a</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;</span><span class="sc">\8</span><span class="st">&quot;</span>      <span class="co">// number outside the octal range so 8 is returned</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="vs">`</span><span class="sc">\9</span><span class="vs">`</span>      <span class="co">// number outside the octal range so 9 is returned</span></span></code></pre></div>
+<h3 id="eval-and-escapes">Eval and escapes</h3>
+<p>Since <code>eval()</code> operates on strings, it attempts to decode the input provided to it. As a result, when the JavaScript is executed, the engine processes the decoded string. This behavior allows us to <strong>bypass some of the previously defined rules</strong>.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Hex can only be used with strings, but with eval() </span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co">// the hex will be decoded first and then executed -&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co">// so this is valid</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="pp">eval</span>(<span class="st">&#39;</span><span class="sc">\x61</span><span class="st">=123&#39;</span>)    <span class="co">// a = 123</span></span></code></pre></div>
+<p>With unicode you can do the same and you can also double encode backslash</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">eval</span><span class="op">(</span><span class="er">&#39;\\</span>x61<span class="op">=</span><span class="dv">123</span><span class="er">&#39;</span><span class="op">)</span>      <span class="co">// (hex) -&gt; Error</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">eval</span><span class="op">(</span><span class="er">&#39;\u0061</span><span class="op">=</span><span class="dv">123</span><span class="er">&#39;</span><span class="op">)</span>     <span class="co">// a = 123</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="fu">eval</span><span class="op">(</span><span class="er">&#39;\\</span>u0061<span class="op">=</span><span class="dv">123</span><span class="er">&#39;</span><span class="op">)</span>    </span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="co">// (1) \\u0061 -&gt; \u0061</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="co">// (2) \u0061 = 123</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="co">// (3) a = 133</span></span></code></pre></div>
+<p>When using <code>eval()</code> and can mix and match the encodings</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="pp">eval</span>(<span class="st">&#39;</span><span class="sc">\\</span><span class="st">u</span><span class="sc">\x30</span><span class="st">061=123&#39;</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co">// (1) \x30 -&gt; 0</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="co">// (2) \\u0061 -&gt; \u0061 -&gt; a</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co">// (3) a = 123</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="pp">eval</span>(<span class="st">&#39;</span><span class="er">\u</span><span class="sc">\x30</span><span class="st">061=123&#39;</span>)         <span class="co">// Error, you need to escape backslash</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="pp">eval</span>(<span class="st">&#39;</span><span class="sc">\\</span><span class="st">u</span><span class="sc">\x30</span><span class="st">0</span><span class="sc">\66</span><span class="st">1=123&#39;</span>)</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="co">// (1) \x30 -&gt; 0    \6 -&gt; 6</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="co">// (2) \\u0061 -&gt; \u0061 -&gt; a</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="co">// (3) a = 123</span></span></code></pre></div>
+<h3 id="javascript-eval-atob">Javascript eval() + atob()</h3>
+<div class="sourceCode" id="cb14"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="pp">eval</span>(<span class="fu">atob</span>(<span class="st">&quot;YWxlcnQoKQ==&quot;</span>))    <span class="co">// alert()</span></span></code></pre></div>
+<p><code>atob()</code> decode a base-64 encoded string.</p>
+<p>This can be useful to bypass char/string blocked.</p>
+<hr />
+<h2 id="eval---dom-xss">eval() - DOM XSS</h2>
+<ul>
+<li>Consider <code>eval('var searchResultsObj = ' + this.responseText);</code>
+<ul>
+<li>If you can manipulate the <code>this.responseText</code> string you can execute an alert.
+<ul>
+<li>(The response is taken with ajax)</li>
+</ul></li>
+</ul></li>
+<li>If the response is <code>{"results":[],"searchTerm":"XSS"}</code> and you are able to change <code>XSS</code> keyword into <code>\"-alert(1)}//</code> the result will be <code>{"results":[],"searchTerm":"\\"-alert(1)}//"}</code> and an alert will appear</li>
+</ul>
+<blockquote>
+<p><strong>Notes</strong>:</p>
+<ul>
+<li>Notice that JSON automatically escape the double quote <code>"</code> (standard feature of javascript string) so we need to use <code>\"</code></li>
+<li>We add <code>//</code> to comment the rest</li>
+<li>This specific example with JSON works because the site didn’t use <code>JSON.parse(this.responseText)</code></li>
+<li>This specific example is a case of Reflected DOM XSS</li>
+</ul>
+</blockquote>
+<hr />
+<h2 id="replace">replace()</h2>
+<p>The <code>replace()</code> method returns a new string with matches of a pattern replaced by a replacement, which can be a string or a function. The pattern can be a string or RegExp.</p>
+<p>If pattern is a string, only the first occurrence will be replaced. The original string is left unchanged.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">escapeHTML</span>(html) {</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> html<span class="op">.</span><span class="fu">replace</span>(<span class="st">&#39;&lt;&#39;</span><span class="op">,</span> <span class="st">&#39;&amp;lt;&#39;</span>)<span class="op">.</span><span class="fu">replace</span>(<span class="st">&#39;&gt;&#39;</span><span class="op">,</span> <span class="st">&#39;&amp;gt;&#39;</span>)<span class="op">;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>You can easy bypass this with <code>&lt;&gt;&lt;img src=1 onerror=alert(1)&gt;</code></p>
+<hr />
+<h2 id="document.location">document.location</h2>
+<p>In JavaScript, the <code>location</code> variable (<code>document.location</code>) represents the URL of the current document. Assigning a value to it redirects the page to that URL.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>location <span class="op">=</span> <span class="st">&#39;https://google.it&#39;</span><span class="op">;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<hr />
+<h2 id="javascript-in-innerhtml">Javascript in innerHTML</h2>
+<div class="sourceCode" id="cb17"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>name = &quot;<span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span><span class="fu">alert</span>(<span class="st">&#39;I am John in an annoying alert!&#39;</span>)<span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span>&quot;;</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>el.innerHTML = name; <span class="co">&lt;!-- harmless in this case --&gt;</span></span></code></pre></div>
+<p>HTML specifies that a <code>&lt;script&gt;</code> tag inserted with innerHTML should not execute</p>
+<p>In this case you can use <code>const name = "&lt;img src='x' onerror='alert(1)'&gt;";</code></p>
+<hr />
+<h2 id="javascript-in-href-attribute">Javascript in href attribute</h2>
+<p>Possible values:</p>
+<ul>
+<li>An absolute URL - points to another web site. <code>href="http://www.example.com/default.htm"</code></li>
+<li>A relative URL - points to a file within a web site. <code>href="default.htm"</code></li>
+<li>Link to an element with a specified id within the page. <code>href="#section2"</code></li>
+<li>Other protocols (like <code>https://</code>, <code>ftp://</code>, <code>mailto://</code>, <code>file://</code>, etc..)</li>
+<li>A script. <code>href="javascript:alert('Hello');"</code></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

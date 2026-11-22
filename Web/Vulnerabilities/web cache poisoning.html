@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Web cache poisoning</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Web cache poisoning</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#exploiting-cache-design-flaws" id="toc-exploiting-cache-design-flaws">Exploiting cache design flaws</a>
+<ul>
+<li><a href="#exploiting-responses-that-expose-too-much-information" id="toc-exploiting-responses-that-expose-too-much-information">Exploiting responses that expose too much information</a></li>
+</ul></li>
+<li><a href="#exploiting-cache-implementation-flaws" id="toc-exploiting-cache-implementation-flaws">Exploiting cache implementation flaws</a>
+<ul>
+<li><a href="#unkeyed-port" id="toc-unkeyed-port">Unkeyed port</a></li>
+<li><a href="#unkeyed-query-string" id="toc-unkeyed-query-string">Unkeyed query string</a></li>
+<li><a href="#unkeyed-query-parameters" id="toc-unkeyed-query-parameters">Unkeyed query parameters</a>
+<ul>
+<li><a href="#detection" id="toc-detection">Detection</a></li>
+</ul></li>
+<li><a href="#exploiting-parameter-parsing-quirks" id="toc-exploiting-parameter-parsing-quirks">Exploiting parameter parsing quirks</a></li>
+<li><a href="#exploiting-fat-get-support" id="toc-exploiting-fat-get-support">Exploiting fat GET support</a></li>
+<li><a href="#normalized-cache-keys" id="toc-normalized-cache-keys">Normalized cache keys</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<p>More info about web cache: <a href="/Web/Web%20security/web%20cache.html">Web cache</a></p>
+<p>Two phases:</p>
+<ol type="1">
+<li>Find a way to trigger a response that unintentionally includes a dangerous payload.</li>
+<li>Ensure the response is cached and served to the intended victims after success.</li>
+</ol>
+<hr />
+<h2 id="exploiting-cache-design-flaws">Exploiting cache design flaws</h2>
+<p><strong>Web cache poisoning to deliver XSS</strong></p>
+<pre class="http"><code>GET /en?region=uk HTTP/1.1
+Host: innocent-website.com
+X-Forwarded-Host: innocent-website.co.uk
+
+HTTP/1.1 200 OK
+Cache-Control: public
+&lt;meta property=&quot;og:image&quot; content=&quot;https://innocent-website.co.uk/cms/social.png&quot; /&gt;</code></pre>
+<p><code>X-Forwarded-Host</code> is unkeyed. Exploit: <code>X-Forwarded-Host: a."&gt;&lt;script&gt;alert(1)&lt;/script&gt;"</code></p>
+<p>If this response was cached, all users who accessed <code>/en?region=uk</code> would be served this XSS payload</p>
+<blockquote>
+<p><strong>Note</strong>: Try also multiple headers:</p>
+<pre class="http"><code>GET /random HTTP/1.1
+Host: innocent-site.com
+X-Forwarded-Proto: http
+
+HTTP/1.1 301 moved permanently
+Location: https://innocent-site.com/random</code></pre>
+</blockquote>
+<h3 id="exploiting-responses-that-expose-too-much-information">Exploiting responses that expose too much information</h3>
+<p><strong>Cache-control directives</strong></p>
+<p>A challenge in web cache poisoning is ensuring the harmful response gets cached, often requiring manual trial and error. However, sometimes responses reveal information that helps the attacker successfully poison the cache.</p>
+<pre class="http"><code>HTTP/1.1 200 OK
+Via: 1.1 varnish-v4
+Age: 174
+Cache-Control: public, max-age=1800</code></pre>
+<p><strong>Vary header</strong></p>
+<p>The <code>Vary</code> header specifies a list of additional headers that should be treated as part of the cache key even if they are normally unkeyed. For example, it is commonly used to specify that the <code>User-Agent</code> header is keyed. If the mobile version of a website is cached, this won’t be served to non-mobile users by mistake.</p>
+<hr />
+<h2 id="exploiting-cache-implementation-flaws">Exploiting cache implementation flaws</h2>
+<p>The methodology involves the following steps:</p>
+<ol type="1">
+<li>Identify a suitable cache oracle
+<ul>
+<li>A cache oracle is a cacheable page or endpoint that provides feedback on whether a response was cached or served directly from the server.</li>
+</ul></li>
+<li>Identify and evaluate unkeyed inputs
+<ul>
+<li>Adding random inputs to requests and observing their effect on the response, whether it’s directly reflected or triggers a different response.</li>
+</ul></li>
+<li>Identify an exploitable gadget
+<ul>
+<li>These gadgets will often be classic client-side vulnerabilities, such as reflected XSS and open redirects.</li>
+</ul></li>
+</ol>
+<blockquote>
+<p><strong>Tip</strong>: Use Param Miner extension to identify unkeyed inputs (Guess headers).</p>
+</blockquote>
+<h3 id="unkeyed-port">Unkeyed port</h3>
+<p>In this way you can:</p>
+<ul>
+<li>Enable a denial-of-service attack by adding an arbitrary port, redirecting users to a non-functional port.</li>
+<li>Enable XSS payload injection.</li>
+</ul>
+<h3 id="unkeyed-query-string">Unkeyed query string</h3>
+<p>Like the Host header, the request line is usually keyed, but one of the most common cache-key transformations is the exclusion of the entire query string.</p>
+<p><strong>Detecting an unkeyed query string</strong></p>
+<p>You can use alternative cache busters, like adding them to a keyed header that doesn’t affect the app’s behavior.</p>
+<pre class="http"><code>Accept-Encoding: gzip, deflate, cachebuster
+Accept: */*, text/cachebuster
+Cookie: cachebuster=1
+Origin: https://cachebuster.vulnerable-website.com</code></pre>
+<h3 id="unkeyed-query-parameters">Unkeyed query parameters</h3>
+<p>Some websites only exclude specific query parameters that are not relevant to the back-end application, such as parameters for analytics or serving targeted advertisements. UTM parameters like <code>utm_content</code>.</p>
+<h4 id="detection">Detection</h4>
+<p>First time</p>
+<pre class="http"><code>GET /?first=test1&amp;utm_content=a HTTP/2
+
+HTTP/2 200 OK
+X-Cache: miss</code></pre>
+<p>Second time</p>
+<pre class="http"><code>GET /?first=test1&amp;utm_content=b HTTP/2
+
+HTTP/2 200 OK
+X-Cache: hit</code></pre>
+<blockquote>
+<p><strong>Tip</strong>: Use Param Miner extension to identify unkeyed inputs.</p>
+</blockquote>
+<h3 id="exploiting-parameter-parsing-quirks">Exploiting parameter parsing quirks</h3>
+<p>This happen when back-end identifies distinct parameters that the cache does not. The Ruby on Rails framework, for example, interprets both ampersands (<code>&amp;</code>) and semicolons (<code>;</code>) as delimiters</p>
+<pre class="http"><code>GET /?keyed_param=abc&amp;excluded_param=123;keyed_param=bad-stuff-here</code></pre>
+<p>As the names suggest, <code>keyed_param</code> is included in the cache key, but <code>excluded_param</code> is not. Many caches will only interpret this as two parameters, delimited by the ampersand:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">1.</span>    keyed_param=abc</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">2.</span>    excluded_param=123<span class="kw">;</span><span class="va">keyed_param</span><span class="op">=</span>bad-stuff-here</span></code></pre></div>
+<p>Once the parsing algorithm removes the <code>excluded_param</code>, the cache key will only contain <code>keyed_param=abc</code>. On the back-end, however, Ruby on Rails sees the semicolon and splits the query string into three separate parameters:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">1.</span>    keyed_param=abc</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">2.</span>    excluded_param=123</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">3.</span>    keyed_param=bad-stuff-here</span></code></pre></div>
+<p>But now there is a duplicate <code>keyed_param</code>. This is where the second quirk comes into play. If there are duplicate parameters, each with different values, Ruby on Rails gives precedence to the final occurrence. The end result is that the cache key contains an innocent, expected parameter value, allowing the cached response to be served as normal to other users. On the back-end, however, the same parameter has a completely different value, which is our injected payload. It is this second value that will be passed into the gadget and reflected in the poisoned response.</p>
+<h3 id="exploiting-fat-get-support">Exploiting fat GET support</h3>
+<p>Although this scenario is pretty rare, you can sometimes simply add a body to a <code>GET</code> request to create a “fat” <code>GET</code> request. In this case you can “overwrite” the param value</p>
+<pre class="http"><code>GET /?param=innocent HTTP/1.1
+[…]
+
+param=bad-stuff-here</code></pre>
+<h3 id="normalized-cache-keys">Normalized cache keys</h3>
+<p>Problem: when you find reflected XSS in a parameter, it is often unexploitable in practice. This is because modern browsers typically URL-encode the necessary characters when sending the request, and the server doesn’t decode them.</p>
+<p>Example:</p>
+<p>You send the follow URL to a victim</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">https://vulnerable.website.net/test</span><span class="op">&lt;</span>script<span class="op">&gt;</span>alert<span class="er">(</span><span class="ex">1</span><span class="kw">)</span><span class="op">&lt;</span>/script<span class="op">&gt;</span></span></code></pre></div>
+<p>His browser send the following request</p>
+<pre class="http"><code>GET /test%3Cscript%3Ealert(1)%3C/script%3E HTTP/2
+Host: vulnerable.website.net
+[...]
+
+
+HTTP/2 404 Not Found
+[...]
+
+&lt;p&gt;Not Found: /test&lt;script&gt;alert(1)&lt;/script&gt;&lt;/p&gt;</code></pre>
+<p>So, normally this XSS is unexploitable.</p>
+<p><strong>Exploitation with normalized cache keys</strong></p>
+<p>Some caching implementations normalize keyed input when adding it to the cache key. In this case, both of the following requests would have the same key:</p>
+<pre class="http"><code>GET /example?param=&quot;&gt;&lt;test&gt;
+GET /example?param=%22%3e%3ctest%3e</code></pre>
+<p>When the victim visits the malicious URL, the payload will still be URL-encoded by their browser; however, once the URL is normalized by the cache, it will have the same cache key as the response containing your unencoded payload.</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

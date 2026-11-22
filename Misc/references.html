@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | References</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>References</h1>
+<h2 id="android">ANDROID</h2>
+<ul>
+<li><a href="https://app.hextree.io/">https://app.hextree.io/</a></li>
+<li><a href="https://timeout.userpage.fu-berlin.de/apk-building-on-mobile/en/index.php">https://timeout.userpage.fu-berlin.de/apk-building-on-mobile/en/index.php</a></li>
+<li><a href="https://book.hacktricks.xyz/mobile-pentesting/android-app-pentesting">https://book.hacktricks.xyz/mobile-pentesting/android-app-pentesting</a></li>
+<li><a href="https://github.com/Hrishikesh7665/Android-Pentesting-Checklist">https://github.com/Hrishikesh7665/Android-Pentesting-Checklist</a></li>
+<li><a href="https://mas.owasp.org/MASTG/">https://mas.owasp.org/MASTG/</a></li>
+<li><a href="https://stinger.io/mobile/android/">https://stinger.io/mobile/android/</a></li>
+<li><a href="https://github.com/ivan-sincek/android-penetration-testing-cheat-sheet">https://github.com/ivan-sincek/android-penetration-testing-cheat-sheet</a></li>
+<li><a href="https://developer.android.com/privacy-and-security/security-tips">https://developer.android.com/privacy-and-security/security-tips</a></li>
+<li><a href="https://github.com/DERE-ad2001/Frida-Labs">https://github.com/DERE-ad2001/Frida-Labs</a></li>
+<li><a href="https://suam.wtf/posts/react-native-application-static-analysis-en/">https://suam.wtf/posts/react-native-application-static-analysis-en/</a></li>
+<li><a href="https://www.youtube.com/@fatalsec/videos">https://www.youtube.com/<span class="citation" data-cites="fatalsec/videos">@fatalsec/videos</span></a></li>
+</ul>
+<hr />
+<h2 id="web">WEB</h2>
+<ul>
+<li><a href="https://portswigger.net/web-security">https://portswigger.net/web-security</a></li>
+<li><a href="https://portswigger.net/research/server-side-template-injection">https://portswigger.net/research/server-side-template-injection</a></li>
+<li><a href="https://www.netspi.com/blog/technical-blog/web-application-pentesting/ultimate-guide-to-prototype-pollution/">https://www.netspi.com/blog/technical-blog/web-application-pentesting/ultimate-guide-to-prototype-pollution/</a></li>
+<li>Gareth Heyes. (2022). JavaScript for hackers: Learn to think like a hacker.</li>
+</ul>
+<hr />
+<h2 id="other">OTHER</h2>
+<ul>
+<li><a href="https://github.com/neilmadhava/EJPTv2-Notes">https://github.com/neilmadhava/EJPTv2-Notes</a></li>
+<li><a href="https://juggernaut-sec.com/blog/">https://juggernaut-sec.com/blog/</a></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

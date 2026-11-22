@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Extra</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Extra</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#enumerating-web-resources" id="toc-enumerating-web-resources">Enumerating web resources</a>
+<ul>
+<li><a href="#wordlists" id="toc-wordlists">Wordlists</a></li>
+</ul></li>
+<li><a href="#vulnerability-scanner" id="toc-vulnerability-scanner">Vulnerability scanner</a></li>
+<li><a href="#technology-identification" id="toc-technology-identification">Technology Identification</a></li>
+</ul></div>
+  <hr>
+<h2 id="enumerating-web-resources">Enumerating web resources</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Web fuzzer </span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">ffuf</span> <span class="at">-c</span> <span class="at">-u</span> https://example.com/file-FUZZ <span class="at">-w</span> wordlist.txt</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># with extension</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">ffuf</span> <span class="at">-c</span> <span class="at">-u</span> https://example.com/FUZZ <span class="at">-w</span> wordlist.txt <span class="at">-e</span> .php,.html,.txt</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># with more placeholder</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="ex">ffuf</span> <span class="at">-c</span> <span class="at">-u</span> http://example.com/FUZZ/FILE <span class="at">-w</span> wordlist.txt:FUZZ <span class="at">-w</span> wordlist2.txt:FILE </span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Recursive content discovery</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># You can set depth (recursion), extract links from response body</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="ex">feroxbuster</span> <span class="at">-u</span> https://example.com <span class="at">-x</span> html,php,js,txt,pdf,json</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Fetch all the URLs that the Wayback Machine knows about for a domain</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="ex">waybackurls</span> https://example.com</span></code></pre></div>
+<h3 id="wordlists">Wordlists</h3>
+<p><strong>Full path</strong></p>
+<p><a href="https://github.com/six2dez/OneListForAll/blob/main/onelistforallmicro.txt">onelistforallmicro.txt</a> (18.109 lines)</p>
+<p><a href="https://github.com/six2dez/OneListForAll/blob/main/onelistforallshort.txt">onelistforallshort.txt</a> (892.361 lines)</p>
+<p><strong>Directory/file</strong></p>
+<p><a href="https://github.com/daviddias/node-dirbuster/blob/master/lists/directory-list-2.3-medium.txt">directory-list-2.3-medium.txt</a> (220.560 lines)</p>
+<hr />
+<h2 id="vulnerability-scanner">Vulnerability scanner</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">nikto</span> <span class="at">-h</span> http://example.com</span></code></pre></div>
+<hr />
+<h2 id="technology-identification">Technology Identification</h2>
+<p>Use <a href="https://www.wappalyzer.com/">Wappalyzer</a> extension.</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

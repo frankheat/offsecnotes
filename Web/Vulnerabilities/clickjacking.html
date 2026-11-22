@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Understand clickjacking attacks, iframe-based exploits, form prefill tricks, frame busting bypasses, and how they combine with XSS for account takeover.">
+  <title>offsecnotes | Clickjacking</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Clickjacking</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#how-it-works" id="toc-how-it-works">How it works:</a></li>
+<li><a href="#example-of-clickjacking" id="toc-example-of-clickjacking">Example of Clickjacking</a></li>
+<li><a href="#prefilled-form-input-attack" id="toc-prefilled-form-input-attack">Prefilled Form Input Attack</a></li>
+<li><a href="#bypassing-frame-busting-scripts" id="toc-bypassing-frame-busting-scripts">Bypassing Frame Busting Scripts</a></li>
+<li><a href="#clickjacking-dom-xss" id="toc-clickjacking-dom-xss">Clickjacking + DOM XSS</a></li>
+<li><a href="#multi-step-clickjacking-attacks" id="toc-multi-step-clickjacking-attacks">Multi-Step Clickjacking Attacks</a></li>
+</ul></div>
+  <hr>
+<details>
+<summary>
+Introduction
+</summary>
+<p>Clickjacking is a web security vulnerability where an attacker tricks a user into clicking something different from what they perceive. This is done by overlaying an invisible or disguised element on top of a legitimate webpage.</p>
+<h3 id="how-it-works">How it works:</h3>
+<ul>
+<li>An attacker embeds an <strong>invisible iframe</strong> of a target website within a malicious page.</li>
+<li>The user thinks they are clicking on the visible page, but they are actually interacting with the hidden iframe.</li>
+<li>This can lead to unwanted actions such as <strong>clicking on a hidden button, submitting a form, or activating a harmful feature.</strong></li>
+</ul>
+Clickjacking attacks are <strong>not prevented</strong> by CSRF tokens, as the user’s session with the target site remains valid.
+</details>
+<hr />
+<h2 id="example-of-clickjacking">Example of Clickjacking</h2>
+<p>Here is a basic example of a clickjacking attack using an iframe:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">html</span><span class="dt">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">head</span><span class="dt">&gt;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&lt;</span><span class="kw">style</span><span class="dt">&gt;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>            iframe {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>                <span class="kw">position</span>:<span class="dv">relative</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>                <span class="kw">width</span>:$width_value<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>                <span class="kw">height</span>: $height_value<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>                <span class="kw">opacity</span>: $opacity<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>                <span class="kw">z-index</span>: <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            div {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>                <span class="kw">position</span>: <span class="dv">absolute</span><span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>                <span class="kw">top</span>: <span class="dv">185</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>                <span class="kw">left</span>: <span class="dv">90</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>                <span class="kw">z-index</span>: <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&lt;/</span><span class="kw">style</span><span class="dt">&gt;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">head</span><span class="dt">&gt;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">body</span><span class="dt">&gt;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&lt;</span><span class="kw">div</span><span class="dt">&gt;</span>You won $3,000<span class="dt">&lt;/</span><span class="kw">div</span><span class="dt">&gt;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&lt;</span><span class="kw">iframe</span> <span class="er">src</span><span class="ot">=</span><span class="st">&quot;http://victim-site.com&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;/</span><span class="kw">body</span><span class="dt">&gt;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">html</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>The <code>opacity</code> of the iframe is set to <code>0</code>, making it invisible, while the <code>z-index</code> ensures that it is layered above the visible content.</p>
+<hr />
+<h2 id="prefilled-form-input-attack">Prefilled Form Input Attack</h2>
+<p>Some websites allow prepopulating form inputs via <code>GET</code> parameters. Attackers can exploit this to trick users into submitting forms with attacker-controlled values.</p>
+<p>Example:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>http://website.com/account?email=attacker@example.com</span></code></pre></div>
+<p>If the website autofills the email field, the victim might unknowingly submit the attacker’s email instead of their own.</p>
+<hr />
+<h2 id="bypassing-frame-busting-scripts">Bypassing Frame Busting Scripts</h2>
+<p>A frame busting script is a JavaScript script used by a website to prevent itself from being loaded inside an iframe on another site.</p>
+<p>However, attackers can <strong>bypass</strong> these protections using the <code>sandbox</code> attribute in HTML5:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span> <span class="er">id</span><span class="ot">=</span><span class="st">&quot;victim_site&quot;</span> <span class="er">src</span><span class="ot">=</span><span class="st">&quot;https://victim-site.com&quot;</span> <span class="er">sandbox</span><span class="ot">=</span><span class="st">&quot;allow-forms&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>When this is set with the <code>allow-forms</code> or <code>allow-scripts</code> values and the <code>allow-top-navigation</code> value is omitted then the frame buster script can be neutralized as the iframe cannot check whether or not it is the top window.</p>
+<hr />
+<h2 id="clickjacking-dom-xss">Clickjacking + DOM XSS</h2>
+<p>An attacker can combine <strong>Clickjacking with Cross-Site Scripting (XSS)</strong> for more impact.</p>
+<p><strong>Steps</strong>:</p>
+<ol type="1">
+<li>Identify an <strong>XSS vulnerability</strong> on the target site.</li>
+<li>Embed the vulnerable page inside an iframe.</li>
+<li>Use clickjacking to make the victim <strong>click a malicious link</strong> that triggers the XSS.</li>
+</ol>
+<p>This allows the attacker to execute JavaScript in the victim’s session, potentially leading to <strong>account takeover</strong>.</p>
+<hr />
+<h2 id="multi-step-clickjacking-attacks">Multi-Step Clickjacking Attacks</h2>
+<p>Some attacks require multiple steps. This can be done by overlaying multiple <strong>iframes</strong> with staged interactions.</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

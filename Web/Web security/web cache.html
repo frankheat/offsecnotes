@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Web cache</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Web cache</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#cache-keys" id="toc-cache-keys">Cache keys</a></li>
+<li><a href="#cache-rules" id="toc-cache-rules">Cache rules</a></li>
+<li><a href="#detecting-cached-responses" id="toc-detecting-cached-responses">Detecting cached responses</a></li>
+<li><a href="#using-a-cache-buster" id="toc-using-a-cache-buster">Using a cache buster</a></li>
+</ul></div>
+  <hr>
+<p>A web cache is an intermediary system between the origin server and the user. When a client requests a static resource, the cache checks if it has a copy. If not (a cache miss), the request is sent to the origin server, which processes and responds.</p>
+<h2 id="cache-keys">Cache keys</h2>
+<p>When the cache gets an HTTP request, it decides whether to serve a cached response or forward the request to the origin server by generating a “cache key”. Typically, this would contain the request line and <code>Host</code> header but can also include headers and content type.</p>
+<hr />
+<h2 id="cache-rules">Cache rules</h2>
+<p>Cache rules dictate what can be cached and for how long. They usually store static resources, which change infrequently and are used across multiple pages. Dynamic content isn’t cached, as it often contains sensitive information, ensuring users receive the most up-to-date data from the server.</p>
+<ul>
+<li><strong>Static file extension</strong> rules match the file extensions of requested resources, like <code>.css</code> or <code>.js</code></li>
+<li><strong>Static directory</strong> rules match URL paths starting with a specific prefix, typically used for directories containing static resources, such as <code>/static</code> or <code>/assets</code>.</li>
+<li><strong>File name</strong> rules target specific files that are essential and rarely change, like <code>robots.txt</code> and <code>favicon.ico</code>.</li>
+<li><strong>Custom</strong> rules.</li>
+</ul>
+<hr />
+<h2 id="detecting-cached-responses">Detecting cached responses</h2>
+<ul>
+<li>The <code>X-Cache</code> header indicates if a response came from the cache. Typical values include:
+<ul>
+<li><code>X-Cache: hit</code> - The response come from the cache.</li>
+<li><code>X-Cache: miss</code> - The cache had no response for the request’s key, so it was fetched from the origin server and, in most cases, cached. Send the request again to check if the value updates to “hit.”</li>
+<li><code>X-Cache: dynamic</code> - The origin server dynamically generated the content, making it generally unsuitable for caching.</li>
+<li><code>X-Cache: refresh</code> - The cached content was outdated and needed refreshing or revalidation.</li>
+</ul></li>
+<li>The <code>Cache-Control</code> header may include a directive that indicates caching, like <code>public</code> with a <code>max-age</code> that has a value over <code>0</code>. Note that this only suggests that the resource is cacheable. It isn’t always indicative of caching, as the cache may sometimes override this header.</li>
+</ul>
+<p>If you notice a big difference in response time for the same request, this may also indicate that the faster response is served from the cache.</p>
+<hr />
+<h2 id="using-a-cache-buster">Using a cache buster</h2>
+<p>A “cache buster” is a technique to ensure that users get the most recent version of a file (like CSS, JavaScript, or images) by bypassing the browser’s cache. This is done by appending a unique query string (e.g., <code>?v=1.1</code> or <code>?ts=1689876543</code> or whatever you want) to the file URL. The browser treats this as a different file and loads the latest version, preventing issues with outdated cached files.</p>
+<p>When testing for discrepancies and crafting a web cache deception exploit, ensure each request has a unique cache key to avoid receiving cached responses, which could skew your results.</p>
+<p>Since the cache key typically includes the URL path and query parameters, change the key by adding a different query string with each request. Automate this with the Param Miner extension by selecting <em>Add dynamic cachebuster</em> under the Param Miner &gt; Settings menu in Burp. This will add a unique query string to every request, viewable in the Logger tab.</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

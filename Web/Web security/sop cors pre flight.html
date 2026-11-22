@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | SOP, CORS, Pre-flight</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>SOP, CORS, Pre-flight</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#same-origin-policy-sop" id="toc-same-origin-policy-sop">Same-origin policy (SOP)</a></li>
+<li><a href="#cross-origin-resource-sharing" id="toc-cross-origin-resource-sharing">Cross-origin resource sharing</a></li>
+<li><a href="#pre-flight-checks" id="toc-pre-flight-checks">Pre-flight checks</a></li>
+</ul></div>
+  <hr>
+<h2 id="same-origin-policy-sop">Same-origin policy (SOP)</h2>
+<ul>
+<li>The same-origin policy restricts scripts on one origin from accessing data from another origin.</li>
+<li>An origin consists of a URI scheme, domain and port number.</li>
+<li>The SOP prevents a malicious website from running JS in a browser to read data from a third-party website. (There are various exceptions)</li>
+<li>The SOP allows embedding of images via the <code>&lt;img&gt;</code> <code>&lt;video&gt;</code> <code>&lt;script&gt;</code>.
+<ul>
+<li>However, while these external resources can be loaded by the page, any JavaScript on the page won’t be able to read the contents of these resources.</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="cross-origin-resource-sharing">Cross-origin resource sharing</h2>
+<p>The cross-origin resource sharing specification provides controlled relaxation of the same-origin policy. The CORS specification identifies a collection of protocol headers</p>
+<ul>
+<li><code>Origin</code> header added by the browser.
+<ul>
+<li><pre class="http"><code>  Origin : https://normal-website.com</code></pre></li>
+</ul></li>
+<li><code>Access-Control-Allow-Origin</code> returned by a server when a website requests a cross-domain resource.
+<ul>
+<li><pre class="http"><code>  Access-Control-Allow-Origin: https://normal-website.com</code></pre></li>
+</ul></li>
+</ul>
+<p>This means that the browser will allow code running on normal-website.com to access the response because the origins match.</p>
+<blockquote>
+<p><strong>Note</strong>: <code>Access-Control-Allow-Origin</code> is returned only if the whitelisted values or <code>*</code> or <code>null</code> matched the Origin.</p>
+</blockquote>
+<p><strong>Access-Control-Allow-Origin: *</strong></p>
+<p>The use of the wildcard <code>*</code> is restricted in the specification as you cannot combine the wildcard with the cross-origin transfer of credentials (authentication, cookies or client-side certificates). This following response is not permitted</p>
+<pre class="http"><code>Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true</code></pre>
+<p><strong>Access-Control-Allow-Origin: null</strong></p>
+<p>Specifies that only origins with a <code>null</code> origin are allowed to access the resource. Browsers might send the value <code>null</code> in the Origin header in various unusual situations:</p>
+<ul>
+<li>Cross-origin redirects.</li>
+<li>Requests from serialized data.</li>
+<li>Request using the <code>file</code> protocol.</li>
+<li>Sandboxed cross-origin requests.</li>
+</ul>
+<hr />
+<h2 id="pre-flight-checks">Pre-flight checks</h2>
+<p>Under certain circumstances, when a cross-domain request includes a non-standard HTTP method or headers, the cross-origin request is preceded by a request using the OPTIONS method.</p>
+<p>For example, this is a pre-flight request that is seeking to use the PUT method together with a custom request header called Special-Request-Header</p>
+<pre class="http"><code>OPTIONS /data HTTP/1.1
+Host: &lt;some website&gt;
+[...]
+Origin: https://normal-website.com
+Access-Control-Request-Method: PUT
+Access-Control-Request-Headers: Special-Request-Header</code></pre>
+<pre class="language-http"><code class="lang-http">HTTP/1.1 204 No Content
+<strong>[...]
+</strong>Access-Control-Allow-Origin: https://normal-website.com
+Access-Control-Allow-Methods: PUT, POST, OPTIONS
+Access-Control-Allow-Headers: Special-Request-Header
+Access-Control-Allow-Credentials: true
+Access-Control-Max-Age: 240
+</code></pre>
+<ul>
+<li>This response sets out the allowed methods (<code>PUT</code>, <code>POST</code> and <code>OPTIONS</code>) and permitted request headers (<code>Special-Request-Header</code>). In this particular case the cross-domain server also allows the sending of credentials (authentication, cookies or client-side certificates), and the Access-Control-Max-Age header defines a maximum timeframe for caching the pre-flight response for reuse.</li>
+<li>More info about preflight: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#preflighted_requests">https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#preflighted_requests</a></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

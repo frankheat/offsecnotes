@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn Android application reversing with detailed guides on understanding .dex and .smali, extracting and modifying APKs using Apktool, and decompiling with jadx.">
+  <title>offsecnotes | Apk analysis</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Apk analysis</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#understanding-.dex-and-.smali" id="toc-understanding-.dex-and-.smali">Understanding .dex and .smali</a></li>
+<li><a href="#extract-apk" id="toc-extract-apk">Extract APK</a></li>
+<li><a href="#disassemble-assemble" id="toc-disassemble-assemble">Disassemble &amp; assemble</a></li>
+<li><a href="#troubleshooting-apktool" id="toc-troubleshooting-apktool">Troubleshooting apktool</a></li>
+<li><a href="#dex-to-java" id="toc-dex-to-java">Dex to Java</a></li>
+</ul></div>
+  <hr>
+<h2 id="understanding-.dex-and-.smali">Understanding .dex and .smali</h2>
+<p>Binary Dalvik bytecode (.dex files) are not easy to read or modify.</p>
+<details>
+<summary>
+Dex format
+</summary>
+<p>More details [<a href="https://dzone.com/articles/the-dex-file-format/">↗</a>].</p>
+<p><strong>HEX</strong></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">6465780A</span> 30333800 7A44CBBB FB4AE841 0286C06A 8DF19000</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">3C5DE024</span> D07326A2 E0010000 70000000 78563412 00000000</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">00000000</span> 64010000 05000000 70000000 03000000 84000000</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">01000000</span> 90000000 00000000 00000000 02000000 9C000000</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">01000000</span> AC000000 14010000 CC000000 E4000000 EC000000</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">07010000</span> 2C010000 2F010000 01000000 02000000 03000000</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="ex">03000000</span> 02000000 00000000 00000000 00000000 01000000</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="ex">00000000</span> 01000000 01000000 00000000 00000000 FFFFFFFF</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="ex">00000000</span> 57010000 00000000 01000100 01000000 00000000</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="ex">04000000</span> 70100000 00000E00 063C696E 69743E00 194C616E</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ex">64726F69</span> 642F6170 702F4170 706C6963 6174696F 6E3B0023</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="ex">4C636F6D</span> 2F627567 736E6167 2F646578 6578616D 706C652F</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="ex">42756773</span> 6E616741 70703B00 01560026 7E7E4438 7B226D69</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="ex">6E2D6170</span> 69223A32 362C2276 65727369 6F6E223A 2276302E</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="ex">312E3134</span> 227D0000 00010001 818004CC 01000000 0A000000</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="ex">00000000</span> 01000000 00000000 01000000 05000000 70000000</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="ex">02000000</span> 03000000 84000000 03000000 01000000 90000000</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="ex">05000000</span> 02000000 9C000000 06000000 01000000 AC000000</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="ex">01200000</span> 01000000 CC000000 02200000 05000000 E4000000</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="ex">00200000</span> 01000000 57010000 00100000 01000000 64010000</span></code></pre></div>
+<p><strong>UTF-8</strong></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dex</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">038zDÀª˚JËAÜ¿jçÒê</span><span class="op">&lt;</span>]‡$–s<span class="kw">&amp;</span><span class="ex">¢‡pxv4dpñêú¨ã‰ï,</span> ˇˇˇˇwp<span class="op">&lt;</span>init=<span class="st">&quot;&quot;</span><span class="op">&gt;</span>Landroid/app/Application<span class="kw">;</span><span class="op">&lt;</span>/]‡$–s<span class="kw">&amp;</span><span class="ex">¢‡pxv4dpñêú¨ã‰ï,</span><span class="op">&gt;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">#Lcom/bugsnag/dexexample/BugsnagApp;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">V</span><span class="kw">&amp;</span><span class="ex">~~D8</span><span class="dt">{</span><span class="st">&quot;min-api&quot;</span><span class="dt">:26</span><span class="op">,</span><span class="st">&quot;version&quot;</span><span class="dt">:</span><span class="st">&quot;v0.1.14&quot;</span><span class="dt">}</span><span class="ex">ÅÄÃ</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">pÑêú¨</span> Ã ‰ Wd</span></code></pre></div>
+</details>
+<p>So there are tools out there to convert to and from a human readable representation. The most common human readable format is known as <strong>Smali.</strong> We can say that Smali acting like assembly language [<a href="https://payatu.com/blog/an-introduction-to-smali/">↗</a>]. You can convert (“disassembler”) dex to smali using <a href="https://github.com/JesusFreke/smali">baksmali</a> tool.</p>
+<p><strong>Example</strong></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> x <span class="op">=</span> <span class="dv">42</span>         <span class="co">//java</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">13</span> 00 2A 00        //dex file contains this hex sequence</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">const/16</span> v0, 42    //smali</span></code></pre></div>
+<hr />
+<h2 id="extract-apk">Extract APK</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Prints all packages</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> shell pm list packages</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the path to the .apk of the given installed package name</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Note: There can be more apk</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> shell pm path <span class="op">&lt;</span>com.package.app<span class="op">&gt;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Get apk(s)</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> pull <span class="op">&lt;</span>path<span class="op">&gt;</span></span></code></pre></div>
+<hr />
+<h2 id="disassemble-assemble">Disassemble &amp; assemble</h2>
+<p><a href="https://github.com/iBotPeaches/Apktool">Apktool</a> is a reverse engineering tool for Android apps. It can decode (and disassemble) resources to <strong>nearly</strong> original form and <strong>rebuild</strong> them after making some modifications.</p>
+<p>In this way you can read <code>.smali</code> code (so you don’t need baksmali), <code>AndroidManifest.xml</code>, etc.</p>
+<blockquote>
+<p><strong>Note</strong>: Even if you can extract an APK file as if it were a ZIP file, you can’t read a file such as <code>AndroidManifest.xml</code> because it’s been compiled. This is why you should use a tool like APKtool.</p>
+</blockquote>
+<p><strong>Disassemble</strong></p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">apktool</span> d target.apk <span class="co"># Default output is in dist directory</span></span></code></pre></div>
+<p><strong>Assemble (Single apk)</strong></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Assemble (inside the folder of the disassembled apk)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">apktool</span> b .</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Sign</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="ex">java</span> <span class="at">-jar</span> uber-apk-signer.jar <span class="at">-a</span> target.apk</span></code></pre></div>
+<p><strong>Assemble (Splitted apk)</strong></p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Assemble</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">java</span> <span class="at">-jar</span> APKEditor.jar m <span class="at">-i</span> <span class="op">&lt;</span>path_splitted_apk<span class="op">&gt;</span> -o merged.apk</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Sign</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="ex">java</span> <span class="at">-jar</span> uber-apk-signer.jar <span class="at">-a</span> merged.apk</span></code></pre></div>
+<hr />
+<h2 id="troubleshooting-apktool">Troubleshooting apktool</h2>
+<ul>
+<li><p><strong>INSTALL_FAILED_INVALID_APK:</strong> Failed to extract native libraries</p>
+<ul>
+<li>This error occurs in some apktool versions with apps containing native libraries. To fix it, set <code>extractNativeLibs</code> to <code>true</code> in <code>AndroidManifest.xml</code>, then repackage and re-sign the APK.</li>
+</ul></li>
+<li><p>If you have errors when you assemble try this:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">apktool</span> d <span class="at">-f</span> <span class="at">-r</span> target.apk</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Note: This do not decode resources</span></span></code></pre></div></li>
+</ul>
+<hr />
+<h2 id="dex-to-java">Dex to Java</h2>
+<p>Decompile to (near) source code (Dex to Java) using <a href="https://github.com/skylot/jadx">jadx</a>.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Open jadx-gui</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">jadx-gui</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Decompile</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ex">jadx</span> target.apk</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="ex">jadx</span> <span class="at">-d</span> App target.apk</span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

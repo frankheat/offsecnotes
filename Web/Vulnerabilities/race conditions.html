@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn how to detect and exploit race conditions in web applications, including multi-endpoint timing attacks, session locking, and server delay manipulation using tools like Burp Suite and Turbo Intruder.">
+  <title>offsecnotes | Race conditions</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Race conditions</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#detecting-and-exploiting" id="toc-detecting-and-exploiting">Detecting and exploiting</a></li>
+<li><a href="#multi-endpoint-race-windows" id="toc-multi-endpoint-race-windows">Multi-endpoint race windows</a></li>
+<li><a href="#session-based-locking-mechanisms" id="toc-session-based-locking-mechanisms">Session-based locking mechanisms</a></li>
+<li><a href="#time-sensitive-attacks" id="toc-time-sensitive-attacks">Time-sensitive attacks</a></li>
+</ul></div>
+  <hr>
+<details>
+<summary>
+Introduction
+</summary>
+<p>Race conditions occurs when websites process requests concurrently without proper safeguards, leading to multiple threads accessing the same data and causing unintended behavior due to “collisions.” The timeframe for potential collisions is called the “race window.”</p>
+<p><strong>Impact</strong></p>
+<ul>
+<li>Redeeming a gift card multiple times</li>
+<li>Rating a product multiple times</li>
+<li>Withdrawing or transferring cash in excess of your account balance</li>
+<li>Reusing a single CAPTCHA solution</li>
+<li>Bypassing an anti-brute-force rate limit</li>
+<li>Etc.</li>
+</ul>
+</details>
+<hr />
+<h2 id="detecting-and-exploiting">Detecting and exploiting</h2>
+<p>Even with simultaneous requests, external factors can unpredictably affect server processing. Burp adjusts techniques automatically.</p>
+<p>Sending many requests helps reduce server-side jitter, even though only two are needed for exploits.</p>
+<p><strong>With Custom Action - Bambdas</strong></p>
+<ol type="1">
+<li>Send to repeater.</li>
+<li>Use custom action: https://gist.github.com/albinowax/101e3b2e605496db1ddf84d14f5d0485</li>
+<li>Set NUMBER_OF_REQUESTS and run.</li>
+</ol>
+<p><strong>With Burp Repeater</strong></p>
+<ol type="1">
+<li>Add requests in a group</li>
+<li>Send group in parallel</li>
+</ol>
+<p><strong>With Turbo Intruder</strong></p>
+<ol type="1">
+<li><code>Extensions</code> -&gt; <code>Turbo Intruder</code> -&gt; <code>Send to Turbo Intruder</code></li>
+<li>Modify the request by replacing the value you want to brute force with <code>%s</code>.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> queueRequests(target, wordlists):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    engine <span class="op">=</span> RequestEngine(endpoint<span class="op">=</span>target.endpoint,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>                           concurrentConnections<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>                           engine<span class="op">=</span>Engine.BURP2</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>                           )</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> password <span class="kw">in</span> <span class="bu">open</span>(<span class="st">&#39;/home/francesco/passwords.txt&#39;</span>):</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        engine.queue(target.req, password.rstrip(), gate<span class="op">=</span><span class="st">&#39;race1&#39;</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    engine.openGate(<span class="st">&#39;race1&#39;</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> handleResponse(req, interesting):</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    table.add(req)</span></code></pre></div>
+<hr />
+<h2 id="multi-endpoint-race-windows">Multi-endpoint race windows</h2>
+<p><strong>Connection warming</strong></p>
+<p>In Burp Repeater, try adding a <code>GET</code> request for the homepage at the start of your tab group, then use the “Send group in sequence” option.</p>
+<ul>
+<li>If only the first request has a longer processing time but the rest are fast, ignore the delay and continue testing.</li>
+<li>If inconsistent response times persist, it indicates back-end delay interference. To work around this, use Turbo Intruder to send connection warming requests before your main attack requests.</li>
+</ul>
+<p><strong>Abusing rate or resource limits</strong></p>
+<p>Web servers often delay processing if too many requests are sent too quickly. By sending many dummy requests to trigger rate or resource limits, you can create a server-side delay, making the single-packet attack viable even with delayed execution.</p>
+<hr />
+<h2 id="session-based-locking-mechanisms">Session-based locking mechanisms</h2>
+<p>Some frameworks prevent accidental data corruption through request locking. For example, PHP’s native session handler processes one request per session at a time.</p>
+<p>If your requests are processed sequentially, <strong>try using a different session token for each</strong>.</p>
+<hr />
+<h2 id="time-sensitive-attacks">Time-sensitive attacks</h2>
+<p>E.g. a password reset token generated solely using a timestamp, can result in identical tokens for different users if <strong>two reset requests are timed to produce the same timestamp</strong>.</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

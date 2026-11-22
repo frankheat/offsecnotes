@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn practical techniques for interacting with and analyzing native code using Frida in pentesting. Explore JNI, dynamic and static linking, detecting library loads, and hooking native functions for security assessments.">
+  <title>offsecnotes | Working with native code</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Working with native code</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#native-functions" id="toc-native-functions">Native functions</a></li>
+<li><a href="#detecting-when-native-libraries-are-loaded" id="toc-detecting-when-native-libraries-are-loaded">Detecting when native libraries are loaded</a>
+<ul>
+<li><a href="#script-to-hook-native-library-loading" id="toc-script-to-hook-native-library-loading">Script to hook native library loading</a></li>
+</ul></li>
+<li><a href="#get-a-functions-address" id="toc-get-a-functions-address">Get a function’s address</a>
+<ul>
+<li><a href="#standard-libraries" id="toc-standard-libraries">Standard libraries</a></li>
+<li><a href="#external-library" id="toc-external-library">External library</a></li>
+</ul></li>
+<li><a href="#hooking-a-native-function" id="toc-hooking-a-native-function">Hooking a native function</a></li>
+<li><a href="#frida-stalker" id="toc-frida-stalker">Frida Stalker</a>
+<ul>
+<li><a href="#understanding-events" id="toc-understanding-events">Understanding Events</a></li>
+<li><a href="#onreceiveevents" id="toc-onreceiveevents">onReceive(events)</a></li>
+<li><a href="#oncallsummarysummary" id="toc-oncallsummarysummary">onCallSummary(summary)</a></li>
+<li><a href="#transformiterator" id="toc-transformiterator">transform(iterator)</a></li>
+<li><a href="#assembling-the-pieces---examples" id="toc-assembling-the-pieces---examples">Assembling the Pieces - Examples</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<p>For additional details, refer to the <a href="https://frida.re/docs/javascript-api/">official documentation</a>.</p>
+<h2 id="native-functions">Native functions</h2>
+<details>
+<summary>
+Introduction
+</summary>
+<p><strong>Loading the library</strong></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">System</span><span class="op">.</span><span class="fu">loadLibrary</span><span class="op">(</span><span class="st">&quot;calc&quot;</span><span class="op">)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">System</span><span class="op">.</span><span class="fu">load</span><span class="op">(</span><span class="st">&quot;lib/armeabi/libcalc.so&quot;</span><span class="op">)</span></span></code></pre></div>
+<p><strong>The Java to Native Code Connection</strong></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">native</span> <span class="bu">String</span> <span class="fu">doThingsInNativeLibrary</span><span class="op">(</span><span class="dt">int</span> var0<span class="op">);</span></span></code></pre></div>
+<p>There are 2 different ways to do this pairing, or linking:</p>
+<ol type="1">
+<li>Dynamic Linking using JNI Native Method Name Resolving, or</li>
+<li>Static Linking using the <code>RegisterNatives</code> API call</li>
+</ol>
+<p><strong>Dynamic Linking</strong></p>
+<p>The developer names the method and the function according to the specs. E.g. class <code>com.android.interesting.Stuff</code>. The function in the native library would need to be named.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Java_com_android_interesting_Stuff_doThingsInNativeLibrary</span></code></pre></div>
+<p><strong>Static Linking</strong></p>
+<p>Using the <code>RegisterNatives</code>. This function is called from the native code, not the Java code and is most often called in the <code>JNI_OnLoad</code> function since <code>RegisterNatives</code> must be executed prior to calling the Java-declared native method.</p>
+</details>
+<hr />
+<h2 id="detecting-when-native-libraries-are-loaded">Detecting when native libraries are loaded</h2>
+<p>To begin with, it’s important to understand how a native library is loaded in an Android application. This can be done using several different methods.</p>
+<p><strong>Method 1. The Standard Java API Calls</strong></p>
+<p>Standard, convenient.</p>
+<ul>
+<li><a href="https://developer.android.com/reference/java/lang/System#loadLibrary(java.lang.String"><code>System.loadLibrary(String libname)</code></a></li>
+<li><a href="https://developer.android.com/reference/java/lang/System#load(java.lang.String"><code>System.load(String libname)</code></a></li>
+</ul>
+<div class="sourceCode" id="cb4"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// System.loadLibrary</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">System</span><span class="op">.</span><span class="fu">loadLibrary</span><span class="op">(</span><span class="st">&quot;my-native-lib&quot;</span><span class="op">);</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// System.load</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="bu">String</span> libraryPath <span class="op">=</span> <span class="fu">getApplicationInfo</span><span class="op">().</span><span class="fu">dataDir</span> <span class="op">+</span> <span class="st">&quot;/lib/libmy-native-lib.so&quot;</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="bu">System</span><span class="op">.</span><span class="fu">load</span><span class="op">(</span>libraryPath<span class="op">);</span></span></code></pre></div>
+<p>Both <code>System.load()</code> and <code>System.loadLibrary()</code> are simply convenient wrappers around the <code>java.lang.Runtime</code> class methods:</p>
+<ul>
+<li><code>System.load(path)</code> calls <code>Runtime.getRuntime().load(path)</code></li>
+<li><code>System.loadLibrary(name)</code> calls <code>Runtime.getRuntime().loadLibrary(name)</code></li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: <code>Runtime.getRuntime().load()</code> and <code>Runtime.getRuntime().loadLibrary()</code> use <code>android_dlopen_ext()</code> under the hood.</p>
+</blockquote>
+<p><strong>Method 2. The Native C/C++ Calls</strong></p>
+<p>This is done using <code>dlopen()</code> and <code>android_dlopen_ext()</code>.</p>
+<ul>
+<li><code>android_dlopen_ext()</code> is used by the Android System itself, primarily by the Android Runtime (ART) when it fulfills a Java-level request like <code>System.loadLibrary()</code>.</li>
+<li><code>dlopen()</code> is used by “regular” native code, such as third-party libraries, game engines, or any C/C++ code that is written to be portable and doesn’t need Android-specific linker features.</li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: <strong>You should hook both</strong> <code>android_dlopen_ext()</code> and <code>dlopen()</code>.</p>
+<p>An application is not a monolith. It’s a complex assembly of your code, the Android Framework, and many third-party native libraries. Within a single running app, <strong>both loading mechanisms will likely be used</strong>:</p>
+<ol type="1">
+<li>Your app starts, and <code>MainActivity</code> calls <code>System.loadLibrary("libmy-app-logic")</code>. <code>android_dlopen_ext()</code> is called.</li>
+<li>Inside <code>libmy-app-logic.so</code>, you initialize a third-party analytics SDK. Its initialization function calls <code>dlopen("libanalytics-core.so")</code> to load its own dependency. <code>dlopen()</code> is called.</li>
+</ol>
+<p>If you only hook one, you will miss the other, giving you an incomplete picture of the app’s behavior. That is why a robust interception script always hooks both <code>dlopen()</code> and <code>android_dlopen_ext()</code> to guarantee full coverage.</p>
+</blockquote>
+<p><strong>Method 3. Java Reflection</strong></p>
+<p>This is a simple obfuscation technique. Instead of calling <code>System.loadLibrary</code> or <code>System.load</code> directly, the app uses reflection to find and invoke the method. This prevents simple static analysis tools from finding the “loadLibrary” function in the code.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">String</span> libName <span class="op">=</span> <span class="st">&quot;my-secret-lib&quot;</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">Class</span><span class="op">&lt;?&gt;</span> systemClass <span class="op">=</span> <span class="bu">Class</span><span class="op">.</span><span class="fu">forName</span><span class="op">(</span><span class="st">&quot;java.lang.System&quot;</span><span class="op">);</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">Method</span> loadLibraryMethod <span class="op">=</span> systemClass<span class="op">.</span><span class="fu">getMethod</span><span class="op">(</span><span class="st">&quot;loadLibrary&quot;</span><span class="op">,</span> <span class="bu">String</span><span class="op">.</span><span class="fu">class</span><span class="op">);</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    loadLibraryMethod<span class="op">.</span><span class="fu">invoke</span><span class="op">(</span><span class="kw">null</span><span class="op">,</span> libName<span class="op">);</span> <span class="co">// null because it&#39;s a static method</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">Exception</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    e<span class="op">.</span><span class="fu">printStackTrace</span><span class="op">();</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong> A Frida script that hooks <code>System.loadLibrary</code> or <code>System.load</code> will successfully intercept a call made via reflection.</p>
+</blockquote>
+<p><strong>Method 4. Manual ELF Mapper (In-Memory Loading)</strong></p>
+<p>This is the most advanced and stealthy technique. The application doesn’t use any system loader function (<code>dlopen</code>, <code>Runtime.load</code>, etc.). Instead, it re-implements the logic of the system loader itself.</p>
+<p>This is very difficult to intercept directly. You can’t hook a loader function because a standard one isn’t used. Your best bet is to hook the low-level system calls that are required for this process to work. The most critical one is <code>mmap</code>.</p>
+<p>A manual loader must call <code>mmap</code> to create a memory region that is executable (<code>PROT_EXEC</code>).</p>
+<p>Hooking <code>mmap</code> will be very noisy. Many things use it. The key is filtering for the <code>PROT_EXEC</code> flag.</p>
+<h3 id="script-to-hook-native-library-loading">Script to hook native library loading</h3>
+<p>We can simply hook the <code>android_dlopen_ext</code> and <code>dlopen</code> functions, as these are ultimately responsible for loading libraries - except in the case of method 4.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> dlopen_ptr <span class="op">=</span> Module<span class="op">.</span><span class="fu">findExportByName</span>(<span class="kw">null</span><span class="op">,</span> <span class="st">&quot;dlopen&quot;</span>)<span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> android_dlopen_ext_ptr <span class="op">=</span> Module<span class="op">.</span><span class="fu">findExportByName</span>(<span class="kw">null</span><span class="op">,</span> <span class="st">&quot;android_dlopen_ext&quot;</span>)<span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (dlopen_ptr) {</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    Interceptor<span class="op">.</span><span class="fu">attach</span>(dlopen_ptr<span class="op">,</span> {</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onEnter</span><span class="op">:</span> <span class="kw">function</span> (args) {</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>            <span class="kw">const</span> path <span class="op">=</span> args[<span class="dv">0</span>]<span class="op">.</span><span class="fu">readCString</span>()<span class="op">;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>            <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`[Native] dlopen(path=&quot;</span><span class="sc">${</span>path<span class="sc">}</span><span class="vs">&quot;)`</span>)<span class="op">;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (android_dlopen_ext_ptr) {</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    Interceptor<span class="op">.</span><span class="fu">attach</span>(android_dlopen_ext_ptr<span class="op">,</span> {</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onEnter</span><span class="op">:</span> <span class="kw">function</span> (args) {</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>            <span class="kw">const</span> path <span class="op">=</span> args[<span class="dv">0</span>]<span class="op">.</span><span class="fu">readCString</span>()<span class="op">;</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>            <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`[Native] android_dlopen_ext(path=&quot;</span><span class="sc">${</span>path<span class="sc">}</span><span class="vs">&quot;)`</span>)<span class="op">;</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<blockquote>
+<p><strong>Warning</strong>: On my <strong>x86_64 emulator</strong> running Android 11, attempting to hook <code>dlopen</code> results in a crash with the error: <strong>Process crashed: Trace/BPT trap</strong>. However, it <strong>works perfectly on my physical Android 12 device</strong>. At the moment, I’m not sure of the exact cause.</p>
+<p>I’m using Frida 16.6.6.</p>
+</blockquote>
+<hr />
+<h2 id="get-a-functions-address">Get a function’s address</h2>
+<h3 id="standard-libraries">Standard libraries</h3>
+<p>Suppose we want to hook the <code>strcmp</code> function of the <code>libc.so</code>. Since the <code>libc.so</code> library is interal and loaded soon, we can directly use <code>Module.findExportByName()</code> to find the absolute address of the function.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> strcmp_adr <span class="op">=</span> Module<span class="op">.</span><span class="fu">findExportByName</span>(<span class="st">&quot;libc.so&quot;</span><span class="op">,</span> <span class="st">&quot;strcmp&quot;</span>)<span class="op">;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(strcmp_adr)<span class="op">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="bn">0x7ca708c5d110</span></span></code></pre></div>
+<h3 id="external-library">External library</h3>
+<p>First, we need to wait for the native library to load. Once it’s loaded, we can retrieve the address of the function we want to hook.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> libraryName <span class="op">=</span> <span class="st">&quot;libfoo.so&quot;</span><span class="op">;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> functionName <span class="op">=</span> <span class="st">&quot;Java_sg_vantagepoint_uncrackable2_CodeCheck_bar&quot;</span><span class="op">;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> flag <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">interceptLibraryLoad</span>(loaderFunctionName) {</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    Interceptor<span class="op">.</span><span class="fu">attach</span>(Module<span class="op">.</span><span class="fu">findExportByName</span>(<span class="kw">null</span><span class="op">,</span> loaderFunctionName)<span class="op">,</span> {</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onEnter</span><span class="op">:</span> <span class="kw">function</span> (args) {</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>            <span class="kw">var</span> library_path <span class="op">=</span> Memory<span class="op">.</span><span class="fu">readCString</span>(args[<span class="dv">0</span>])</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (library_path<span class="op">.</span><span class="fu">indexOf</span>(libraryName) <span class="op">&gt;=</span> <span class="dv">0</span>) {</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Loading library: &quot;</span> <span class="op">+</span> library_path)</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>                flag <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onLeave</span><span class="op">:</span> <span class="kw">function</span> (retval) {</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (flag <span class="op">==</span> <span class="dv">1</span>) {</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Library loaded&quot;</span>)<span class="op">;</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>                <span class="kw">var</span> module <span class="op">=</span> Process<span class="op">.</span><span class="fu">findModuleByName</span>(libraryName)<span class="op">;</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Address of &quot;</span> <span class="op">+</span> functionName <span class="op">+</span> <span class="st">&quot;: &quot;</span> <span class="op">+</span> module<span class="op">.</span><span class="fu">findExportByName</span>(functionName) )<span class="op">;</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>                flag <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a><span class="fu">interceptLibraryLoad</span>(<span class="st">&quot;dlopen&quot;</span>)<span class="op">;</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="fu">interceptLibraryLoad</span>(<span class="st">&quot;android_dlopen_ext&quot;</span>)<span class="op">;</span></span></code></pre></div>
+<p>When <code>onEnter</code> is called, it is checked whether the library that <code>android_dlopen_ext</code> / <code>dlopen</code> is loading the desired library. If so, it sets <code>flag = 1</code>.</p>
+<p><code>onLeave</code> checks whether the <code>flag == 1</code>. If this check is omitted, the code within <code>onLeave</code> will be executed each time any library is loaded.</p>
+<hr />
+<h2 id="hooking-a-native-function">Hooking a native function</h2>
+<p>First, use Frida to obtain the address of the specific function. Once you have the address, you can hook the function using the following script:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>Interceptor<span class="op">.</span><span class="fu">attach</span>(targetAddress<span class="op">,</span> {</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">onEnter</span><span class="op">:</span> <span class="kw">function</span> (args) {</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Entering &#39;</span> <span class="op">+</span> functionName)<span class="op">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        <span class="co">/* Modify or log arguments if needed</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co">        var arg0 = Memory.readUtf8String(args[0]); // first argument</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co">        var arg1 = Memory.readUtf8String(args[1]); // second argument</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co">        if (arg0.includes(&quot;Hello&quot;)) {</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co">            console.log(&quot;arg0 &quot; + arg0);</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co">            console.log(&quot;arg1 &quot;+ arg1);</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co">        }</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="co">        */</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="dt">onLeave</span><span class="op">:</span> <span class="kw">function</span> (retval) {</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Leaving &#39;</span> <span class="op">+</span> functionName)<span class="op">;</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>        <span class="co">/* Modify or log return value if needed</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="co">        console.log(&quot;Original return value :&quot; + retval);</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="co">        retval.replace(1337)  // changing the return value to 1337.</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="co">        */</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p><strong>Complete example</strong></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> libraryName <span class="op">=</span> <span class="st">&quot;libfoo.so&quot;</span><span class="op">;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> functionName <span class="op">=</span> <span class="st">&quot;Java_sg_vantagepoint_uncrackable2_CodeCheck_bar&quot;</span><span class="op">;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> flag <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">interceptLibraryLoad</span>(loaderFunctionName) {</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    Interceptor<span class="op">.</span><span class="fu">attach</span>(Module<span class="op">.</span><span class="fu">findExportByName</span>(<span class="kw">null</span><span class="op">,</span> loaderFunctionName)<span class="op">,</span> {</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onEnter</span><span class="op">:</span> <span class="kw">function</span> (args) {</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>            <span class="kw">var</span> library_path <span class="op">=</span> Memory<span class="op">.</span><span class="fu">readCString</span>(args[<span class="dv">0</span>])</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (library_path<span class="op">.</span><span class="fu">indexOf</span>(libraryName) <span class="op">&gt;=</span> <span class="dv">0</span>) {</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Loading library: &quot;</span> <span class="op">+</span> library_path)</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>                flag <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onLeave</span><span class="op">:</span> <span class="kw">function</span> (retval) {</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (flag <span class="op">==</span> <span class="dv">1</span>) {</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Library loaded&quot;</span>)<span class="op">;</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>                <span class="kw">var</span> module <span class="op">=</span> Process<span class="op">.</span><span class="fu">findModuleByName</span>(libraryName)<span class="op">;</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>                <span class="kw">var</span> addr_func <span class="op">=</span> module<span class="op">.</span><span class="fu">findExportByName</span>(functionName)<span class="op">;</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Address of &quot;</span> <span class="op">+</span> functionName <span class="op">+</span> <span class="st">&quot;: &quot;</span> <span class="op">+</span> addr_func)<span class="op">;</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>                <span class="fu">hookfunc</span>(addr_func)<span class="op">;</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>                flag <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">hookfunc</span>(targetAddress) {</span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>    Interceptor<span class="op">.</span><span class="fu">attach</span>(targetAddress<span class="op">,</span> {</span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onEnter</span><span class="op">:</span> <span class="kw">function</span> (args) {</span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>            <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Entering &#39;</span> <span class="op">+</span> functionName)<span class="op">;</span></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>            <span class="co">// do something</span></span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onLeave</span><span class="op">:</span> <span class="kw">function</span> (retval) {</span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a>            <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Leaving &#39;</span> <span class="op">+</span> functionName)<span class="op">;</span></span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>            <span class="co">// do something</span></span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a><span class="fu">interceptLibraryLoad</span>(<span class="st">&quot;dlopen&quot;</span>)<span class="op">;</span></span>
+<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a><span class="fu">interceptLibraryLoad</span>(<span class="st">&quot;android_dlopen_ext&quot;</span>)<span class="op">;</span></span></code></pre></div>
+<hr />
+<h2 id="frida-stalker">Frida Stalker</h2>
+<p><strong>Frida Stalker</strong> is a built-in tracer for native code. It lets you follow execution at the instruction level and can capture details like memory reads/writes, function calls, etc.. Unlike hooking, which only intercepts specific functions, Stalker can dynamically trace all instructions executed by a thread.</p>
+<p>Documentation: https://frida.re/docs/javascript-api/#stalker</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">startStalker</span>(threadId) {</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    Stalker<span class="op">.</span><span class="fu">follow</span>(threadId<span class="op">,</span> {</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>        <span class="dt">events</span><span class="op">:</span> {</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>            <span class="dt">call</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>            <span class="dt">ret</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>            <span class="dt">exec</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>            <span class="dt">block</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>            <span class="dt">compile</span><span class="op">:</span> <span class="kw">false</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onReceive</span><span class="op">:</span> <span class="kw">function</span> (events) {</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>            <span class="kw">var</span> calls <span class="op">=</span> Stalker<span class="op">.</span><span class="fu">parse</span>(events)<span class="op">;</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> (<span class="kw">var</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> calls<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>                <span class="kw">let</span> call <span class="op">=</span> calls[i]<span class="op">;</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(call)<span class="op">;</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onCallSummary</span><span class="op">:</span> <span class="kw">function</span> (summary) {</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>            <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="bu">JSON</span><span class="op">.</span><span class="fu">stringify</span>(summary<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="dv">4</span>))<span class="op">;</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="understanding-events">Understanding Events</h3>
+<p>The events object tells Stalker what to collect:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Event</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>call</code></td>
+<td>Track function calls (direct/indirect)</td>
+</tr>
+<tr class="even">
+<td><code>ret</code></td>
+<td>Track return instructions</td>
+</tr>
+<tr class="odd">
+<td><code>exec</code></td>
+<td>Track every instruction (use with care)</td>
+</tr>
+<tr class="even">
+<td><code>block</code></td>
+<td>Track basic blocks (i.e., linear groups of instructions)</td>
+</tr>
+<tr class="odd">
+<td><code>compile</code></td>
+<td>Triggered when a basic block is compiled by Stalker</td>
+</tr>
+</tbody>
+</table>
+<h3 id="onreceiveevents">onReceive(events)</h3>
+<p>When you’re using <code>Stalker.follow()</code> with events configured, you can set a callback <code>onReceive(events)</code> to get a batch of events from the Stalker engine. These events describe what the target thread did during execution - like entering a block, making a call, or returning.</p>
+<p>The events argument is a <strong>binary blob</strong>. To use it, you need to decode it using <code>Stalker.parse()</code>.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>onReceive<span class="op">:</span> <span class="kw">function</span> (events) {</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> calls <span class="op">=</span> Stalker<span class="op">.</span><span class="fu">parse</span>(events)<span class="op">;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">var</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> calls<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> call <span class="op">=</span> calls[i]<span class="op">;</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(call)<span class="op">;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Each event has a type field and other fields depending on the type. To better understand or manage Stalker events, check out this helpful script: https://codeshare.frida.re/<span class="citation" data-cites="mrmacete/stalker-event-parser">@mrmacete/stalker-event-parser</span>/</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Event</th>
+<th>format</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>call</td>
+<td><code>type</code>, <code>location</code>, <code>target</code>, <code>depth</code></td>
+<td>call,0x7d91cb8ce7b0,0x7d91cbbf1230,1</td>
+</tr>
+<tr class="even">
+<td>ret</td>
+<td><code>type</code>, <code>location</code>, <code>target</code>, <code>depth</code></td>
+<td>ret,0x7d9172ffba6e,0x7d945c03b077,1</td>
+</tr>
+<tr class="odd">
+<td>exec</td>
+<td><code>type</code>, <code>location</code></td>
+<td>exec,0x7d9173033030</td>
+</tr>
+<tr class="even">
+<td>block</td>
+<td><code>type</code>, <code>begin</code>, <code>end</code></td>
+<td>block,0x7d9172ffbb33,0x7d9172ffbb3a</td>
+</tr>
+<tr class="odd">
+<td>compile</td>
+<td><code>type</code>, <code>begin</code>, <code>end</code></td>
+<td>compile,0x7d9172ffbbf2,0x7d9172ffbbfb</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Tip</strong>: You can see the code istruction in that address with <code>Instruction.parse()</code>.</p>
+<p>Example:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>Stalker<span class="op">.</span><span class="fu">follow</span>(threadId<span class="op">,</span> {</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>   <span class="dt">events</span><span class="op">:</span> {</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>       <span class="dt">exec</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>   }<span class="op">,</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>   <span class="dt">onReceive</span><span class="op">:</span> <span class="kw">function</span> (events) {</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>       <span class="kw">var</span> calls <span class="op">=</span> Stalker<span class="op">.</span><span class="fu">parse</span>(events)<span class="op">;</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>       <span class="cf">for</span> (<span class="kw">var</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> calls<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>           <span class="kw">let</span> call <span class="op">=</span> calls[i]<span class="op">;</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>           <span class="kw">let</span> istruction <span class="op">=</span> call[<span class="dv">1</span>]<span class="op">;</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>           <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(Instruction<span class="op">.</span><span class="fu">parse</span>(istruction)<span class="op">.</span><span class="fu">toString</span>())<span class="op">;</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>       }</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>   }<span class="op">,</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>   <span class="dt">onCallSummary</span><span class="op">:</span> <span class="kw">function</span> (summary) {</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>       <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="bu">JSON</span><span class="op">.</span><span class="fu">stringify</span>(summary<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="dv">4</span>))<span class="op">;</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>   }</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>   })<span class="op">;</span></span></code></pre></div>
+<p>Output:</p>
+<pre class="x86asm"><code>jmp 0x7d91730348a0
+and dword ptr [rbx + 0x90], 0
+mov rdi, qword ptr [rbx + 0xa0]
+and qword ptr [rbx + 0xa0], 0
+test rdi, rdi
+je 0x7d91730348c0
+call 0x7d91731276c0
+mov rdi, qword ptr [rbx + 0x98]
+and qword ptr [rbx + 0x98], 0
+test rdi, rdi
+je 0x7d91730348da
+pop rbx
+ret
+[...]</code></pre>
+</blockquote>
+<h3 id="oncallsummarysummary">onCallSummary(summary)</h3>
+<p><code>onCallSummary(summary)</code> is a callback used in <code>Stalker.follow()</code> to receive aggregated information about function calls during tracing. Instead of giving you every single call event (which can be very noisy and expensive), Frida can summarize call data and deliver it in a batch after a time slice.</p>
+<p>The <strong><a href="https://frida.re/docs/javascript-api/#stalker">official documentation</a></strong> say also:</p>
+<p><em>“when you only want to know which targets were called and how many times, but don’t care about the order that the calls happened in.”</em></p>
+<p>Example:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>onCallSummary<span class="op">:</span> <span class="kw">function</span> (summary) {</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="bu">JSON</span><span class="op">.</span><span class="fu">stringify</span>(summary<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="dv">4</span>))<span class="op">;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Output:</p>
+<ul>
+<li>KEY -&gt; function called</li>
+<li>VALUE -&gt; how many times is called</li>
+</ul>
+<div class="sourceCode" id="cb16"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;0x7d91cb64e200&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;0x7d9172ffb575&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;0x7d91cbbf1230&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;0x7d91cbae4ea0&quot;</span><span class="fu">:</span> <span class="dv">2</span><span class="fu">,</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;0x7d91cb8ce4c0&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;0x7d91731276c0&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;0x7d946065d5b0&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;0x7d9173003512&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;0x7d9172ffec5f&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;0x7d946065b930&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;0x7d91cb8e4a90&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    <span class="er">[...]</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<h3 id="transformiterator">transform(iterator)</h3>
+<p><code>transform(iterator)</code> is one of the most powerful and low-level tools in Frida’s Stalker. It allows you to <strong>customize or rewrite machine code</strong>, instruction by instruction, as Frida is instrumenting a thread.</p>
+<p>Example:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>transform<span class="op">:</span> <span class="kw">function</span> (iterator) {</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> instruction <span class="op">=</span> iterator<span class="op">.</span><span class="fu">next</span>()<span class="op">;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> (instruction <span class="op">!==</span> <span class="kw">null</span>) {</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(instruction)<span class="op">;</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>        iterator<span class="op">.</span><span class="fu">keep</span>()<span class="op">;</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>        instruction <span class="op">=</span> iterator<span class="op">.</span><span class="fu">next</span>()<span class="op">;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">warn</span>(<span class="st">&quot;The block is finished&quot;</span>)<span class="op">;</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Output:</p>
+<pre class="x86asm"><code>jmp 0x7d0055e438a0
+The block is finished
+and dword ptr [rbx + 0x90], 0
+mov rdi, qword ptr [rbx + 0xa0]
+and qword ptr [rbx + 0xa0], 0
+test rdi, rdi
+je 0x7d0055e438c0
+The block is finished
+call 0x7d0055f366c0
+The block is finished
+mov rdi, qword ptr [rbx + 0x98]
+and qword ptr [rbx + 0x98], 0
+test rdi, rdi
+je 0x7d0055e438da
+The block is finished
+pop rbx
+jmp 0x7d0055f366c0
+The block is finished
+push rbp
+push r15
+push r14
+push r12
+push rbx
+mov r12, rdi
+lea r14, [rdi + 0x10]
+lea r15, [rip + 0xd3a66a]
+mov ebx, dword ptr [r12 + 8]
+cmp ebx, 2
+jl 0x7d0055f366fa
+The block is finished
+[...]</code></pre>
+<p>The loop continues until <code>iterator.next()</code> returns <code>null</code> (meaning no more instructions in the current block).</p>
+<p><code>iterator.keep()</code> tells Frida to keep this instruction in the emitted version of the basic block. If you omit <code>keep()</code>, the instruction is skipped.</p>
+<p>You can insert your own instructions before or after using <code>iterator.put...()</code> or <code>iterator.putCallout()</code>.</p>
+<blockquote>
+<p><strong>Note</strong>: Keep in mind <code>transform()</code> is for rewriting instructions. It always runs if you provide it - <strong>independent of events</strong>.</p>
+<p><code>events</code> is for emitting runtime data. So they are used for collecting execution data Frida generates internally, like:</p>
+<ul>
+<li><code>{ call: true }</code> - logs when a call happens</li>
+<li><code>{ ret: true }</code> - logs ret instructions</li>
+<li><code>{ block: true }</code> - logs blocks entered</li>
+<li>etc.</li>
+</ul>
+<p>Without these, <code>onReceive()</code> and <code>onCallSummary()</code> won’t get data.</p>
+<p><strong>But it has nothing to do with whether <code>transform()</code> is invoked</strong>.</p>
+<p>So you can do this:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>Stalker<span class="op">.</span><span class="fu">follow</span>(threadId<span class="op">,</span> {</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">transform</span><span class="op">:</span> <span class="kw">function</span> (iterator) {</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> instruction <span class="op">=</span> iterator<span class="op">.</span><span class="fu">next</span>()<span class="op">;</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">while</span> (instruction <span class="op">!==</span> <span class="kw">null</span>) {</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>           <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(instruction)<span class="op">;</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>            iterator<span class="op">.</span><span class="fu">keep</span>()<span class="op">;</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>            instruction <span class="op">=</span> iterator<span class="op">.</span><span class="fu">next</span>()<span class="op">;</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">warn</span>(<span class="st">&quot;The block is finished&quot;</span>)<span class="op">;</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// No events enabled here</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+</blockquote>
+<p><strong>iterator.putCallout()</strong></p>
+<p><code>iterator.putCallout(fn)</code> tells Frida to <strong>insert a call to your JavaScript function at a specific point</strong> in the native code. The function you give to <code>putCallout()</code> receives a <code>context</code> object, which is a snapshot of the CPU registers at that moment.</p>
+<p>Example:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>Stalker<span class="op">.</span><span class="fu">follow</span>(threadId<span class="op">,</span> {</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">transform</span><span class="op">:</span> <span class="kw">function</span> (iterator) {</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> instruction <span class="op">=</span> iterator<span class="op">.</span><span class="fu">next</span>()<span class="op">;</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> module <span class="op">=</span> Process<span class="op">.</span><span class="fu">getModuleByName</span>(libraryName)<span class="op">;</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">var</span> baseAddrModule <span class="op">=</span> module<span class="op">.</span><span class="at">base</span><span class="op">;</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">var</span> endAddrModule <span class="op">=</span> baseAddrModule<span class="op">.</span><span class="fu">add</span>(module<span class="op">.</span><span class="at">size</span>)<span class="op">;</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">while</span> (instruction <span class="op">!==</span> <span class="kw">null</span>) {</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (instruction<span class="op">.</span><span class="at">address</span><span class="op">.</span><span class="fu">compare</span>(baseAddrModule) <span class="op">&gt;=</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> instruction<span class="op">.</span><span class="at">address</span><span class="op">.</span><span class="fu">compare</span>(endAddrModule) <span class="op">&lt;</span> <span class="dv">0</span>) {</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> (instruction<span class="op">.</span><span class="at">address</span><span class="op">.</span><span class="fu">equals</span>(baseAddrModule<span class="op">.</span><span class="fu">add</span>(<span class="bn">0x1189</span>))) {</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>                    <span class="co">// When matched, we insert a putCallout to run a JS callback at runtime,</span></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>                    <span class="co">// reading and printing rsi register content.</span></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>                    iterator<span class="op">.</span><span class="fu">putCallout</span>(<span class="kw">function</span> (context) {</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>                        <span class="kw">var</span> str <span class="op">=</span> Memory<span class="op">.</span><span class="fu">readUtf8String</span>(context<span class="op">.</span><span class="at">rsi</span>)<span class="op">;</span></span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>                        <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;[-] Flag: &quot;</span> <span class="op">+</span> str)<span class="op">;</span></span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>                    })<span class="op">;</span></span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>                }</span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>            iterator<span class="op">.</span><span class="fu">keep</span>()<span class="op">;</span></span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>            instruction <span class="op">=</span> iterator<span class="op">.</span><span class="fu">next</span>()<span class="op">;</span></span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="assembling-the-pieces---examples">Assembling the Pieces - Examples</h3>
+<p><strong>Example 1: Hook function and traces calls made during its execution</strong></p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> libraryName <span class="op">=</span> <span class="st">&quot;libfoo.so&quot;</span><span class="op">;</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> functionName <span class="op">=</span> <span class="st">&quot;Java_sg_vantagepoint_uncrackable2_CodeCheck_bar&quot;</span><span class="op">;</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> flag <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">interceptLibraryLoad</span>(loaderFunctionName) {</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    Interceptor<span class="op">.</span><span class="fu">attach</span>(Module<span class="op">.</span><span class="fu">findExportByName</span>(<span class="kw">null</span><span class="op">,</span> loaderFunctionName)<span class="op">,</span> {</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onEnter</span><span class="op">:</span> <span class="kw">function</span> (args) {</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>            <span class="kw">var</span> library_path <span class="op">=</span> Memory<span class="op">.</span><span class="fu">readCString</span>(args[<span class="dv">0</span>])</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (library_path<span class="op">.</span><span class="fu">indexOf</span>(libraryName) <span class="op">&gt;=</span> <span class="dv">0</span>) {</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Loading library: &quot;</span> <span class="op">+</span> library_path)</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>                flag <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onLeave</span><span class="op">:</span> <span class="kw">function</span> (retval) {</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (flag <span class="op">==</span> <span class="dv">1</span>) {</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Library loaded&quot;</span>)<span class="op">;</span></span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>                <span class="kw">var</span> module <span class="op">=</span> Process<span class="op">.</span><span class="fu">findModuleByName</span>(libraryName)<span class="op">;</span></span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>                <span class="kw">var</span> addr_func <span class="op">=</span> module<span class="op">.</span><span class="fu">findExportByName</span>(functionName)<span class="op">;</span></span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Address of &quot;</span> <span class="op">+</span> functionName <span class="op">+</span> <span class="st">&quot;: &quot;</span> <span class="op">+</span> addr_func)<span class="op">;</span></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>                <span class="fu">hookfunc</span>(addr_func)<span class="op">;</span></span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>                flag <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">hookfunc</span>(targetAddress) {</span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a>    Interceptor<span class="op">.</span><span class="fu">attach</span>(targetAddress<span class="op">,</span> {</span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onEnter</span><span class="op">:</span> <span class="kw">function</span> (args) {</span>
+<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a>            <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Entering &#39;</span> <span class="op">+</span> functionName)<span class="op">;</span></span>
+<span id="cb21-33"><a href="#cb21-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-34"><a href="#cb21-34" aria-hidden="true" tabindex="-1"></a>            <span class="fu">startStalker</span>(<span class="kw">this</span><span class="op">.</span><span class="at">threadId</span>)<span class="op">;</span></span>
+<span id="cb21-35"><a href="#cb21-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-36"><a href="#cb21-36" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb21-37"><a href="#cb21-37" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onLeave</span><span class="op">:</span> <span class="kw">function</span> (retval) {</span>
+<span id="cb21-38"><a href="#cb21-38" aria-hidden="true" tabindex="-1"></a>            <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Leaving &#39;</span> <span class="op">+</span> functionName)<span class="op">;</span></span>
+<span id="cb21-39"><a href="#cb21-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-40"><a href="#cb21-40" aria-hidden="true" tabindex="-1"></a>            <span class="fu">stopStalker</span>(<span class="kw">this</span><span class="op">.</span><span class="at">threadId</span>)</span>
+<span id="cb21-41"><a href="#cb21-41" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb21-42"><a href="#cb21-42" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb21-43"><a href="#cb21-43" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb21-44"><a href="#cb21-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-45"><a href="#cb21-45" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">startStalker</span>(threadId) {</span>
+<span id="cb21-46"><a href="#cb21-46" aria-hidden="true" tabindex="-1"></a>    Stalker<span class="op">.</span><span class="fu">follow</span>(threadId<span class="op">,</span> {</span>
+<span id="cb21-47"><a href="#cb21-47" aria-hidden="true" tabindex="-1"></a>        <span class="dt">events</span><span class="op">:</span> {</span>
+<span id="cb21-48"><a href="#cb21-48" aria-hidden="true" tabindex="-1"></a>            <span class="dt">call</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb21-49"><a href="#cb21-49" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb21-50"><a href="#cb21-50" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onReceive</span><span class="op">:</span> <span class="kw">function</span> (events) {</span>
+<span id="cb21-51"><a href="#cb21-51" aria-hidden="true" tabindex="-1"></a>            <span class="kw">var</span> calls <span class="op">=</span> Stalker<span class="op">.</span><span class="fu">parse</span>(events)<span class="op">;</span></span>
+<span id="cb21-52"><a href="#cb21-52" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> (<span class="kw">var</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> calls<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb21-53"><a href="#cb21-53" aria-hidden="true" tabindex="-1"></a>                <span class="kw">let</span> call <span class="op">=</span> calls[i]<span class="op">;</span></span>
+<span id="cb21-54"><a href="#cb21-54" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(call)</span>
+<span id="cb21-55"><a href="#cb21-55" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb21-56"><a href="#cb21-56" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb21-57"><a href="#cb21-57" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onCallSummary</span><span class="op">:</span> <span class="kw">function</span> (summary) {</span>
+<span id="cb21-58"><a href="#cb21-58" aria-hidden="true" tabindex="-1"></a>            <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="bu">JSON</span><span class="op">.</span><span class="fu">stringify</span>(summary<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="dv">4</span>))<span class="op">;</span></span>
+<span id="cb21-59"><a href="#cb21-59" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb21-60"><a href="#cb21-60" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb21-61"><a href="#cb21-61" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb21-62"><a href="#cb21-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-63"><a href="#cb21-63" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">stopStalker</span>(threadId) {</span>
+<span id="cb21-64"><a href="#cb21-64" aria-hidden="true" tabindex="-1"></a>    Stalker<span class="op">.</span><span class="fu">unfollow</span>(threadId)<span class="op">;</span></span>
+<span id="cb21-65"><a href="#cb21-65" aria-hidden="true" tabindex="-1"></a>    Stalker<span class="op">.</span><span class="fu">flush</span>()<span class="op">;</span></span>
+<span id="cb21-66"><a href="#cb21-66" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb21-67"><a href="#cb21-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-68"><a href="#cb21-68" aria-hidden="true" tabindex="-1"></a><span class="fu">interceptLibraryLoad</span>(<span class="st">&quot;android_dlopen_ext&quot;</span>)<span class="op">;</span></span></code></pre></div>
+<p><strong>Example 2: Module-Specific Instruction Filtering with transform(iterator)</strong></p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> libraryName <span class="op">=</span> <span class="st">&quot;libfoo.so&quot;</span><span class="op">;</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> functionName <span class="op">=</span> <span class="st">&quot;Java_sg_vantagepoint_uncrackable2_CodeCheck_bar&quot;</span><span class="op">;</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> flag <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">interceptLibraryLoad</span>(loaderFunctionName) {</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    Interceptor<span class="op">.</span><span class="fu">attach</span>(Module<span class="op">.</span><span class="fu">findExportByName</span>(<span class="kw">null</span><span class="op">,</span> loaderFunctionName)<span class="op">,</span> {</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onEnter</span><span class="op">:</span> <span class="kw">function</span> (args) {</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>            <span class="kw">var</span> library_path <span class="op">=</span> Memory<span class="op">.</span><span class="fu">readCString</span>(args[<span class="dv">0</span>])</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (library_path<span class="op">.</span><span class="fu">indexOf</span>(libraryName) <span class="op">&gt;=</span> <span class="dv">0</span>) {</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Loading library: &quot;</span> <span class="op">+</span> library_path)</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>                flag <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onLeave</span><span class="op">:</span> <span class="kw">function</span> (retval) {</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (flag <span class="op">==</span> <span class="dv">1</span>) {</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Library loaded&quot;</span>)<span class="op">;</span></span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>                <span class="kw">var</span> module <span class="op">=</span> Process<span class="op">.</span><span class="fu">findModuleByName</span>(libraryName)<span class="op">;</span></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>                <span class="kw">var</span> addr_func <span class="op">=</span> module<span class="op">.</span><span class="fu">findExportByName</span>(functionName)<span class="op">;</span></span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>                <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&quot;Address of &quot;</span> <span class="op">+</span> functionName <span class="op">+</span> <span class="st">&quot;: &quot;</span> <span class="op">+</span> addr_func)<span class="op">;</span></span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a>                <span class="fu">hookfunc</span>(addr_func)<span class="op">;</span></span>
+<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a>                flag <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb22-25"><a href="#cb22-25" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb22-26"><a href="#cb22-26" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb22-27"><a href="#cb22-27" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb22-28"><a href="#cb22-28" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-29"><a href="#cb22-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-30"><a href="#cb22-30" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">hookfunc</span>(targetAddress) {</span>
+<span id="cb22-31"><a href="#cb22-31" aria-hidden="true" tabindex="-1"></a>    Interceptor<span class="op">.</span><span class="fu">attach</span>(targetAddress<span class="op">,</span> {</span>
+<span id="cb22-32"><a href="#cb22-32" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onEnter</span><span class="op">:</span> <span class="kw">function</span> (args) {</span>
+<span id="cb22-33"><a href="#cb22-33" aria-hidden="true" tabindex="-1"></a>            <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Entering &#39;</span> <span class="op">+</span> functionName)<span class="op">;</span></span>
+<span id="cb22-34"><a href="#cb22-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-35"><a href="#cb22-35" aria-hidden="true" tabindex="-1"></a>            <span class="fu">startStalker</span>(<span class="kw">this</span><span class="op">.</span><span class="at">threadId</span>)<span class="op">;</span></span>
+<span id="cb22-36"><a href="#cb22-36" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb22-37"><a href="#cb22-37" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onLeave</span><span class="op">:</span> <span class="kw">function</span> (retval) {</span>
+<span id="cb22-38"><a href="#cb22-38" aria-hidden="true" tabindex="-1"></a>            <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Leaving &#39;</span> <span class="op">+</span> functionName)<span class="op">;</span></span>
+<span id="cb22-39"><a href="#cb22-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-40"><a href="#cb22-40" aria-hidden="true" tabindex="-1"></a>            <span class="fu">stopStalker</span>(<span class="kw">this</span><span class="op">.</span><span class="at">threadId</span>)</span>
+<span id="cb22-41"><a href="#cb22-41" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb22-42"><a href="#cb22-42" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb22-43"><a href="#cb22-43" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-44"><a href="#cb22-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-45"><a href="#cb22-45" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">startStalker</span>(threadId) {</span>
+<span id="cb22-46"><a href="#cb22-46" aria-hidden="true" tabindex="-1"></a>    Stalker<span class="op">.</span><span class="fu">follow</span>(threadId<span class="op">,</span> {</span>
+<span id="cb22-47"><a href="#cb22-47" aria-hidden="true" tabindex="-1"></a>        <span class="dt">transform</span><span class="op">:</span> <span class="kw">function</span> (iterator) {</span>
+<span id="cb22-48"><a href="#cb22-48" aria-hidden="true" tabindex="-1"></a>            <span class="kw">let</span> instruction <span class="op">=</span> iterator<span class="op">.</span><span class="fu">next</span>()<span class="op">;</span></span>
+<span id="cb22-49"><a href="#cb22-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-50"><a href="#cb22-50" aria-hidden="true" tabindex="-1"></a>            <span class="kw">let</span> module <span class="op">=</span> Process<span class="op">.</span><span class="fu">getModuleByName</span>(libraryName)<span class="op">;</span></span>
+<span id="cb22-51"><a href="#cb22-51" aria-hidden="true" tabindex="-1"></a>            <span class="kw">var</span> baseAddrModule <span class="op">=</span> module<span class="op">.</span><span class="at">base</span><span class="op">;</span></span>
+<span id="cb22-52"><a href="#cb22-52" aria-hidden="true" tabindex="-1"></a>            <span class="kw">var</span> endAddrModule <span class="op">=</span> baseAddrModule<span class="op">.</span><span class="fu">add</span>(module<span class="op">.</span><span class="at">size</span>)<span class="op">;</span></span>
+<span id="cb22-53"><a href="#cb22-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-54"><a href="#cb22-54" aria-hidden="true" tabindex="-1"></a>            <span class="cf">while</span> (instruction <span class="op">!==</span> <span class="kw">null</span>) {</span>
+<span id="cb22-55"><a href="#cb22-55" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> (instruction<span class="op">.</span><span class="at">address</span><span class="op">.</span><span class="fu">compare</span>(baseAddrModule) <span class="op">&gt;=</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> instruction<span class="op">.</span><span class="at">address</span><span class="op">.</span><span class="fu">compare</span>(endAddrModule) <span class="op">&lt;</span> <span class="dv">0</span>) {</span>
+<span id="cb22-56"><a href="#cb22-56" aria-hidden="true" tabindex="-1"></a>                    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(instruction<span class="op">.</span><span class="at">address</span> <span class="op">+</span> <span class="st">&quot;  &quot;</span> <span class="op">+</span> instruction)<span class="op">;</span></span>
+<span id="cb22-57"><a href="#cb22-57" aria-hidden="true" tabindex="-1"></a>                }</span>
+<span id="cb22-58"><a href="#cb22-58" aria-hidden="true" tabindex="-1"></a>                iterator<span class="op">.</span><span class="fu">keep</span>()<span class="op">;</span></span>
+<span id="cb22-59"><a href="#cb22-59" aria-hidden="true" tabindex="-1"></a>                instruction <span class="op">=</span> iterator<span class="op">.</span><span class="fu">next</span>()<span class="op">;</span></span>
+<span id="cb22-60"><a href="#cb22-60" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb22-61"><a href="#cb22-61" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb22-62"><a href="#cb22-62" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb22-63"><a href="#cb22-63" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-64"><a href="#cb22-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-65"><a href="#cb22-65" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">stopStalker</span>(threadId) {</span>
+<span id="cb22-66"><a href="#cb22-66" aria-hidden="true" tabindex="-1"></a>    Stalker<span class="op">.</span><span class="fu">unfollow</span>(threadId)<span class="op">;</span></span>
+<span id="cb22-67"><a href="#cb22-67" aria-hidden="true" tabindex="-1"></a>    Stalker<span class="op">.</span><span class="fu">flush</span>()<span class="op">;</span></span>
+<span id="cb22-68"><a href="#cb22-68" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-69"><a href="#cb22-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-70"><a href="#cb22-70" aria-hidden="true" tabindex="-1"></a><span class="fu">interceptLibraryLoad</span>(<span class="st">&quot;android_dlopen_ext&quot;</span>)<span class="op">;</span></span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

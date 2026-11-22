@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn about deep link security in mobile applications, including different types of deep links, potential vulnerabilities like Link Hijacking, and testing methodologies.">
+  <title>offsecnotes | Deep link misconfiguration</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Deep link misconfiguration</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#introduction" id="toc-introduction">Introduction</a></li>
+<li><a href="#start-an-intent" id="toc-start-an-intent">Start an intent</a></li>
+<li><a href="#testing" id="toc-testing">Testing</a></li>
+</ul></div>
+  <hr>
+<h2 id="introduction">Introduction</h2>
+<details>
+<summary>
+Types of links
+</summary>
+<p><strong><a href="https://developer.android.com/training/app-links#deep-links">(Custom) Scheme URI</a></strong></p>
+<p>App developers customize any schemes and URIs for their app without any restriction</p>
+<p>E.g. <code>fb://profile</code>, <code>geo://</code></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">activity</span><span class="ot"> android:name=</span><span class="st">&quot;.MyMapActivity&quot;</span><span class="ot"> android:exported=</span><span class="st">&quot;true&quot;</span><span class="er">...</span>&gt;</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.action.VIEW&quot;</span> /&gt;</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.DEFAULT&quot;</span> /&gt;</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.BROWSABLE&quot;</span> /&gt;</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">data</span><span class="ot"> android:scheme=</span><span class="st">&quot;geo&quot;</span> /&gt;</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">activity</span>&gt;</span></code></pre></div>
+<p>When the user clicks a deep link, a disambiguation dialog might appear. This dialog allows the user to select one of multiple apps, including your app, that can handle the given deep link</p>
+<hr />
+<p><strong><a href="https://developer.android.com/training/app-links#web-links">Web links</a></strong></p>
+<p>Web links are deep links that use the HTTP and HTTPS schemes.</p>
+<p><strong>Note</strong>: On Android 12 and higher, clicking a web link (not an Android App Link) opens it in a web browser. On earlier Android versions, users may see a disambiguation dialog if multiple apps can handle the web link.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.action.VIEW&quot;</span> /&gt;</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.DEFAULT&quot;</span> /&gt;</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.BROWSABLE&quot;</span> /&gt;</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">data</span><span class="ot"> android:scheme=</span><span class="st">&quot;http&quot;</span> /&gt;</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">data</span><span class="ot"> android:host=</span><span class="st">&quot;myownpersonaldomain.com&quot;</span> /&gt;</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">intent-filter</span>&gt;</span></code></pre></div>
+<hr />
+<p><strong><a href="https://developer.android.com/training/app-links#android-app-links">Android App Links</a></strong></p>
+<p>Android App Links, available on Android 6.0 (API level 23) and higher, are web links with the <code>autoVerify</code> attribute. This lets your app become the default handler for the link type, so when a user clicks an Android App Link, your app opens immediately if installed, without a disambiguation dialog.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">intent-filter</span><span class="ot"> android:autoVerify=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.action.VIEW&quot;</span> /&gt;</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.DEFAULT&quot;</span> /&gt;</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">category</span><span class="ot"> android:name=</span><span class="st">&quot;android.intent.category.BROWSABLE&quot;</span> /&gt;</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">data</span><span class="ot"> android:scheme=</span><span class="st">&quot;http&quot;</span> /&gt;</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">data</span><span class="ot"> android:scheme=</span><span class="st">&quot;https&quot;</span> /&gt;</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">data</span><span class="ot"> android:host=</span><span class="st">&quot;myownpersonaldomain.com&quot;</span> /&gt;</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">intent-filter</span>&gt;</span></code></pre></div>
+<p>In this case Android attempt to access the <strong>Digital Asset Links</strong> file in order to verify the App Links. <strong>A deep link can be considered an App Link only if the verification is successful.</strong></p>
+</details>
+<p><strong>Why might that be a problem?</strong></p>
+<p>Because of Link Hijacking. This happen when a malicious app registers an URI that belongs to the victim app. If mobile OS redirects the user to the malicious app, it can lead to phishing (e.g., the malicious app displays forged UI to lure user passwords) or data leakage (e.g., the deep link may carry sensitive data in the URL parameters such as session IDs).</p>
+<p>Suppose that:</p>
+<ul>
+<li>The victim user has malicious app installed</li>
+<li>Both apps (victim and malicious) manage <code>geo://</code>, <code>https://google.com</code></li>
+</ul>
+<table>
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><strong>Android version</strong></th>
+<th><strong>Victim app installed</strong></th>
+<th><strong>Link supported</strong></th>
+<th><strong>URI</strong></th>
+<th><strong>Behavior</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>All</td>
+<td>N</td>
+<td>Custom scheme URI</td>
+<td><code>geo://</code></td>
+<td>Open in malicious</td>
+</tr>
+<tr class="even">
+<td>All</td>
+<td>Y</td>
+<td>Custom scheme URI</td>
+<td><code>geo://</code></td>
+<td>Dialog appear (malicious app, victim app)</td>
+</tr>
+<tr class="odd">
+<td>&lt; 12</td>
+<td>N</td>
+<td>Web Links</td>
+<td><code>https://google.com</code></td>
+<td>Dialog appear (browser, malicious app)</td>
+</tr>
+<tr class="even">
+<td>&lt; 12</td>
+<td>Y</td>
+<td>Web Links</td>
+<td><code>https://google.com</code></td>
+<td>Dialog appear (browser, malicious app, victim app)</td>
+</tr>
+<tr class="odd">
+<td>&gt; 12</td>
+<td>N / Y</td>
+<td>Web Links</td>
+<td><code>https://google.com</code></td>
+<td>Open in default browser</td>
+</tr>
+<tr class="even">
+<td>&gt; 6</td>
+<td>Y</td>
+<td>App Links</td>
+<td><code>https://google.com</code></td>
+<td>Open victim app</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="start-an-intent">Start an intent</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">adb</span> shell am start <span class="at">-W</span> <span class="at">-a</span> android.intent.action.VIEW <span class="at">-d</span> <span class="st">&quot;geo://&quot;</span></span></code></pre></div>
+<hr />
+<h2 id="testing">Testing</h2>
+<ul>
+<li><strong>Testing (custom) Scheme URI:</strong> Check if there are any scheme URL. These types of deep links are not secure.</li>
+<li><strong>Testing Web Links:</strong> Check if there are any Web Links. If the app can be installed on <code>Android &lt; 12</code> they are not secure.</li>
+<li><strong>Testing App Links:</strong> Check if there are any App Links. If the app can be installed on <code>Android &lt; 12</code> proceed with testing.
+<ul>
+<li>Check for missing
+<ul>
+<li>Digital Asset Links file: <code>https://myownpersonaldomain.com/.well-known/assetlinks.json</code> , <code>https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=myownpersonaldomain.com</code></li>
+</ul></li>
+<li>Misconfigured
+<ul>
+<li>If the OS prompts you to choose between Browser and one or more apps, then the app link Verification process is not correctly implemented.</li>
+</ul></li>
+</ul></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

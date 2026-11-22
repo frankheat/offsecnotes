@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn how to detect and exploit Server-Side Template Injection (SSTI) vulnerabilities in various templating engines such as Jinja2, Twig, ERB, and Smarty. Includes payloads, testing techniques, and identification methods.">
+  <title>offsecnotes | SSTI</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>SSTI</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#detect" id="toc-detect">Detect</a>
+<ul>
+<li><a href="#plaintext-context" id="toc-plaintext-context">Plaintext context</a></li>
+<li><a href="#code-context" id="toc-code-context">Code context</a></li>
+</ul></li>
+<li><a href="#identification" id="toc-identification">Identification</a></li>
+<li><a href="#exploitation" id="toc-exploitation">Exploitation</a></li>
+</ul></div>
+  <hr>
+<p>Server-side template injection (SSTI) occurs when an attacker exploits native template syntax to inject and execute a malicious payload on the server.</p>
+<hr />
+<h2 id="detect">Detect</h2>
+<h3 id="plaintext-context">Plaintext context</h3>
+<p>Most template languages support a ‘text’ context where you can directly input HTML</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">http://vulnerable-website.com/?username=user</span></span></code></pre></div>
+<p>The server:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">render</span><span class="er">(</span><span class="st">&#39;Hello &#39;</span> + username<span class="kw">)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">Hello</span> user</span></code></pre></div>
+<p>You might think to test for XSS, but it can also be vulnerable to template injection. If you find XSS, test also for SSTI. So, you should try:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">http://vulnerable-website.com/?username=</span><span class="va">${7</span><span class="er">*7</span><span class="va">}</span></span></code></pre></div>
+<p>If the output is <code>49</code>, it means the mathematical operation is being processed server-side.</p>
+<h3 id="code-context">Code context</h3>
+<p>This context is easily missed during assessment because it doesn’t result in obvious XSS.</p>
+<ol type="1">
+<li><p>First establish that the parameter doesn’t contain a direct XSS vulnerability by injecting HTML</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">http://vulnerable-website.com/?greeting=data.username</span><span class="op">&lt;</span>tag<span class="op">&gt;</span></span></code></pre></div>
+<p>Without XSS, this usually results in a blank output, encoded tags, or an error message.</p></li>
+<li><p>Next, break out of the statement with common templating syntax and inject arbitrary HTML</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">http://vulnerable-website.com/?greeting=data.username}}</span><span class="op">&lt;</span>tag<span class="op">&gt;</span></span></code></pre></div>
+<p>If this results in an error or blank output, you may have used the wrong templating syntax, or SSTI isn’t possible. If the output renders correctly with the arbitrary HTML, it indicates a SSTI vulnerability.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Hello</span> user<span class="op">&lt;</span>tag<span class="op">&gt;</span></span></code></pre></div></li>
+<li><p>Exploit</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">http://vulnerable-website.com/?greeting=data.username}}</span><span class="op">&lt;</span>PAYLOAD<span class="op">&gt;</span></span></code></pre></div></li>
+</ol>
+<hr />
+<h2 id="identification">Identification</h2>
+<ul>
+<li>Smarty (PHP)
+<ul>
+<li><code>${7*7}</code></li>
+<li><code>a{*comment*}b</code></li>
+</ul></li>
+<li>Mako (Python)
+<ul>
+<li><code>${7*7}</code></li>
+<li><code>${"z".join("ab")}</code></li>
+</ul></li>
+<li>Jinja2 (Python)
+<ul>
+<li><code>{{7*7}}</code> returns error</li>
+<li><code>{{7*'7'}}</code> returns <code>7777777</code></li>
+</ul></li>
+<li>Twig (PHP)
+<ul>
+<li><code>{{7*7}}</code> returns <code>49</code></li>
+<li><code>{{7*'7'}}</code> returns <code>49</code></li>
+</ul></li>
+<li>ERB (Ruby)
+<ul>
+<li><code>&lt;%= 7*7 %&gt;</code> returns <code>49</code></li>
+</ul></li>
+<li>Unknown
+<ul>
+<li><code>${7*7}</code></li>
+<li><code>{{7*'7'}}</code></li>
+</ul></li>
+<li>Check if not vulnerable
+<ul>
+<li><code>${7*7}</code> -&gt; <code>{{7*'7'}}</code></li>
+<li>In this case these payloads don’t have to work</li>
+</ul></li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: There are many other template languages.</p>
+</blockquote>
+<hr />
+<h2 id="exploitation">Exploitation</h2>
+<ul>
+<li><a href="https://book.hacktricks.wiki/en/pentesting-web/ssti-server-side-template-injection/index.html">https://book.hacktricks.wiki/en/pentesting-web/ssti-server-side-template-injection/index.html</a></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

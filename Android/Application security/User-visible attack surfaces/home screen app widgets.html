@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Home screen app widgets</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Home screen app widgets</h1>
+<p>Android home screen widgets are backed by a class that <strong>extends</strong> <strong><a href="https://developer.android.com/reference/android/appwidget/AppWidgetProvider">AppWidgetProvider</a></strong>. <code>AppWidgetProvider</code> is actually a <code>BroadcastReceiver</code> under the hood.</p>
+<p>This class is:</p>
+<ul>
+<li>Registered in the <code>AndroidManifest.xml</code>.</li>
+<li>Associated with a metadata XML file that defines widget size, update frequency, the layout XML used to draw the widget UI, etc.</li>
+</ul>
+<p>There are several methods inside <code>AppWidgetProvider</code>:</p>
+<ul>
+<li><code>onUpdate()</code>: This is the most important method and the one you will use most often. It is triggered at intervals defined by the <code>updatePeriodMillis</code> in the <code>AppWidgetProviderInfo</code> metadata file. It is also called when the user first adds the widget to the home screen.</li>
+<li><code>onDeleted(Context, int[] appWidgetIds)</code>: called every time an instance of the widget is removed from the home screen by the user.</li>
+<li><code>onEnabled(Context context)</code>: called when the very first instance of the widget is added to the home screen.</li>
+<li><code>onDisabled(Context context)</code>: called when the last instance of your widget is removed from the home screen.</li>
+<li><code>onReceive(Context, Intent)</code>: called on every broadcast intent. Generally developers don’t need to override this. <code>AppWidgetProvider</code> is a subclass of <code>BroadcastReceiver</code>, and its default <code>onReceive</code> implementation parses the Intent and calls the appropriate method (like <code>onUpdate</code> or <code>onDeleted</code>).</li>
+</ul>
+<p>Even if, developers rarely need to override <code>onReceive</code> because the parent class already handles routing the standard lifecycle intents, they would override it when the widgets needs to react to custom actions, such as a button click that performs a specific logic or a system broadcast like a time zone change.</p>
+<p>Example:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Inside onUpdate</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>RemoteViews views <span class="op">=</span> <span class="kw">new</span> <span class="fu">RemoteViews</span><span class="op">(</span>context<span class="op">.</span><span class="fu">getPackageName</span><span class="op">(),</span> R<span class="op">.</span><span class="fu">layout</span><span class="op">.</span><span class="fu">widget_layout</span><span class="op">);</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Create an Intent with a custom action string</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">(</span>context<span class="op">,</span> MyWidgetProvider<span class="op">.</span><span class="fu">class</span><span class="op">);</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setAction</span><span class="op">(</span><span class="st">&quot;com.example.ACTION_WIDGET_CLICK&quot;</span><span class="op">);</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Wrap it in a PendingIntent</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>PendingIntent pendingIntent <span class="op">=</span> PendingIntent<span class="op">.</span><span class="fu">getBroadcast</span><span class="op">(</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    context<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> intent<span class="op">,</span> PendingIntent<span class="op">.</span><span class="fu">FLAG_IMMUTABLE</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Attach the click listener to a button in the layout</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>views<span class="op">.</span><span class="fu">setOnClickPendingIntent</span><span class="op">(</span>R<span class="op">.</span><span class="fu">id</span><span class="op">.</span><span class="fu">sync_button</span><span class="op">,</span> pendingIntent<span class="op">);</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="at">@Override</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="dt">void</span> <span class="fu">onReceive</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Always call super.onReceive first! </span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// This ensures onUpdate, onEnabled, etc., still function properly.</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">super</span><span class="op">.</span><span class="fu">onReceive</span><span class="op">(</span>context<span class="op">,</span> intent<span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Check if the intent matches our custom action</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span><span class="st">&quot;com.example.ACTION_WIDGET_CLICK&quot;</span><span class="op">.</span><span class="fu">equals</span><span class="op">(</span>intent<span class="op">.</span><span class="fu">getAction</span><span class="op">()))</span> <span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Perform your custom logic here (e.g., show a Toast or start a service)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        Toast<span class="op">.</span><span class="fu">makeText</span><span class="op">(</span>context<span class="op">,</span> <span class="st">&quot;Button Clicked!&quot;</span><span class="op">,</span> Toast<span class="op">.</span><span class="fu">LENGTH_SHORT</span><span class="op">).</span><span class="fu">show</span><span class="op">();</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 3. Manually trigger a UI refresh if needed</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        AppWidgetManager appWidgetManager <span class="op">=</span> AppWidgetManager<span class="op">.</span><span class="fu">getInstance</span><span class="op">(</span>context<span class="op">);</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        ComponentName thisAppWidget <span class="op">=</span> <span class="kw">new</span> <span class="fu">ComponentName</span><span class="op">(</span>context<span class="op">.</span><span class="fu">getPackageName</span><span class="op">(),</span> MyWidgetProvider<span class="op">.</span><span class="fu">class</span><span class="op">.</span><span class="fu">getName</span><span class="op">());</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span><span class="op">[]</span> appWidgetIds <span class="op">=</span> appWidgetManager<span class="op">.</span><span class="fu">getAppWidgetIds</span><span class="op">(</span>thisAppWidget<span class="op">);</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Trigger the onUpdate method manually to refresh the UI</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>        <span class="fu">onUpdate</span><span class="op">(</span>context<span class="op">,</span> appWidgetManager<span class="op">,</span> appWidgetIds<span class="op">);</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: Widgets often have buttons (e.g., Play / Pause in a podcast widget). Clicking a widget button it sends a broadcast via a <strong>PendingIntent</strong>. This is because widgets are displayed inside another app (usually the launcher). The launcher is the one detecting the click and to avoid running code with launcher permissions, Android uses a <code>PendingIntent</code> that ensures the broadcast runs with the podcast app’s permissions, not the launcher’s.</p>
+</blockquote>
+<p><strong>Attack surface: Developers can override <code>onReceive()</code> and add custom logic for other broadcast intents.</strong></p>
+<p>Let’s say that the app io.hextree.attacksurface has the following widget:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">receiver</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ot">    android:name=</span><span class="st">&quot;io.hextree.attacksurface.receivers.Flag19Widget&quot;</span><span class="ot"> android:exported=</span><span class="st">&quot;true&quot;</span>&gt;</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        &lt;<span class="kw">action</span><span class="ot"> android:name=</span><span class="st">&quot;android.appwidget.action.APPWIDGET_UPDATE&quot;</span>/&gt;</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    &lt;/<span class="kw">intent-filter</span>&gt;</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    &lt;<span class="kw">meta-data</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="ot">        android:name=</span><span class="st">&quot;android.appwidget.provider&quot;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="ot">        android:resource=</span><span class="st">&quot;@xml/flag_home_widget_info&quot;</span>/&gt;</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>&lt;/<span class="kw">receiver</span>&gt;</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">class</span> Flag19Widget <span class="kw">extends</span> AppWidgetProvider <span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onDisabled</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onEnabled</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">static</span> <span class="dt">void</span> <span class="fu">updateAppWidget</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> AppWidgetManager appWidgetManager<span class="op">,</span> <span class="dt">int</span> i<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onReceive</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> Intent intent<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        Bundle bundleExtra<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        Log<span class="op">.</span><span class="fu">i</span><span class="op">(</span><span class="st">&quot;Flag19Widget.onReceive&quot;</span><span class="op">,</span> Utils<span class="op">.</span><span class="fu">dumpIntent</span><span class="op">(</span>context<span class="op">,</span> intent<span class="op">));</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">onReceive</span><span class="op">(</span>context<span class="op">,</span> intent<span class="op">);</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">String</span> action <span class="op">=</span> intent<span class="op">.</span><span class="fu">getAction</span><span class="op">();</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>action <span class="op">==</span> <span class="kw">null</span> <span class="op">||</span> <span class="op">!</span>action<span class="op">.</span><span class="fu">contains</span><span class="op">(</span><span class="st">&quot;APPWIDGET_UPDATE&quot;</span><span class="op">)</span> <span class="op">||</span> <span class="op">(</span>bundleExtra <span class="op">=</span> intent<span class="op">.</span><span class="fu">getBundleExtra</span><span class="op">(</span><span class="st">&quot;appWidgetOptions&quot;</span><span class="op">))</span> <span class="op">==</span> <span class="kw">null</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> i <span class="op">=</span> bundleExtra<span class="op">.</span><span class="fu">getInt</span><span class="op">(</span><span class="st">&quot;appWidgetMaxHeight&quot;</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">);</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> i2 <span class="op">=</span> bundleExtra<span class="op">.</span><span class="fu">getInt</span><span class="op">(</span><span class="st">&quot;appWidgetMinHeight&quot;</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">);</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span>i <span class="op">==</span> <span class="dv">1094795585</span> <span class="op">&amp;&amp;</span> i2 <span class="op">==</span> <span class="dv">322376503</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>            <span class="fu">success</span><span class="op">(</span>context<span class="op">);</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">void</span> <span class="fu">success</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">@Override</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">void</span> <span class="fu">onUpdate</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">,</span> AppWidgetManager appWidgetManager<span class="op">,</span> <span class="dt">int</span><span class="op">[]</span> iArr<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">static</span> Intent <span class="fu">refreshIntent</span><span class="op">(</span><span class="bu">Context</span> context<span class="op">)</span> <span class="op">{</span><span class="kw">...</span><span class="op">}</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>To trigger the success method we have to send a broadcast like the following:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>Bundle bundle <span class="op">=</span> <span class="kw">new</span> <span class="fu">Bundle</span><span class="op">();</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>bundle<span class="op">.</span><span class="fu">putInt</span><span class="op">(</span><span class="st">&quot;appWidgetMaxHeight&quot;</span><span class="op">,</span> <span class="dv">1094795585</span><span class="op">);</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>bundle<span class="op">.</span><span class="fu">putInt</span><span class="op">(</span><span class="st">&quot;appWidgetMinHeight&quot;</span><span class="op">,</span> <span class="dv">322376503</span><span class="op">);</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>Intent intent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Intent</span><span class="op">();</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setClassName</span><span class="op">(</span><span class="st">&quot;io.hextree.attacksurface&quot;</span><span class="op">,</span> <span class="st">&quot;io.hextree.attacksurface.receivers.Flag19Widget&quot;</span><span class="op">);</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">setAction</span><span class="op">(</span><span class="st">&quot;test.APPWIDGET_UPDATE&quot;</span><span class="op">);</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>intent<span class="op">.</span><span class="fu">putExtra</span><span class="op">(</span><span class="st">&quot;appWidgetOptions&quot;</span><span class="op">,</span> bundle<span class="op">);</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="fu">sendBroadcast</span><span class="op">(</span>intent<span class="op">);</span></span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

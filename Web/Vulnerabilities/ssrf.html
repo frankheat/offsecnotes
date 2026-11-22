@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore advanced SSRF exploitation techniques, including bypassing filters, blind SSRF detection, protocol manipulation, and using tools like Gopherus to exploit internal services.">
+  <title>offsecnotes | SSRF</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>SSRF</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#ssrf-attack" id="toc-ssrf-attack">SSRF attack</a></li>
+<li><a href="#protocols" id="toc-protocols">Protocols</a></li>
+<li><a href="#blind" id="toc-blind">Blind</a></li>
+<li><a href="#bypass-ssrf-defenses" id="toc-bypass-ssrf-defenses">Bypass SSRF defenses</a>
+<ul>
+<li><a href="#blacklist-based" id="toc-blacklist-based">Blacklist-based</a></li>
+<li><a href="#whitelist-based" id="toc-whitelist-based">Whitelist-based</a></li>
+<li><a href="#bypassing-ssrf-filters-via-open-redirection" id="toc-bypassing-ssrf-filters-via-open-redirection">Bypassing SSRF filters via open redirection</a></li>
+</ul></li>
+<li><a href="#finding-hidden-attack-surface-for-ssrf" id="toc-finding-hidden-attack-surface-for-ssrf">Finding hidden attack surface for SSRF</a></li>
+</ul></div>
+  <hr>
+<h2 id="ssrf-attack">SSRF attack</h2>
+<p><strong>SSRF attacks against the server itself</strong></p>
+<pre class="http"><code>api=http://localhost/admin</code></pre>
+<p><strong>SSRF attacks against other back-end systems</strong></p>
+<pre class="http"><code>api=http://192.168.0.68/admin</code></pre>
+<hr />
+<h2 id="protocols">Protocols</h2>
+<p>If you can control the protocol you can change it.</p>
+<p><code>file://</code>, <code>sftp://</code>, <code>gopher://</code>, etc.</p>
+<blockquote>
+<p><strong>Tip</strong>: With gopher in some case it is possible to get a shell. E.g. interacting with mysql, redis PostgreSQL, etc. <a href="https://github.com/tarunkant/Gopherus">https://github.com/tarunkant/Gopherus</a>.</p>
+</blockquote>
+<hr />
+<h2 id="blind">Blind</h2>
+<p>Difficult to exploit because you will be able to exploit only well-known vulnerabilities.</p>
+<p><strong>Detection:</strong> Out-of-band techniques</p>
+<hr />
+<h2 id="bypass-ssrf-defenses">Bypass SSRF defenses</h2>
+<h3 id="blacklist-based">Blacklist-based</h3>
+<ul>
+<li>Alternative IP representation of <code>127.0.0.1</code>, such as <code>2130706433</code>, <code>017700000001</code>, or <code>127.1</code></li>
+<li>Obfuscating blocked strings using URL encoding or Double encoding</li>
+<li>Case variation <code>admin</code> -&gt; <code>aDmIn</code></li>
+<li>Registering your own domain name that resolves to <code>127.0.0.1</code>. You can use <code>spoofed.burpcollaborator.net</code> for this purpose</li>
+<li>Providing a URL that you control, which subsequently redirects to the target URL. Try using different redirect codes, as well as different protocols for the target URL. For example, switching from an <code>http</code> to <code>https</code></li>
+</ul>
+<h3 id="whitelist-based">Whitelist-based</h3>
+<ul>
+<li>Add credentials: <code>https://expected-host:fakepassword@evil-host</code></li>
+<li><code>https://expected-host.evil-host</code></li>
+<li>URL encode and URL double encode</li>
+</ul>
+<h3 id="bypassing-ssrf-filters-via-open-redirection">Bypassing SSRF filters via open redirection</h3>
+<ol type="1">
+<li><p>Identify endpoint with open redirect</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>https://website.com/login?redirect=/my-account</span></code></pre></div></li>
+<li><p>Have the server execute a request that performs a redirect</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Original</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="va">api</span><span class="op">=</span>http://website.com/product<span class="pp">?</span>productId=6</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Exploit</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="va">api</span><span class="op">=</span>http://website.com/login<span class="pp">?</span>redirect=http://192.168.0.68/admin</span></code></pre></div></li>
+</ol>
+<hr />
+<h2 id="finding-hidden-attack-surface-for-ssrf">Finding hidden attack surface for SSRF</h2>
+<ul>
+<li>Partial URLs in requests</li>
+<li>URLs within data formats (e.g. in XML)</li>
+<li>SSRF via the Referer header (Some applications use server-side analytics software to tracks visitors)</li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

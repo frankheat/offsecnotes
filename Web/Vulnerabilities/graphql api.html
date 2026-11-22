@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | GraphQL API</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>GraphQL API</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#serving-over-http" id="toc-serving-over-http">Serving over HTTP</a></li>
+<li><a href="#graphql-endpoints" id="toc-graphql-endpoints">GraphQL endpoints</a>
+<ul>
+<li><a href="#universal-queries" id="toc-universal-queries">Universal queries</a></li>
+</ul></li>
+<li><a href="#common-endpoint-names" id="toc-common-endpoint-names">Common endpoint names</a></li>
+<li><a href="#discovering-schema-information" id="toc-discovering-schema-information">Discovering schema information</a>
+<ul>
+<li><a href="#using-introspection" id="toc-using-introspection">Using introspection</a></li>
+<li><a href="#suggestions" id="toc-suggestions">Suggestions</a></li>
+</ul></li>
+<li><a href="#bypassing-graphql-introspection-defenses" id="toc-bypassing-graphql-introspection-defenses">Bypassing GraphQL introspection defenses</a></li>
+<li><a href="#bypassing-rate-limiting" id="toc-bypassing-rate-limiting">Bypassing rate limiting</a></li>
+<li><a href="#graphql-csrf" id="toc-graphql-csrf">GraphQL CSRF</a></li>
+</ul></div>
+  <hr>
+<p>GraphQL syntax: <a href="https://portswigger.net/web-security/graphql/what-is-graphql">https://portswigger.net/web-security/graphql/what-is-graphql</a></p>
+<hr />
+<h2 id="serving-over-http">Serving over HTTP</h2>
+<p><strong>HTTP GET</strong></p>
+<p>GraphQL query should be specified in the “query” query string.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">http://myapi/graphql?query={me{name}}</span></span></code></pre></div>
+<p><strong>HTTP POST</strong></p>
+<p>JSON-encoded body</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;query&quot;</span><span class="fu">:</span> <span class="st">&quot;...&quot;</span><span class="fu">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;operationName&quot;</span><span class="fu">:</span> <span class="st">&quot;...&quot;</span><span class="fu">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;variables&quot;</span><span class="fu">:</span> <span class="fu">{</span> <span class="dt">&quot;myVariable&quot;</span><span class="fu">:</span> <span class="st">&quot;someValue&quot;</span><span class="fu">,</span> <span class="er">...</span> <span class="fu">}</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<hr />
+<h2 id="graphql-endpoints">GraphQL endpoints</h2>
+<h3 id="universal-queries">Universal queries</h3>
+<p>Sending <code>query{__typename}</code> to a GraphQL endpoint will return <code>{"data": {"__typename": "query"}}</code> in the response.</p>
+<p>Try with POST, GET or POST with <code>application/x-www-form-urlencoded</code></p>
+<hr />
+<h2 id="common-endpoint-names">Common endpoint names</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">/graphql</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">/api</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ex">/api/graphql</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ex">/graphql/api</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">/graphql/graphql</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="ex">/v1/graphql</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="ex">/v1/api</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="ex">/v1/api/graphql</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="ex">/v1/graphql/api</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="ex">/v1/graphql/graphql</span></span></code></pre></div>
+<p>More endpoint: <a href="https://github.com/danielmiessler/SecLists/blob/fe2aa9e7b04b98d94432320d09b5987f39a17de8/Discovery/Web-Content/graphql.txt">SecLists discovery graphql</a></p>
+<blockquote>
+<p><strong>Note</strong>: Response could be “query not present” or similar. (meaning it’s present)</p>
+</blockquote>
+<hr />
+<h2 id="discovering-schema-information">Discovering schema information</h2>
+<h3 id="using-introspection">Using introspection</h3>
+<p>To use introspection to discover schema information, query the <code>__schema</code> field. (could be disabled in production environments)</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;query&quot;</span><span class="fu">:</span> <span class="st">&quot;{__schema{queryType{name}}}&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Manual</strong></p>
+<details>
+<summary>
+Running a full introspection query
+</summary>
+<div class="sourceCode" id="cb5"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="er">#Full</span> <span class="er">introspection</span> <span class="er">query</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="er">query</span> <span class="er">IntrospectionQuery</span> <span class="fu">{</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="er">__schema</span> <span class="er">{</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>            <span class="er">queryType</span> <span class="er">{</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>                <span class="er">name</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>            <span class="fu">}</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>            <span class="er">mutationType</span> <span class="fu">{</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>                <span class="er">name</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>            <span class="fu">}</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>            <span class="er">subscriptionType</span> <span class="fu">{</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>                <span class="er">name</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>            <span class="fu">}</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>            <span class="er">types</span> <span class="fu">{</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>             <span class="er">...FullType</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>            <span class="fu">}</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>            <span class="er">directives</span> <span class="fu">{</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>                <span class="er">name</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>                <span class="er">description</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>                <span class="er">args</span> <span class="er">{</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>                    <span class="er">...InputValue</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>            <span class="fu">}</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>            <span class="er">onOperation</span>  <span class="er">#Often</span> <span class="er">needs</span> <span class="er">to</span> <span class="er">be</span> <span class="er">deleted</span> <span class="er">to</span> <span class="er">run</span> <span class="er">query</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>            <span class="er">onFragment</span>   <span class="er">#Often</span> <span class="er">needs</span> <span class="er">to</span> <span class="er">be</span> <span class="er">deleted</span> <span class="er">to</span> <span class="er">run</span> <span class="er">query</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>            <span class="er">onField</span>      <span class="er">#Often</span> <span class="er">needs</span> <span class="er">to</span> <span class="er">be</span> <span class="er">deleted</span> <span class="er">to</span> <span class="er">run</span> <span class="er">query</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>            <span class="er">}</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>        <span class="er">}</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    <span class="er">}</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>    <span class="er">fragment</span> <span class="er">FullType</span> <span class="er">on</span> <span class="er">__Type</span> <span class="fu">{</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>        <span class="er">kind</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>        <span class="er">name</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>        <span class="er">description</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>        <span class="er">fields(includeDeprecated</span><span class="fu">:</span> <span class="kw">true</span><span class="er">)</span> <span class="fu">{</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>            <span class="er">name</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>            <span class="er">description</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>            <span class="er">args</span> <span class="er">{</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>                <span class="er">...InputValue</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>            <span class="fu">}</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>            <span class="er">type</span> <span class="fu">{</span></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>                <span class="er">...TypeRef</span></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>            <span class="fu">}</span></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>            <span class="er">isDeprecated</span></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>            <span class="er">deprecationReason</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>        <span class="fu">}</span></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>        <span class="er">inputFields</span> <span class="fu">{</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>            <span class="er">...InputValue</span></span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>        <span class="fu">}</span></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>        <span class="er">interfaces</span> <span class="fu">{</span></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>            <span class="er">...TypeRef</span></span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>        <span class="fu">}</span></span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a>        <span class="er">enumValues(includeDeprecated:</span> <span class="er">true)</span> <span class="fu">{</span></span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>            <span class="er">name</span></span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>            <span class="er">description</span></span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a>            <span class="er">isDeprecated</span></span>
+<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a>            <span class="er">deprecationReason</span></span>
+<span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a>        <span class="fu">}</span></span>
+<span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a>        <span class="er">possibleTypes</span> <span class="fu">{</span></span>
+<span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a>            <span class="er">...TypeRef</span></span>
+<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a>        <span class="fu">}</span></span>
+<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a>    <span class="er">}</span></span>
+<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a>    <span class="er">fragment</span> <span class="er">InputValue</span> <span class="er">on</span> <span class="er">__InputValue</span> <span class="fu">{</span></span>
+<span id="cb5-64"><a href="#cb5-64" aria-hidden="true" tabindex="-1"></a>        <span class="er">name</span></span>
+<span id="cb5-65"><a href="#cb5-65" aria-hidden="true" tabindex="-1"></a>        <span class="er">description</span></span>
+<span id="cb5-66"><a href="#cb5-66" aria-hidden="true" tabindex="-1"></a>        <span class="er">type</span> <span class="er">{</span></span>
+<span id="cb5-67"><a href="#cb5-67" aria-hidden="true" tabindex="-1"></a>            <span class="er">...TypeRef</span></span>
+<span id="cb5-68"><a href="#cb5-68" aria-hidden="true" tabindex="-1"></a>        <span class="fu">}</span></span>
+<span id="cb5-69"><a href="#cb5-69" aria-hidden="true" tabindex="-1"></a>        <span class="er">defaultValue</span></span>
+<span id="cb5-70"><a href="#cb5-70" aria-hidden="true" tabindex="-1"></a>    <span class="er">}</span></span>
+<span id="cb5-71"><a href="#cb5-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-72"><a href="#cb5-72" aria-hidden="true" tabindex="-1"></a>    <span class="er">fragment</span> <span class="er">TypeRef</span> <span class="er">on</span> <span class="er">__Type</span> <span class="fu">{</span></span>
+<span id="cb5-73"><a href="#cb5-73" aria-hidden="true" tabindex="-1"></a>        <span class="er">kind</span></span>
+<span id="cb5-74"><a href="#cb5-74" aria-hidden="true" tabindex="-1"></a>        <span class="er">name</span></span>
+<span id="cb5-75"><a href="#cb5-75" aria-hidden="true" tabindex="-1"></a>        <span class="er">ofType</span> <span class="er">{</span></span>
+<span id="cb5-76"><a href="#cb5-76" aria-hidden="true" tabindex="-1"></a>            <span class="er">kind</span></span>
+<span id="cb5-77"><a href="#cb5-77" aria-hidden="true" tabindex="-1"></a>            <span class="er">name</span></span>
+<span id="cb5-78"><a href="#cb5-78" aria-hidden="true" tabindex="-1"></a>            <span class="er">ofType</span> <span class="er">{</span></span>
+<span id="cb5-79"><a href="#cb5-79" aria-hidden="true" tabindex="-1"></a>                <span class="er">kind</span></span>
+<span id="cb5-80"><a href="#cb5-80" aria-hidden="true" tabindex="-1"></a>                <span class="er">name</span></span>
+<span id="cb5-81"><a href="#cb5-81" aria-hidden="true" tabindex="-1"></a>                <span class="er">ofType</span> <span class="er">{</span></span>
+<span id="cb5-82"><a href="#cb5-82" aria-hidden="true" tabindex="-1"></a>                    <span class="er">kind</span></span>
+<span id="cb5-83"><a href="#cb5-83" aria-hidden="true" tabindex="-1"></a>                    <span class="er">name</span></span>
+<span id="cb5-84"><a href="#cb5-84" aria-hidden="true" tabindex="-1"></a>                <span class="fu">}</span></span>
+<span id="cb5-85"><a href="#cb5-85" aria-hidden="true" tabindex="-1"></a>            <span class="er">}</span></span>
+<span id="cb5-86"><a href="#cb5-86" aria-hidden="true" tabindex="-1"></a>        <span class="er">}</span></span>
+<span id="cb5-87"><a href="#cb5-87" aria-hidden="true" tabindex="-1"></a>    <span class="er">}</span></span></code></pre></div>
+<p>If introspection is enabled but the query fails, try removing the onOperation, onFragment, and onField directives. Many endpoints don’t accept these in introspection queries.</p>
+</details>
+<p><strong>Automatic</strong></p>
+<details>
+<summary>
+Burp
+</summary>
+<ol type="1">
+<li>Browse the target application for requests to a GraphQL endpoint</li>
+<li>Right-click the GraphQL request, select “Send to Repeater”</li>
+<li>In Repeater, right-click in the Request panel, choose “GraphQL &gt; Set introspection query”</li>
+<li>Click Send. If introspection is enabled, the server will return the full API schema. If you are working with an older GraphQL server, it may fail. So right-click within the Request and select GraphQL &gt; Set legacy introspection query and try again.</li>
+<li>In the Response panel, right-click and select “GraphQL &gt; Save GraphQL queries to site map.” Burp saves discovered queries as nodes on the site map. You can review these queries, and send them to Intruder or Repeater for further investigation or attacks.</li>
+</ol>
+<p><a href="https://portswigger.net/burp/documentation/desktop/testing-workflow/working-with-graphql#accessing-graphql-api-schemas-using-introspection">https://portswigger.net/burp/documentation/desktop/testing-workflow/working-with-graphql#accessing-graphql-api-schemas-using-introspection</a></p>
+</details>
+<p>Now you can easily view relationships between schema entities using a GraphQL visualizer: <a href="https://graphql-kit.com/graphql-voyager/">https://graphql-kit.com/graphql-voyager/</a></p>
+<h3 id="suggestions">Suggestions</h3>
+<p>Suggestions are a feature of the Apollo GraphQL platform where the server suggests query amendments in error messages. <a href="https://github.com/nikitastupin/clairvoyance">Clairvoyance</a> is a tool that uses suggestions to automatically recover all or part of a GraphQL schema, even when introspection is disabled.</p>
+<hr />
+<h2 id="bypassing-graphql-introspection-defenses">Bypassing GraphQL introspection defenses</h2>
+<ul>
+<li><p>Developers might use a regex to exclude the <code>__schema</code> keyword. Try spaces, new lines, and commas, which GraphQL ignores but flawed regex does not.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="er">#Introspection</span> <span class="er">query</span> <span class="er">with</span> <span class="er">newline</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;query&quot;</span><span class="fu">:</span> <span class="st">&quot;query{__schema</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="st">        {queryType{name}}}&quot;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span></code></pre></div></li>
+<li><p>Try a GET request</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="er">#</span> <span class="er">Introspection</span> <span class="er">probe</span> <span class="er">as</span> <span class="er">GET</span> <span class="er">request</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="er">GET</span> <span class="er">/graphql?query=query%7B__schema%0A%7BqueryType%7Bname%7D%7D%7D</span></span></code></pre></div></li>
+<li><p>POST request with a content-type of <code>x-www-form-urlencoded</code></p></li>
+</ul>
+<hr />
+<h2 id="bypassing-rate-limiting">Bypassing rate limiting</h2>
+<p>Use aliases to return multiple instances of the same type of object in one request.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="er">#Request</span> <span class="er">with</span> <span class="er">aliased</span> <span class="er">queries</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="er">query</span> <span class="er">isValidDiscount($code:</span> <span class="er">Int)</span> <span class="fu">{</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        <span class="er">isvalidDiscount(code</span><span class="fu">:</span><span class="er">$code)</span><span class="fu">{</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>            <span class="er">valid</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">}</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="er">isValidDiscount2:isValidDiscount(code:$code)</span><span class="fu">{</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>            <span class="er">valid</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        <span class="fu">}</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        <span class="er">isValidDiscount3:isValidDiscount(code:$code)</span><span class="fu">{</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>            <span class="er">valid</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="fu">}</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span></code></pre></div>
+<hr />
+<h2 id="graphql-csrf">GraphQL CSRF</h2>
+<p>GraphQL can be exploited for CSRF attacks. POST requests with <code>application/json</code> content type are secure against forgery if the content type is validated.</p>
+<p>GET requests and POST with <code>application/x-www-form-urlencoded</code> content type can be sent by browsers.</p>
+<details>
+<summary>
+JS script to convert JSON to application x-www-form-urlencoded
+</summary>
+<div class="sourceCode" id="cb9"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">jsonToUrlEncoded</span>(jsonData) {</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> params <span class="op">=</span> <span class="kw">new</span> <span class="fu">URLSearchParams</span>()<span class="op">;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">const</span> [key<span class="op">,</span> value] <span class="kw">of</span> <span class="bu">Object</span><span class="op">.</span><span class="fu">entries</span>(jsonData)) {</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="kw">typeof</span> value <span class="op">===</span> <span class="st">&#39;object&#39;</span>) {</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>            params<span class="op">.</span><span class="fu">append</span>(key<span class="op">,</span> <span class="bu">JSON</span><span class="op">.</span><span class="fu">stringify</span>(value))<span class="op">;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        } <span class="cf">else</span> {</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>            params<span class="op">.</span><span class="fu">append</span>(key<span class="op">,</span> value)<span class="op">;</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> params<span class="op">.</span><span class="fu">toString</span>()<span class="op">;</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="co">// To change</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> jsonData <span class="op">=</span> {<span class="st">&quot;query&quot;</span><span class="op">:</span><span class="st">&quot;test&quot;</span><span class="op">,</span><span class="st">&quot;operationName&quot;</span><span class="op">:</span><span class="st">&quot;test&quot;</span><span class="op">,</span><span class="st">&quot;variables&quot;</span><span class="op">:</span>{<span class="st">&quot;a&quot;</span><span class="op">:</span><span class="dv">1</span><span class="op">,</span><span class="st">&quot;b&quot;</span><span class="op">:</span><span class="dv">2</span>}}<span class="op">;</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> urlEncodedData <span class="op">=</span> <span class="fu">jsonToUrlEncoded</span>(jsonData)<span class="op">;</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(urlEncodedData)<span class="op">;</span></span></code></pre></div>
+</details>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

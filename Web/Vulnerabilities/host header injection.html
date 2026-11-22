@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn how host header injection vulnerabilities can be exploited for password reset poisoning, accessing internal systems, SSRF, and bypassing server validation.">
+  <title>offsecnotes | Host header injection</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>Host header injection</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#supply-an-arbitrary-host-header" id="toc-supply-an-arbitrary-host-header">Supply an arbitrary Host header</a></li>
+<li><a href="#exploitation" id="toc-exploitation">Exploitation</a>
+<ul>
+<li><a href="#password-reset-poisoning" id="toc-password-reset-poisoning">Password reset poisoning</a></li>
+<li><a href="#accessing-restricted-functionality" id="toc-accessing-restricted-functionality">Accessing restricted functionality</a></li>
+<li><a href="#accessing-internal-websites-with-brute-forcing" id="toc-accessing-internal-websites-with-brute-forcing">Accessing internal websites with brute-forcing</a></li>
+<li><a href="#web-cache-poisoning-via-the-host-header" id="toc-web-cache-poisoning-via-the-host-header">Web cache poisoning via the Host header</a></li>
+<li><a href="#routing-based-ssrf" id="toc-routing-based-ssrf">Routing-based SSRF</a></li>
+<li><a href="#connection-state-attacks" id="toc-connection-state-attacks">Connection state attacks</a></li>
+<li><a href="#exploiting-server-side-vulnerabilities" id="toc-exploiting-server-side-vulnerabilities">Exploiting server-side vulnerabilities</a></li>
+</ul></li>
+<li><a href="#bypass-validation" id="toc-bypass-validation">Bypass validation</a></li>
+</ul></div>
+  <hr>
+<details>
+<summary>
+Introduction
+</summary>
+<p><strong>Virtual hosting</strong></p>
+<ul>
+<li><p>Single web server hosts multiple websites or applications.</p></li>
+<li><p>Although each of these distinct websites will have a different domain name, they all share a common IP address with the server.</p></li>
+<li><p>Websites hosted in this way on a single server are known as “virtual hosts”.</p></li>
+</ul>
+<p><strong>Routing traffic via an intermediary</strong></p>
+<ul>
+<li><p>Websites are hosted on distinct back-end servers, but all traffic between the client and servers is routed through an intermediary system.</p></li>
+<li><p>This could be a simple load balancer or a reverse proxy server of some kind.</p></li>
+</ul>
+<p><strong>HTTP Host header</strong></p>
+<p>Http host header refers to the Host header to determine the intended back-end</p>
+<pre class="http"><code>GET /web-security HTTP/1.1
+Host: portswigger.net</code></pre>
+</details>
+<blockquote>
+<p><strong>Warning</strong>: Some intercepting proxies use the Host header to determine the target IP address, making testing difficult. Burp Suite keeps the Host header and target IP address separate, which is crucial.</p>
+</blockquote>
+<hr />
+<h2 id="supply-an-arbitrary-host-header">Supply an arbitrary Host header</h2>
+<p>Start by testing the effect of providing an arbitrary domain name in the Host header</p>
+<ul>
+<li>Occasionally, you can still reach the target website with an unexpected Host header</li>
+<li>Or get an invalid Host header error</li>
+</ul>
+<hr />
+<h2 id="exploitation">Exploitation</h2>
+<h3 id="password-reset-poisoning">Password reset poisoning</h3>
+<ul>
+<li>The website sends an email to the user that contains a link for resetting their password: <code>https://normal-website.com/reset?token=0a1b2c3d4e5f6g7h8i9j</code>.</li>
+<li>Intercept the HTTP request, change the Host header to a domain you control, then visit the vulnerable website and use the stolen token in the appropriate parameter</li>
+</ul>
+<h3 id="accessing-restricted-functionality">Accessing restricted functionality</h3>
+<p>Admin panel with host: <code>Host: localhost</code></p>
+<h3 id="accessing-internal-websites-with-brute-forcing">Accessing internal websites with brute-forcing</h3>
+<p>Bruteforce subdomain</p>
+<h3 id="web-cache-poisoning-via-the-host-header">Web cache poisoning via the Host header</h3>
+<ul>
+<li>Client-side vulnerabilities like XSS aren’t exploitable if they’re caused by the Host header, as attackers can’t manipulate a victim’s browser to generate a harmful host.</li>
+<li>However, if the target uses a web cache, it may be possible to turn this useless <a href="/Web/Vulnerabilities/web%20cache%20poisoning.html">Web cache poisoning</a></li>
+</ul>
+<h3 id="routing-based-ssrf">Routing-based SSRF</h3>
+<p>If load balancers and reverse proxies are misconfigured to forward requests based on an invalid Host header, you can exploit this to reroute requests to any system you choose -&gt; exploit this to have access internal-only systems.</p>
+<p><strong>Detection</strong></p>
+<p>In the host header add your <code>attacker.com</code> website. If it doesn’t work try to identify private IP addresses anyway.</p>
+<p>You can also brute force <code>192.168.0.0/16</code> , <code>10.0.0.0/8</code>, etc.</p>
+<h3 id="connection-state-attacks">Connection state attacks</h3>
+<p>You may encounter servers that only perform thorough validation on the first request they receive over a new connection. So, you can potentially bypass this validation by sending an innocent-looking initial request then following up with your malicious one down the same connection.</p>
+<blockquote>
+<p><strong>Note</strong>: You need to set up a single connection.</p>
+</blockquote>
+<h3 id="exploiting-server-side-vulnerabilities">Exploiting server-side vulnerabilities</h3>
+<p>E.g. SQLi, etc.</p>
+<hr />
+<h2 id="bypass-validation">Bypass validation</h2>
+<ul>
+<li><p>Parsing flaws</p>
+<pre class="http"><code>Host: vulnerable-website.com:bad-stuff-here
+Host: notvulnerable-website.com
+Host: hacked-subdomain.vulnerable-website.com</code></pre></li>
+<li><p>Override headers (<code>X-Host</code>, <code>X-Forwarded-Server</code>, <code>Forwarded</code>, etc.). You can also find with param miner -&gt; guess headers</p>
+<pre class="http"><code>GET /example HTTP/1.1
+Host: vulnerable-website.com
+X-Forwarded-Host: bad-stuff-here</code></pre></li>
+<li><p>Inject duplicate Host headers</p>
+<pre class="http"><code>GET /example HTTP/1.1
+Host: vulnerable-website.com
+Host: bad-stuff-here</code></pre></li>
+<li><p>Supply an absolute URL (many servers are also configured to understand requests for absolute URLs).</p>
+<ul>
+<li>Officially, the request line should be given precedence when routing the request but, in practice, this isn’t always the case</li>
+<li>Try also change protocol <code>HTTP</code>, <code>HTTPS</code></li>
+</ul>
+<pre class="http"><code>GET https://vulnerable-website.com/ HTTP/1.1
+Host: bad-stuff-here</code></pre></li>
+<li><p>Add line wrapping</p>
+<ul>
+<li>Some servers will interpret the indented header as a wrapped line and, therefore, treat it as part of the preceding header’s value
+<ul>
+<li>If the front-end ignores the indented header, the request will be processed as an ordinary request for vulnerable-website.com</li>
+<li>Now let’s say the back-end ignores the leading space and gives precedence to the first header in the case of duplicates. This discrepancy might allow you to pass arbitrary values via the “wrapped” Host header</li>
+</ul></li>
+</ul>
+<pre class="http"><code>GET /example HTTP/1.1
+    Host: bad-stuff-here
+Host: vulnerable-website.com</code></pre></li>
+<li><p>Other techniques you can find on the web “common domain-validation flaws”</p></li>
+</ul>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

