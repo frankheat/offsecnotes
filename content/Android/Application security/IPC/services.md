@@ -55,30 +55,15 @@ startService(intent);
 ```
 
 > **Possible issues**:
-> 
-> 1. Read about Package visibility
-> 2. The target app should be running to start the service (due to battery saving of Android that prevents you from starting services in the background)
-
-## Package visibility
-
-Android 11 introduced [package visibility](https://developer.android.com/training/package-visibility) restrictions for privacy reasons. Apps can no longer see all installed apps or all exported components (like services and content providers) unless explicitly declared.
-
-**There are many more details regarding package visibility, but here we will focus specifically on Content Providers in a typical scenario**. For services, this means:
-
-* Even if a service is `exported="true"`, your app cannot interact with it unless it is declared in `<queries>`.
-* Without this declaration, trying to access the provider will fail.
-
-```
-Unable to start service Intent { act=io.hextree.services.START_FLAG24_SERVICE cmp=io.hextree.attacksurface/.services.Flag24Service } U=0: not found
-```
-
-The `<queries>` element goes in your app’s `AndroidManifest.xml`, outside the `<application>` tag. You can declare visibility by setting the package name:
-
-```xml
-<queries>
-    <package android:name="io.hextree.attacksurface" />
-</queries>
-```
+>
+> 1. **Package visibility**: if the target app isn't visible to yours, the service is not found, even when it's exported:
+>
+>     ```
+>     Unable to start service Intent { act=io.hextree.services.START_FLAG24_SERVICE cmp=io.hextree.attacksurface/.services.Flag24Service } U=0: not found
+>     ```
+>
+>     See [Package visibility](content%20providers.html#package-visibility) for how to fix it (e.g. `<queries>`).
+> 2. **Background limits**: since Android 8, if the app that owns the service targets API 26+ and is in the background, `startService()` throws an `IllegalStateException` (`Not allowed to start service ...: app is in background`). What matters is the state of the target app, not yours: open it first. Bound services are not affected, so `bindService()` works anyway \[[↗](https://developer.android.com/about/versions/oreo/background#services)].
 
 ## Service lifecycle
 
@@ -188,7 +173,7 @@ The vulnerability usually lies in how the service's `IncomingHandler` processes 
 
 * `what`: user-defined message code so that the recipient can identify what this message is about
 * `arg1` and `arg2` are lower-cost alternatives to using `setData()`
-* `obj`: an arbitrary object to send to the recipient
+* `obj`: an object to send to the recipient. Across processes it can only be a `Parcelable` of a framework class (e.g. a `Bundle`), not one implemented by the app
 * `getData` and `setData`: to set or obtains a Bundle of arbitrary data associated with this event
 
 
@@ -681,8 +666,6 @@ public class MainActivity extends AppCompatActivity {
 }
 ```
 
-</details>
-
 <details>
 <summary>
 Another example of a multi-method interface
@@ -822,27 +805,32 @@ The following code snippet demonstrates how to dynamically load the `IFlag28Inte
 ServiceConnection mConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-        // Load the class dynamically
-        ClassLoader classLoader = getForeignClassLoader(Flag28Activity.this, "io.hextree.attacksurface");
-        Class<?> iRemoteServiceClass = classLoader.loadClass("io.hextree.attacksurface.services.IFlag28Interface");
+        try {
+            // Load the target app's code into our process and get its ClassLoader
+            Context targetContext = createPackageContext("io.hextree.attacksurface",
+                    Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+            ClassLoader classLoader = targetContext.getClassLoader();
 
-        Class<?> stubClass = null;
-        for (Class<?> innerClass : iRemoteServiceClass.getDeclaredClasses()) {
-            if (innerClass.getSimpleName().equals("Stub")) {
-                stubClass = innerClass;
-                break;
-            }
+            // Load the interface and its inner Stub class
+            Class<?> interfaceClass = classLoader.loadClass("io.hextree.attacksurface.services.IFlag28Interface");
+            Class<?> stubClass = classLoader.loadClass("io.hextree.attacksurface.services.IFlag28Interface$Stub");
+
+            // IFlag28Interface.Stub.asInterface(service)
+            Method asInterface = stubClass.getDeclaredMethod("asInterface", IBinder.class);
+            Object remote = asInterface.invoke(null, service);
+
+            // remote.openFlag()
+            Method openFlag = interfaceClass.getDeclaredMethod("openFlag");
+            boolean result = (boolean) openFlag.invoke(remote);
+            Log.d("Flag28", "openFlag() = " + result);
+        } catch (PackageManager.NameNotFoundException | ReflectiveOperationException e) {
+            Log.e("Flag28", "Reflection failed", e);
         }
-
-        // Get the asInterface method
-        Method asInterfaceMethod = stubClass.getDeclaredMethod("asInterface", IBinder.class);
-
-        // Invoke the asInterface method to get the instance of IRemoteService
-        Object iRemoteService = asInterfaceMethod.invoke(null, service);
-
-        // Call the init method and get the returned string
-        Method openFlagMethod = iRemoteServiceClass.getDeclaredMethod("openFlag");
-        boolean initResult = (boolean) openFlagMethod.invoke(iRemoteService);
     }
-}
+
+    @Override
+    public void onServiceDisconnected(ComponentName name) {}
+};
 ```
+
+> **Note**: `CONTEXT_INCLUDE_CODE` loads the target app's code into our process, so that `getClassLoader()` can load its classes. Without it, `getClassLoader()` returns the default system class loader.
